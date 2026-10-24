@@ -1,0 +1,113 @@
+
+/* House of Hackney — SweetAlert2 theme */
+
+.hoh-swal-popup {
+  border: 1px solid #d8d5ce !important;
+  border-radius: 2px !important;
+  padding: 2.5rem 2rem !important;
+  box-shadow: 0 18px 60px rgba(23, 23, 19, 0.12) !important;
+}
+
+.hoh-swal-title {
+  color: #171713 !important;
+  font-family: "Playfair Display", Georgia, serif !important;
+  font-size: 1.8rem !important;
+  font-weight: 400 !important;
+}
+
+.hoh-swal-text {
+  color: #68675f !important;
+  font-family: "Inter", Arial, sans-serif !important;
+  font-size: 0.9rem !important;
+  line-height: 1.7 !important;
+}
+
+.hoh-swal-actions {
+  gap: 10px !important;
+  margin-top: 1.5rem !important;
+}
+
+.hoh-swal-confirm,
+.hoh-swal-cancel {
+  min-height: 44px !important;
+  padding: 0.85rem 1.4rem !important;
+  border: 1px solid transparent !important;
+  border-radius: 0 !important;
+  font-family: "Inter", Arial, sans-serif !important;
+  font-size: 0.7rem !important;
+  letter-spacing: 1.5px !important;
+  transition: background 180ms ease, color 180ms ease !important;
+  cursor: pointer !important;
+}
+
+.hoh-swal-confirm {
+  background: #394132 !important;
+  color: #ffffff !important;
+}
+
+.hoh-swal-confirm:hover {
+  background: #252c20 !important;
+}
+
+.hoh-swal-cancel {
+  background: transparent !important;
+  color: #394132 !important;
+  border-color: #d8d5ce !important;
+}
+
+.hoh-swal-cancel:hover {
+  background: #eae6dc !important;
+}
+
+/* Keep SweetAlert2 status icons refined */
+.swal2-icon.swal2-success {
+  border-color: #74816b !important;
+  color: #394132 !important;
+}
+
+.swal2-icon.swal2-success [class^="swal2-success-line"] {
+  background-color: #394132 !important;
+}
+
+.swal2-icon.swal2-success .swal2-success-ring {
+  border-color: rgba(57, 65, 50, 0.25) !important;
+}
+
+.swal2-icon.swal2-error {
+  border-color: #a45e50 !important;
+  color: #a45e50 !important;
+}
+
+.swal2-icon.swal2-warning {
+  border-color: #a58b55 !important;
+  color: #a58b55 !important;
+}
+
+.hoh-swal-toast {
+  border: 1px solid #d8d5ce !important;
+  border-radius: 2px !important;
+  box-shadow: 0 8px 30px rgba(23, 23, 19, 0.1) !important;
+}
+
+.hoh-swal-toast-title {
+  color: #171713 !important;
+  font-family: "Inter", Arial, sans-serif !important;
+  font-size: 0.85rem !important;
+  font-weight: 400 !important;
+}
+
+@media (max-width: 480px) {
+  .hoh-swal-popup {
+    width: calc(100% - 32px) !important;
+    padding: 2rem 1.25rem !important;
+  }
+
+  .hoh-swal-title {
+    font-size: 1.5rem !important;
+  }
+
+  .hoh-swal-confirm,
+  .hoh-swal-cancel {
+    padding: 0.8rem 1rem !important;
+  }
+}
