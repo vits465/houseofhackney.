@@ -20,6 +20,7 @@ import AnnouncementBar from "./AnnouncementBar";
 import Navbar from "./Navbar";
 import BrandLogo from "../common/BrandLogo";
 import MobileMenu from "./MobileMenu";
+import SearchModal from "./SearchModal";
 import { useWishlist } from "../../utils/wishlist";
 
 function calculateTargetLogo(scrollY) {
@@ -54,6 +55,7 @@ function calculateTargetLogo(scrollY) {
 function Header() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
   const [activeNavTab, setActiveNavTab] = useState("SHOP");
   const [activeCategory, setActiveCategory] = useState(null);
@@ -300,13 +302,14 @@ function Header() {
             </button>
 
             {/* Mobile Quick Search Button */}
-            <Link
-              to="/search"
-              aria-label="Search"
-              className="grid h-9 w-9 place-items-center md:hidden text-[#171713] hover:opacity-75"
+            <button
+              type="button"
+              onClick={() => setIsSearchOpen(true)}
+              aria-label="Search products and stores"
+              className="grid h-9 w-9 place-items-center md:hidden text-[#171713] hover:opacity-75 cursor-pointer"
             >
               <Search size={20} strokeWidth={1.5} />
-            </Link>
+            </button>
 
             {/* Desktop Tabs: SHOP, INSPIRATION, OUR HOUSE */}
             <div className="hidden items-center gap-2 lg:gap-4 md:flex">
@@ -409,13 +412,14 @@ function Header() {
               TRADE
             </Link>
 
-            <Link
-              to="/search"
-              aria-label="Search"
-              className="hidden md:grid h-9 w-9 md:h-10 md:w-10 place-items-center rounded-xl border border-[#d8d5ce] hover:bg-white transition-colors"
+            <button
+              type="button"
+              onClick={() => setIsSearchOpen(true)}
+              aria-label="Search products and stores"
+              className="hidden md:grid h-9 w-9 md:h-10 md:w-10 place-items-center rounded-xl border border-[#d8d5ce] hover:bg-white text-[#171713] transition-colors cursor-pointer"
             >
               <Search size={20} strokeWidth={1.5} />
-            </Link>
+            </button>
 
             {renderAuthLink()}
 
@@ -480,6 +484,12 @@ function Header() {
         onClose={closeMobileMenu}
         activeTab={activeNavTab}
         setActiveTab={handleTabChange}
+      />
+
+      {/* Interactive House of Hackney Search Modal Overlay */}
+      <SearchModal
+        isOpen={isSearchOpen}
+        onClose={() => setIsSearchOpen(false)}
       />
     </>
   );

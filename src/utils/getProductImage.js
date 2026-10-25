@@ -215,4 +215,9 @@ export function getProductImage(source) {
   return { url: CATEGORY_DEFAULT_IMAGES.default, alt: "House of Hackney Luxury Creation" };
 }
 
+export const getProductCoverImage = (source) => {
+  const res = getProductImage(source);
+  return res?.url || "";
+};
+
 export default getProductImage;
