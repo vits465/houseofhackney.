@@ -42,6 +42,7 @@ axiosInstance.interceptors.request.use(
 );
 
 const handleSessionExpired = () => {
+  const hadToken = Boolean(store.getState().auth?.token);
   store.dispatch(logout());
   try {
     sessionStorage.removeItem("refreshToken");
@@ -50,12 +51,15 @@ const handleSessionExpired = () => {
     console.warn("Storage clear error:", e);
   }
 
-  if (typeof window !== "undefined" && window.location) {
+  if (typeof window !== "undefined" && window.location && hadToken) {
     const currentPath = window.location.pathname;
-    if (currentPath !== "/login") {
-      const fromParam = currentPath.startsWith("/admin")
-        ? `&from=${encodeURIComponent(currentPath)}`
-        : "";
+    const isProtectedRoute =
+      currentPath.startsWith("/admin") ||
+      currentPath.startsWith("/account") ||
+      currentPath.startsWith("/profile");
+
+    if (isProtectedRoute && currentPath !== "/login") {
+      const fromParam = `&from=${encodeURIComponent(currentPath)}`;
       window.location.href = `/login?expired=true${fromParam}`;
     }
   }

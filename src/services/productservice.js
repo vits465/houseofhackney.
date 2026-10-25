@@ -136,15 +136,44 @@ export const getProductById = (productId) => {
   }
 
   return cacheRequest(productCache, id, async () => {
-    const response = await axiosInstance.get(`/products/${encodeURIComponent(id)}`);
-    const body = getResponseData(response);
-    const product = body?.data?.product ?? body?.data ?? body;
+    try {
+      const response = await axiosInstance.get(`/products/${encodeURIComponent(id)}`);
+      const body = getResponseData(response);
+      const product = body?.data?.product ?? body?.data ?? body;
 
-    if (!product || typeof product !== "object" || Array.isArray(product)) {
-      throw new Error("Invalid product response.");
+      if (product && typeof product === "object" && !Array.isArray(product)) {
+        return syncProductData(product);
+      }
+    } catch (primaryErr) {
+      // If fetching directly by ID fails (e.g. id is a slug or name), try searching products catalogue
+      try {
+        const fallbackRes = await axiosInstance.get("/products", {
+          params: { search: id, limit: 12 },
+        });
+        const listData =
+          fallbackRes.data?.data?.data ||
+          fallbackRes.data?.data ||
+          fallbackRes.data ||
+          [];
+        const list = Array.isArray(listData) ? listData : [];
+        const match = list.find(
+          (p) =>
+            p &&
+            (String(p.slug) === id ||
+              String(p._id) === id ||
+              p.name?.toLowerCase().replace(/[^a-z0-9]+/g, "-") === id.toLowerCase() ||
+              p.name?.toLowerCase().includes(id.toLowerCase()))
+        );
+        if (match) {
+          return syncProductData(match);
+        }
+      } catch {
+        // Fall back to original error
+      }
+      throw primaryErr;
     }
 
-    return syncProductData(product);
+    throw new Error("Invalid product response.");
   });
 };
 

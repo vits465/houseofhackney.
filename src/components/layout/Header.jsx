@@ -225,7 +225,7 @@ function Header() {
   const renderAuthLink = () =>
     initialized ? (
       isAuthenticated ? (
-        <div className="flex items-center gap-2 sm:gap-3">
+        <div className="hidden md:flex items-center gap-2 sm:gap-3">
           <Link
             to="/account"
             className="text-xs tracking-[1px] hover:underline font-semibold text-[#171713] uppercase flex items-center gap-1.5"
@@ -237,7 +237,7 @@ function Header() {
             type="button"
             onClick={handleLogout}
             disabled={loggingOut}
-            className="text-xs tracking-[1px] hover:underline disabled:opacity-50 font-medium text-[#77746c] hover:text-[#171713]"
+            className="text-xs tracking-[1px] hover:underline disabled:opacity-50 font-medium text-[#77746c] hover:text-[#171713] cursor-pointer"
           >
             {loggingOut ? "..." : "LOGOUT"}
           </button>
@@ -246,7 +246,7 @@ function Header() {
         <Link
           to="/login"
           aria-label="Login"
-          className="text-xs tracking-[1px] hover:underline font-medium"
+          className="hidden md:block text-xs tracking-[1px] hover:underline font-medium"
         >
           LOGIN
         </Link>
@@ -285,19 +285,28 @@ function Header() {
         </div>
 
         {/* Main Header Row */}
-        <div className="grid min-h-[64px] md:min-h-[74px] grid-cols-3 items-center px-4 md:px-9 transition-all duration-300">
-          {/* Left Mode Switcher */}
-          <div className="flex items-center">
+        <div className="flex min-h-[58px] sm:min-h-[64px] md:min-h-[74px] items-center justify-between px-3 sm:px-6 md:px-9 transition-all duration-300">
+          {/* Left Zone: Hamburger and search on mobile, category tabs on desktop */}
+          <div className="flex items-center flex-1 justify-start gap-1 sm:gap-2">
             {/* Mobile Hamburger Button */}
             <button
               type="button"
               onClick={openMobileMenu}
               aria-label="Open menu"
               aria-expanded={isMobileOpen}
-              className="grid h-10 w-10 place-items-center md:hidden"
+              className="grid h-10 w-10 place-items-center md:hidden text-[#171713] hover:opacity-75"
             >
-              <Menu size={28} strokeWidth={1.5} />
+              <Menu size={24} strokeWidth={1.5} />
             </button>
+
+            {/* Mobile Quick Search Button */}
+            <Link
+              to="/search"
+              aria-label="Search"
+              className="grid h-9 w-9 place-items-center md:hidden text-[#171713] hover:opacity-75"
+            >
+              <Search size={20} strokeWidth={1.5} />
+            </Link>
 
             {/* Desktop Tabs: SHOP, INSPIRATION, OUR HOUSE */}
             <div className="hidden items-center gap-2 lg:gap-4 md:flex">
@@ -364,26 +373,28 @@ function Header() {
           </div>
 
           {/* Center Logo with Smooth Down-to-Up 2-Section Reel Transition */}
-          <Link
-            to="/"
-            aria-label="House of Hackney home"
-            className="justify-self-center relative flex items-center justify-center min-w-[140px] md:min-w-[220px] h-12 text-[#171713] overflow-hidden group select-none"
-          >
-            {/* Logo 1: Monogram Crest Logo */}
-            <div className={getLogoClass("monogram")}>
-              <BrandLogo className="h-[36px] w-[72px] md:h-[44px] md:w-[88px] transition-transform duration-300 group-hover:scale-105" />
-            </div>
+          <div className="flex items-center justify-center shrink-0 px-2">
+            <Link
+              to="/"
+              aria-label="House of Hackney home"
+              className="relative flex items-center justify-center min-w-[90px] sm:min-w-[120px] md:min-w-[200px] h-11 md:h-12 text-[#171713] overflow-hidden group select-none"
+            >
+              {/* Logo 1: Monogram Crest Logo */}
+              <div className={getLogoClass("monogram")}>
+                <BrandLogo className="h-[28px] w-[56px] sm:h-[34px] sm:w-[68px] md:h-[44px] md:w-[88px] transition-transform duration-300 group-hover:scale-105" />
+              </div>
 
-            {/* Logo 2: Wordmark Logo HOUSE OF HACKNEY */}
-            <div className={getLogoClass("wordmark")}>
-              <span className="font-serif text-[13px] sm:text-[15px] md:text-[17px] font-semibold tracking-[0.26em] md:tracking-[0.3em] text-[#171713] uppercase whitespace-nowrap transition-colors duration-300 group-hover:opacity-75">
-                HOUSE OF HACKNEY
-              </span>
-            </div>
-          </Link>
+              {/* Logo 2: Wordmark Logo HOUSE OF HACKNEY */}
+              <div className={getLogoClass("wordmark")}>
+                <span className="font-serif text-[11px] sm:text-[13px] md:text-[16px] lg:text-[17px] font-semibold tracking-[0.18em] sm:tracking-[0.24em] md:tracking-[0.3em] text-[#171713] uppercase whitespace-nowrap transition-colors duration-300 group-hover:opacity-75">
+                  HOUSE OF HACKNEY
+                </span>
+              </div>
+            </Link>
+          </div>
 
           {/* Right Action Icons & Links */}
-          <div className="flex items-center justify-end gap-3 md:gap-5">
+          <div className="flex items-center flex-1 justify-end gap-1.5 sm:gap-3 md:gap-5">
             <Link
               to="/design-services"
               className="hidden text-xs tracking-[1px] hover:underline xl:block font-medium"
@@ -401,42 +412,45 @@ function Header() {
             <Link
               to="/search"
               aria-label="Search"
-              className="grid h-9 w-9 md:h-10 md:w-10 place-items-center rounded-xl border border-[#d8d5ce] hover:bg-white transition-colors"
+              className="hidden md:grid h-9 w-9 md:h-10 md:w-10 place-items-center rounded-xl border border-[#d8d5ce] hover:bg-white transition-colors"
             >
               <Search size={20} strokeWidth={1.5} />
             </Link>
 
             {renderAuthLink()}
 
+            {/* Mobile Patron Profile Icon */}
             <Link
-              to="/account"
+              to={isAuthenticated ? "/account" : "/login"}
               aria-label="Account"
-              className="hidden md:block hover:opacity-75 transition-opacity"
+              className="md:hidden grid h-9 w-9 place-items-center hover:opacity-75 transition-opacity text-[#171713]"
             >
               <UserRound size={21} strokeWidth={1.5} />
             </Link>
 
+            {/* Wishlist Link with dynamic badge */}
             <Link
               to="/wishlist"
               aria-label="Wishlist"
-              className="relative hover:opacity-75 transition-opacity p-1"
+              className="relative grid h-9 w-9 place-items-center hover:opacity-75 transition-opacity text-[#171713]"
             >
               <Heart size={21} strokeWidth={1.5} />
               {wishlistCount > 0 && (
-                <span className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#b83232] px-1 text-[10px] font-bold text-white shadow-sm">
+                <span className="absolute top-0.5 right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#b83232] px-1 text-[10px] font-bold text-white shadow-sm">
                   {wishlistCount}
                 </span>
               )}
             </Link>
 
+            {/* Shopping Cart Bag with badge */}
             <Link
               to="/cart"
               aria-label="Shopping bag"
-              className="relative hover:opacity-75 transition-opacity p-1"
+              className="relative grid h-9 w-9 place-items-center hover:opacity-75 transition-opacity text-[#171713]"
             >
               <ShoppingBag size={21} strokeWidth={1.5} />
               {cartCount > 0 && (
-                <span className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#394132] px-1 text-[10px] font-bold text-white shadow-sm">
+                <span className="absolute top-0.5 right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#394132] px-1 text-[10px] font-bold text-white shadow-sm">
                   {cartCount}
                 </span>
               )}

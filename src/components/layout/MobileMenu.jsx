@@ -1,12 +1,16 @@
 import { memo, useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useSelector } from "react-redux";
 import {
   X,
   ChevronRight,
   ChevronLeft,
   Globe,
+  LogOut,
+  User,
 } from "lucide-react";
+import { logoutUser } from "../../features/auth/authActions";
+import { showConfirm, showToast } from "../../utils/sweetAlert";
 
 const shopCategories = [
   "WALLPAPER",
@@ -98,8 +102,9 @@ const ourHouseSections = [
 ];
 
 function MobileMenu({ isOpen, onClose, activeTab = "SHOP", setActiveTab = () => {} }) {
+  const navigate = useNavigate();
   const [activeCategory, setActiveCategory] = useState(null);
-  const { isAuthenticated } = useSelector((state) => state.auth || {});
+  const { user, isAuthenticated } = useSelector((state) => state.auth || {});
 
   useEffect(() => {
     if (!isOpen) return;
@@ -126,6 +131,23 @@ function MobileMenu({ isOpen, onClose, activeTab = "SHOP", setActiveTab = () => 
   const closeMenu = () => {
     setActiveCategory(null);
     onClose?.();
+  };
+
+  const handleMobileLogout = async () => {
+    const result = await showConfirm(
+      "Leave our House?",
+      "Are you sure you want to sign out of your account?"
+    );
+    if (!result.isConfirmed) return;
+
+    try {
+      await logoutUser();
+      showToast("Signed out successfully");
+      closeMenu();
+      navigate("/login", { replace: true });
+    } catch {
+      // Ignored
+    }
   };
 
   const handleTabSwitch = (tab) => {
@@ -315,17 +337,59 @@ function MobileMenu({ isOpen, onClose, activeTab = "SHOP", setActiveTab = () => 
         </div>
 
         {/* Bottom account and currency options */}
-        <div className="shrink-0 border-t border-gray-100 px-6 pb-6 pt-5 sm:px-9">
-          <Link
-            to={isAuthenticated ? "/account" : "/login"}
-            onClick={closeMenu}
-            className="mb-5 inline-block text-base font-medium underline underline-offset-4"
-          >
-            {isAuthenticated ? "My Patron Account" : "Login / Register"}
-          </Link>
+        <div className="shrink-0 border-t border-gray-100 bg-[#fbf9f5] px-6 pb-6 pt-5 sm:px-9">
+          {isAuthenticated ? (
+            <div className="mb-4 space-y-2.5">
+              <div className="flex items-center gap-2 text-xs font-semibold tracking-wider text-[#394132] uppercase">
+                <User size={14} />
+                <span>Patron: {user?.firstName ? `${user.firstName} ${user.lastName || ""}` : "Member"}</span>
+              </div>
+              <div className="flex flex-wrap items-center gap-4 text-sm font-medium">
+                <Link
+                  to="/account"
+                  onClick={closeMenu}
+                  className="underline underline-offset-4 text-[#171713] hover:text-[#394132]"
+                >
+                  My Patron Account
+                </Link>
+                <Link
+                  to="/wishlist"
+                  onClick={closeMenu}
+                  className="underline underline-offset-4 text-[#171713] hover:text-[#394132]"
+                >
+                  Wishlist
+                </Link>
+                <button
+                  type="button"
+                  onClick={handleMobileLogout}
+                  className="flex items-center gap-1 text-[#b83232] hover:underline cursor-pointer"
+                >
+                  <LogOut size={13} />
+                  <span>Sign Out</span>
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="mb-4 flex items-center gap-4 text-sm font-medium">
+              <Link
+                to="/login"
+                onClick={closeMenu}
+                className="underline underline-offset-4 text-[#171713] hover:text-[#394132]"
+              >
+                Sign In / Register
+              </Link>
+              <Link
+                to="/wishlist"
+                onClick={closeMenu}
+                className="underline underline-offset-4 text-[#171713] hover:text-[#394132]"
+              >
+                Saved Wishlist
+              </Link>
+            </div>
+          )}
 
-          <div className="flex items-center gap-3 text-sm text-[#2e312b]">
-            <Globe size={18} strokeWidth={1.4} />
+          <div className="flex items-center gap-3 text-xs text-[#555248]">
+            <Globe size={16} strokeWidth={1.4} />
             <span>Region / Currency: Intl / GBP</span>
           </div>
         </div>

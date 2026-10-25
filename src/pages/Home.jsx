@@ -250,15 +250,15 @@ function Home() {
   return (
     <main className="overflow-hidden bg-[#f6f3ec] text-[#26251f]">
       {/* Value pillars */}
-      <section className="border-b border-[#e5dfd4] bg-[#eae4d9] px-4 py-3.5 text-xs">
-        <div className="mx-auto grid max-w-7xl grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-6">
+      <section className="border-b border-[#e5dfd4] bg-[#eae4d9] px-3 sm:px-6 md:px-8 py-3 text-xs">
+        <div className="mx-auto grid max-w-7xl grid-cols-2 gap-x-3 gap-y-2.5 sm:grid-cols-4 sm:gap-6">
           {VALUE_PILLARS.map((pillar, idx) => {
             const Icon = pillar.icon;
             return (
-              <div key={idx} className="flex items-center gap-2.5">
+              <div key={idx} className="flex items-center gap-2 sm:gap-2.5 min-w-0">
                 <Icon size={16} className="shrink-0 text-[#394132]" />
-                <div>
-                  <p className="font-medium tracking-wide text-[#171713]">
+                <div className="min-w-0">
+                  <p className="font-medium tracking-wide text-[#171713] text-[11px] sm:text-xs truncate sm:whitespace-normal">
                     {pillar.title}
                   </p>
                   <p className="hidden text-[10px] text-[#666257] md:block">

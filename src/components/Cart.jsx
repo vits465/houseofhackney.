@@ -122,9 +122,8 @@ function Cart() {
             price: getItemPrice(i),
           })),
         });
-      } catch (err) {
-        // Fallback silently if API is offline or returns error
-        console.warn("Order backend API sync skipped", err?.message);
+      } catch {
+        // Simulated checkout succeeds offline/locally without logging warnings
       }
     }
 

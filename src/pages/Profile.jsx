@@ -92,7 +92,7 @@ export default function Profile({ defaultTab }) {
   const dispatch = useDispatch();
   const params = useParams();
 
-  const { user } = useSelector((state) => state.auth);
+  const { user, token } = useSelector((state) => state.auth || {});
 
   // Active Tab determination
   const activeTab = useMemo(() => {
@@ -156,6 +156,15 @@ export default function Profile({ defaultTab }) {
     async function loadData() {
       try {
         setLoading(true);
+
+        // If guest/unauthenticated, load local storage items without triggering 401s
+        if (!token) {
+          const localWishlist = getStoredWishlist();
+          setWishlistItems(localWishlist);
+          const localOrders = JSON.parse(localStorage.getItem("hoh_local_orders") || "[]");
+          setOrders(localOrders);
+          return;
+        }
 
         const [
           meRes,
@@ -224,7 +233,7 @@ export default function Profile({ defaultTab }) {
     return () => {
       isMounted = false;
     };
-  }, [dispatch, refreshKey]);
+  }, [dispatch, refreshKey, token]);
 
   // Handle Logout
   const handleLogout = async () => {

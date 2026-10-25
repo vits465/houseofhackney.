@@ -147,6 +147,7 @@ function AppContent() {
         <Route path="/gift-voucher" element={<GiftVoucher />} />
         <Route path="/gift-card" element={<GiftVoucher />} />
         <Route path="/vouchers" element={<GiftVoucher />} />
+        <Route path="/wishlist" element={<Profile defaultTab="wishlist" />} />
 
         {/* Customer account pages */}
         <Route element={<ProtectedRoute />}>
@@ -155,7 +156,6 @@ function AppContent() {
           <Route path="/profile" element={<Profile />} />
           <Route path="/profile/:tab" element={<Profile />} />
           <Route path="/orders" element={<Profile defaultTab="orders" />} />
-          <Route path="/wishlist" element={<Profile defaultTab="wishlist" />} />
           <Route path="/addresses" element={<Profile defaultTab="addresses" />} />
         </Route>
 
