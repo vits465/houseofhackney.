@@ -17,7 +17,7 @@ import {
 import { useAdmin } from "../AdminContext";
 import { showToast, showConfirm } from "../../../utils/sweetAlert";
 import { logout } from "../../../features/auth/authSlice";
-import BrandLogo from "../../../componets/common/BrandLogo";
+import BrandLogo from "../../../components/common/BrandLogo";
 
 export default function V14Header({ activeTab, setActiveTab }) {
   const {
@@ -66,7 +66,11 @@ export default function V14Header({ activeTab, setActiveTab }) {
         return [
           { id: "overview", label: "Overview" },
           { id: "manage", label: "Products" },
+          { id: "taxonomy", label: "Taxonomy" },
+          { id: "commerce", label: "Commerce" },
           { id: "trade-b2b", label: "Trade B2B" },
+          { id: "reviews", label: "Reviews" },
+          { id: "media", label: "Media Assets" },
           { id: "activity", label: "Activity" },
           { id: "program", label: "Program" },
         ];
@@ -75,7 +79,11 @@ export default function V14Header({ activeTab, setActiveTab }) {
         return [
           { id: "overview", label: "Overview" },
           { id: "manage", label: "Products" },
+          { id: "taxonomy", label: "Taxonomy" },
+          { id: "commerce", label: "Commerce" },
           { id: "trade-b2b", label: "Trade B2B" },
+          { id: "reviews", label: "Reviews" },
+          { id: "media", label: "Media Assets" },
           { id: "program", label: "Program" },
           { id: "activity", label: "Activity" },
           { id: "reports", label: "Reports" },
@@ -125,32 +133,38 @@ export default function V14Header({ activeTab, setActiveTab }) {
           : "bg-[#ffffff] border-[#e4ede5] text-[#142617]"
       }`}
     >
-      {/* Left: Brand Icon + Title */}
-      <div className="flex items-center gap-3">
-        <div className="flex items-center justify-center w-9 h-9 rounded-full bg-gradient-to-tr from-[#38744b] via-[#48875b] to-[#5e9b70] text-white shadow-sm">
-          <BrandLogo className="w-5 h-2.5 object-contain fill-current" />
-        </div>
+      {/* Left: Brand Icon + Title (Enhanced Size & Responsive) */}
+      <div className="flex items-center gap-3 flex-shrink-0">
+        <Link
+          to="/"
+          target="_blank"
+          rel="noreferrer"
+          title="Visit House of Hackney Storefront"
+          className="flex items-center justify-center w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-gradient-to-tr from-[#2a5b36] via-[#3e7b52] to-[#559a68] text-white shadow-md shadow-[#3e7b52]/20 border border-white/20 transition-transform duration-200 hover:scale-105 p-2 flex-shrink-0"
+        >
+          <BrandLogo className="w-8 h-4 sm:w-9 sm:h-4.5 object-contain fill-white" />
+        </Link>
         <div className="flex flex-col">
           <span
-            className={`font-sans font-bold text-sm sm:text-base tracking-tight leading-none ${
+            className={`font-serif font-bold text-sm sm:text-base md:text-lg tracking-tight leading-none ${
               isDark ? "text-[#f2f7f3]" : "text-[#142617]"
             }`}
           >
             House of Hackney
           </span>
           <span
-            className={`text-[9px] sm:text-[10px] font-mono tracking-widest uppercase font-semibold mt-0.5 ${
+            className={`text-[9px] sm:text-[10px] font-mono tracking-widest uppercase font-bold mt-1 ${
               isDark ? "text-[#7ec792]" : "text-[#2e683f]"
             }`}
           >
-            {currentRole === "trade" ? "B2B Trade Portal" : "Atelier V14"}
+            {currentRole === "trade" ? "B2B Trade Portal" : "ADMIN DASHBOARD"}
           </span>
         </div>
       </div>
 
       {/* Center: Rounded Pill Navbar with Smooth Framer Motion Slide */}
       <nav
-        className={`hidden lg:flex items-center p-1 rounded-full border shadow-sm transition-colors ${
+        className={`hidden md:flex items-center p-1 rounded-full border shadow-sm transition-colors overflow-x-auto max-w-[58vw] scrollbar-none ${
           isDark
             ? "bg-[#1d271f] border-[#2e3f31]"
             : "bg-[#f5f9f6] border-[#dce8df]"
@@ -163,7 +177,7 @@ export default function V14Header({ activeTab, setActiveTab }) {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`relative px-4 py-1.5 rounded-full text-xs font-sans font-medium transition-colors duration-200 select-none ${
+              className={`relative px-3.5 py-1.5 rounded-full text-xs font-sans font-medium transition-colors duration-200 select-none whitespace-nowrap flex-shrink-0 ${
                 isActive
                   ? "text-white font-semibold"
                   : isDark

@@ -1,3 +1,5 @@
+import { syncProductData } from "../../../utils/productSync";
+
 /**
  * Utility helpers for clean product imagery and data normalization
  * Ensures product images are high-resolution, uncorrupted, and never display sponsor/charity logos.
@@ -6,37 +8,39 @@
 // Curated high-resolution House of Hackney boutique imagery fallbacks
 const CATEGORY_FALLBACK_IMAGES = {
   wallpaper:
-    "https://res.cloudinary.com/tysd8i65/image/upload/c_scale,w_800,f_auto,q_auto/house_of_hackney/wallpaper/babylon_wallpaper_dove___willow/babylon-wallpaper-dove-willow-0",
+    "https://res.cloudinary.com/tysd8i65/image/upload/c_scale,w_1200,f_auto,q_auto/house_of_hackney/wallpaper/babylon_wallpaper_dove___willow/babylon-wallpaper-dove-willow-0",
   fabric:
-    "https://res.cloudinary.com/tysd8i65/image/upload/c_scale,w_800,f_auto,q_auto/house_of_hackney/furnishings/artemis_cotton_linen_vesper_sofa___jadeite/artemis-cotton-linen-vesper-sofa-jadeite-0",
+    "https://res.cloudinary.com/tysd8i65/image/upload/c_scale,w_1200,f_auto,q_auto/house_of_hackney/wallpaper/artemis_wallpaper___blush/artemis-wallpaper-blush-0",
   homedecor:
-    "https://res.cloudinary.com/tysd8i65/image/upload/c_scale,w_800,f_auto,q_auto/house_of_hackney/home_decor/alice_in_wonderland_medium_fringed_jacquard_cushion___achillea/alice-in-wonderland-medium-fringed-jacquard-cushion-achillea-1",
+    "https://res.cloudinary.com/tysd8i65/image/upload/c_scale,w_1200,f_auto,q_auto/house_of_hackney/home_decor/alice_in_wonderland_medium_fringed_jacquard_cushion___achillea/alice-in-wonderland-medium-fringed-jacquard-cushion-achillea-1",
   cushions:
-    "https://res.cloudinary.com/tysd8i65/image/upload/c_scale,w_800,f_auto,q_auto/house_of_hackney/home_decor/alice_in_wonderland_medium_fringed_jacquard_cushion___achillea/alice-in-wonderland-medium-fringed-jacquard-cushion-achillea-1",
+    "https://res.cloudinary.com/tysd8i65/image/upload/c_scale,w_1200,f_auto,q_auto/house_of_hackney/home_decor/alice_in_wonderland_medium_fringed_jacquard_cushion___achillea/alice-in-wonderland-medium-fringed-jacquard-cushion-achillea-1",
   paint:
-    "https://res.cloudinary.com/tysd8i65/image/upload/c_scale,w_800,f_auto,q_auto/house_of_hackney/paint/woad_paint___21/woad-paint-21-1",
+    "https://res.cloudinary.com/tysd8i65/image/upload/c_scale,w_1200,f_auto,q_auto/house_of_hackney/paint/woad_paint___21/woad-paint-21-1",
   tiles:
-    "https://images.unsplash.com/photo-1513694203232-719a280e022f?auto=format&fit=crop&w=800&q=80",
+    "https://images.unsplash.com/photo-1513694203232-719a280e022f?auto=format&fit=crop&w=1200&q=85",
   furnishings:
-    "https://res.cloudinary.com/tysd8i65/image/upload/c_scale,w_800,f_auto,q_auto/house_of_hackney/furnishings/artemis_cotton_linen_vesper_sofa___jadeite/artemis-cotton-linen-vesper-sofa-jadeite-0",
+    "https://res.cloudinary.com/tysd8i65/image/upload/c_scale,w_1200,f_auto,q_auto/house_of_hackney/furnishings/wild_card_kenton_small_ottoman___butterscotch/wild-card-kenton-small-ottoman-butterscotch-0",
   curtains:
-    "https://res.cloudinary.com/tysd8i65/image/upload/c_scale,w_800,f_auto,q_auto/house_of_hackney/curtains___blinds/hollyhocks_wallpaper___autumn/hollyhocks-wallpaper-autumn-1",
+    "https://res.cloudinary.com/tysd8i65/image/upload/c_scale,w_1200,f_auto,q_auto/house_of_hackney/wallpaper/plantasia_wallpaper___sage/plantasia-wallpaper-sage-0",
   default:
-    "https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?auto=format&fit=crop&w=800&q=80",
+    "https://res.cloudinary.com/tysd8i65/image/upload/c_scale,w_1200,f_auto,q_auto/house_of_hackney/wallpaper/artemis_wallpaper___petrol/artemis-wallpaper-petrol-0",
 };
 
 /**
  * Validates if an image URL is an actual product photo,
- * filtering out logos, trust badges, avatar icons, or broken strings.
+ * filtering out logos, trust badges, avatar icons, blurry assets, or broken strings.
  */
 export function isValidProductImageUrl(url) {
   if (!url || typeof url !== "string") return false;
   const lower = url.toLowerCase().trim();
 
-  // Exclude charity, sponsor, or trust badges (e.g. World Land Trust logo)
+  // Exclude charity, sponsor, logo, or known blurry/corrupted legacy assets
   if (
     lower.includes("world_land_trust") ||
     lower.includes("worldlandtrust") ||
+    lower.includes("artemis-cotton-linen-vesper-sofa-jadeite-0") ||
+    lower.includes("hollyhocks-wallpaper-autumn-1") ||
     lower.includes("logo") ||
     lower.includes("trust_badge") ||
     lower.includes("avatar") ||
@@ -50,14 +54,16 @@ export function isValidProductImageUrl(url) {
 }
 
 /**
- * Optimizes Cloudinary URLs to be responsive and crisp (800px width with automatic WebP/AVIF format)
+ * Optimizes Cloudinary URLs to be responsive and crisp (1200px width with automatic WebP/AVIF format)
  */
-export function formatCloudinaryUrl(url, width = 800) {
+export function formatCloudinaryUrl(url, width = 1200) {
   if (!url || typeof url !== "string") return "";
   let trimmed = url.trim();
 
   if (trimmed.includes("res.cloudinary.com")) {
-    if (!trimmed.includes("/upload/c_") && !trimmed.includes("/upload/w_") && !trimmed.includes("/upload/f_auto")) {
+    if (trimmed.includes("/w_") || trimmed.includes(",w_") || trimmed.includes("c_thumb")) {
+      trimmed = trimmed.replace(/w_\d+/g, `w_${width}`).replace(/c_thumb/g, "c_scale");
+    } else if (!trimmed.includes("/upload/c_") && !trimmed.includes("/upload/w_") && !trimmed.includes("/upload/f_auto")) {
       trimmed = trimmed.replace(
         "/upload/",
         `/upload/c_scale,w_${width},f_auto,q_auto/`
@@ -68,11 +74,37 @@ export function formatCloudinaryUrl(url, width = 800) {
   return trimmed;
 }
 
+// Iconic House of Hackney master creation image mappings
+const ICONIC_PRODUCT_IMAGES = {
+  artemis:
+    "https://res.cloudinary.com/tysd8i65/image/upload/c_scale,w_1200,f_auto,q_auto/house_of_hackney/wallpaper/artemis_wallpaper___blush/artemis-wallpaper-blush-0",
+  bambusa:
+    "https://res.cloudinary.com/tysd8i65/image/upload/c_scale,w_1200,f_auto,q_auto/house_of_hackney/wallpaper/babylon_wallpaper_dove___willow/babylon-wallpaper-dove-willow-0",
+  "gothic-garden":
+    "https://res.cloudinary.com/tysd8i65/image/upload/c_scale,w_1200,f_auto,q_auto/house_of_hackney/wallpaper/gaia_wallpaper___prussian_blue/gaia-wallpaper-prussian-blue-0",
+  "gothic garden":
+    "https://res.cloudinary.com/tysd8i65/image/upload/c_scale,w_1200,f_auto,q_auto/house_of_hackney/wallpaper/gaia_wallpaper___prussian_blue/gaia-wallpaper-prussian-blue-0",
+};
+
 /**
  * Extracts the best, cleanest product photo from any product document
  */
 export function getCleanProductImage(product) {
   if (!product) return CATEGORY_FALLBACK_IMAGES.default;
+
+  const prodNameKey = (product.name || product.slug || product.sku || "").toLowerCase();
+  for (const [key, iconicImg] of Object.entries(ICONIC_PRODUCT_IMAGES)) {
+    if (prodNameKey.includes(key)) {
+      // If current product image is missing, a known bad asset, or blurry, use the high-res iconic image
+      const rawThumb =
+        typeof product.thumbnail === "string"
+          ? product.thumbnail
+          : product.thumbnail?.secureUrl || product.thumbnail?.url;
+      if (!isValidProductImageUrl(rawThumb)) {
+        return iconicImg;
+      }
+    }
+  }
 
   const categoryKey = (
     product.category?.name ||
@@ -233,7 +265,7 @@ export function normalizeProduct(p) {
     p.stock ??
     (p.inventory?.inStock ? 45 : 20);
 
-  return {
+  const baseNormalized = {
     ...p,
     _id: id,
     id: id,
@@ -251,4 +283,6 @@ export function normalizeProduct(p) {
       p.description ||
       "House of Hackney luxury British atelier creation crafted with sustainable heritage methods.",
   };
+
+  return syncProductData(baseNormalized) || baseNormalized;
 }

@@ -21,11 +21,16 @@ import TradeCompanyProfile from "./v14/trade/TradeCompanyProfile";
 // Admin / Super Admin Views
 import AdminTradeReview from "./v14/admin/AdminTradeReview";
 import AdminUsersRoles from "./v14/admin/AdminUsersRoles";
+import AdminTaxonomy from "./v14/admin/AdminTaxonomy";
+import AdminCommerce from "./v14/admin/AdminCommerce";
+import AdminReviews from "./v14/admin/AdminReviews";
+import AdminMediaLibrary from "./v14/admin/AdminMediaLibrary";
 
 // Modals
 import SpotlightSearchModal from "./components/SpotlightSearchModal";
 import NotificationDrawer from "./components/NotificationDrawer";
 import ProductFormModal from "./components/ProductFormModal";
+import ProductDetailModal from "./components/ProductDetailModal";
 import OrderDetailModal from "./components/OrderDetailModal";
 
 function DashboardV14Main() {
@@ -66,8 +71,16 @@ function DashboardV14Main() {
         return <V14Overview key="overview" />;
       case "manage":
         return <V14Manage key="manage" />;
+      case "taxonomy":
+        return <AdminTaxonomy key="taxonomy" />;
+      case "commerce":
+        return <AdminCommerce key="commerce" />;
       case "trade-b2b":
         return <AdminTradeReview key="trade-b2b" />;
+      case "reviews":
+        return <AdminReviews key="reviews" />;
+      case "media":
+        return <AdminMediaLibrary key="media" />;
       case "program":
         return <V14Program key="program" />;
       case "activity":
@@ -129,6 +142,7 @@ function DashboardV14Main() {
         onClose={() => setProductModalOpen(false)}
         editingProduct={editingProduct}
       />
+      <ProductDetailModal />
       <OrderDetailModal />
     </div>
   );

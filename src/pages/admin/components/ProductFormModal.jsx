@@ -7,27 +7,27 @@ import { showToast } from "../../../utils/sweetAlert";
 const PRESET_PRODUCT_IMAGES = [
   {
     label: "Babylon Willow Wallpaper",
-    url: "https://res.cloudinary.com/tysd8i65/image/upload/c_scale,w_600,f_auto,q_auto/house_of_hackney/wallpaper/babylon_wallpaper_dove___willow/babylon-wallpaper-dove-willow-0",
+    url: "https://res.cloudinary.com/tysd8i65/image/upload/c_scale,w_1200,f_auto,q_auto/house_of_hackney/wallpaper/babylon_wallpaper_dove___willow/babylon-wallpaper-dove-willow-0",
   },
   {
-    label: "Artemis Velvet Jadeite",
-    url: "https://res.cloudinary.com/tysd8i65/image/upload/c_scale,w_600,f_auto,q_auto/house_of_hackney/furnishings/artemis_cotton_linen_vesper_sofa___jadeite/artemis-cotton-linen-vesper-sofa-jadeite-0",
+    label: "Artemis Botanical Wallpaper (Blush)",
+    url: "https://res.cloudinary.com/tysd8i65/image/upload/c_scale,w_1200,f_auto,q_auto/house_of_hackney/wallpaper/artemis_wallpaper___blush/artemis-wallpaper-blush-0",
   },
   {
     label: "Alice Jacquard Cushion",
-    url: "https://res.cloudinary.com/tysd8i65/image/upload/c_scale,w_600,f_auto,q_auto/house_of_hackney/home_decor/alice_in_wonderland_medium_fringed_jacquard_cushion___achillea/alice-in-wonderland-medium-fringed-jacquard-cushion-achillea-1",
+    url: "https://res.cloudinary.com/tysd8i65/image/upload/c_scale,w_1200,f_auto,q_auto/house_of_hackney/home_decor/alice_in_wonderland_medium_fringed_jacquard_cushion___achillea/alice-in-wonderland-medium-fringed-jacquard-cushion-achillea-1",
   },
   {
     label: "Woad Mineral Paint",
-    url: "https://res.cloudinary.com/tysd8i65/image/upload/c_scale,w_600,f_auto,q_auto/house_of_hackney/paint/woad_paint___21/woad-paint-21-1",
+    url: "https://res.cloudinary.com/tysd8i65/image/upload/c_scale,w_1200,f_auto,q_auto/house_of_hackney/paint/woad_paint___21/woad-paint-21-1",
   },
   {
-    label: "Phantasia Botanical Fabric",
-    url: "https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?auto=format&fit=crop&w=600&q=80",
+    label: "Plantasia Sage Wallpaper",
+    url: "https://res.cloudinary.com/tysd8i65/image/upload/c_scale,w_1200,f_auto,q_auto/house_of_hackney/wallpaper/plantasia_wallpaper___sage/plantasia-wallpaper-sage-0",
   },
   {
-    label: "Gothic Garden Tile",
-    url: "https://images.unsplash.com/photo-1513694203232-719a280e022f?auto=format&fit=crop&w=600&q=80",
+    label: "Wild Card Butterscotch Ottoman",
+    url: "https://res.cloudinary.com/tysd8i65/image/upload/c_scale,w_1200,f_auto,q_auto/house_of_hackney/furnishings/wild_card_kenton_small_ottoman___butterscotch/wild-card-kenton-small-ottoman-butterscotch-0",
   },
 ];
 

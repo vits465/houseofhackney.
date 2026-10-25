@@ -1,13 +1,28 @@
 import { useEffect, useState, useMemo } from "react";
 import { Link, useSearchParams, useParams, useNavigate } from "react-router-dom";
 import { useDispatch } from "react-redux";
-import { ArrowRight, ShoppingBag, ChevronLeft, ChevronRight, Sparkles, X } from "lucide-react";
+import {
+  ArrowRight,
+  ShoppingBag,
+  ChevronLeft,
+  ChevronRight,
+  Sparkles,
+  X,
+  LayoutGrid,
+  Grid2X2,
+  Grid3X3,
+  ShieldCheck,
+  TreePine,
+  Truck,
+  Heart,
+} from "lucide-react";
 
 import { getProducts } from "../services/productservice";
 import { getProductImage, optimizeImageUrl } from "../utils/getProductImage";
 import { addToCart } from "../features/carts/cartSlice";
 import { setProducts as setReduxProducts } from "../features/products/productSlice";
 import { showToast, showError } from "../utils/sweetAlert";
+import { useWishlist } from "../utils/wishlist";
 
 function formatPrice(value, currency = "GBP") {
   if (value === null || value === undefined || !Number.isFinite(Number(value))) {
@@ -150,8 +165,42 @@ const categorySlugMap = {
   "Carpets & Flooring": "carpets___flooring",
 };
 
+const SUB_CATEGORIES_BY_CATEGORY = {
+  Wallpaper: [
+    { label: "All Wallpaper", filterKey: "clear" },
+    { label: "Floral & Meadows", filterKey: "style", value: "floral" },
+    { label: "Botanical & Foliage", filterKey: "style", value: "botanical" },
+    { label: "William Morris & Victorian", filterKey: "style", value: "victorian" },
+    { label: "Animal & Whimsical", filterKey: "style", value: "whimsical" },
+    { label: "Murals & Grand Panels", filterKey: "productType", value: "WALLPAPER_MURAL" },
+    { label: "Stripes & Architectural", filterKey: "style", value: "stripe" },
+  ],
+  Fabric: [
+    { label: "All Fabric", filterKey: "clear" },
+    { label: "Velvet", filterKey: "search", value: "velvet" },
+    { label: "Cotton & Linen", filterKey: "search", value: "linen" },
+    { label: "Jacquard", filterKey: "search", value: "jacquard" },
+    { label: "Curtains & Drapery", filterKey: "search", value: "curtain" },
+  ],
+  Paint: [
+    { label: "All Paint", filterKey: "clear" },
+    { label: "Greens & Sage", filterKey: "colour", value: "green" },
+    { label: "Pinks & Blush", filterKey: "colour", value: "pink" },
+    { label: "Blues & Woad", filterKey: "colour", value: "blue" },
+    { label: "Neutrals & Creams", filterKey: "colour", value: "neutral" },
+    { label: "Dark & Moody", filterKey: "colour", value: "black" },
+  ],
+  "Home Decor": [
+    { label: "All Decor", filterKey: "clear" },
+    { label: "Cushions & Tassels", filterKey: "search", value: "cushion" },
+    { label: "Lampshades", filterKey: "search", value: "lampshade" },
+    { label: "Ceramics & Mugs", filterKey: "search", value: "ceramic" },
+  ],
+};
+
 function Products() {
   const dispatch = useDispatch();
+  const { isWishlisted, toggleWishlist } = useWishlist();
   const [searchParams, setSearchParams] = useSearchParams();
   const { categorySlug, collectionSlug, styleSlug, colourSlug } = useParams();
   const navigate = useNavigate();
@@ -162,6 +211,7 @@ function Products() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [reloadKey, setReloadKey] = useState(0);
+  const [gridCols, setGridCols] = useState(4); // 2, 3, or 4 columns view
 
   // Parse active filters from URL query params and route params
   const urlCategoryRaw = searchParams.get("category") || categorySlug || "";
@@ -333,6 +383,15 @@ function Products() {
     urlStyle,
   ]);
 
+  // Live auto-refresh when an admin creates, updates, or deletes a product
+  useEffect(() => {
+    const handleUpdate = () => {
+      setReloadKey((k) => k + 1);
+    };
+    window.addEventListener("hoh_catalog_updated", handleUpdate);
+    return () => window.removeEventListener("hoh_catalog_updated", handleUpdate);
+  }, []);
+
   const categoriesList = [
     "All",
     "Wallpaper",
@@ -492,10 +551,9 @@ function Products() {
 
   return (
     <main className="min-h-screen bg-[#f6f3ec] text-[#171713]">
-      {/* 1. Original House of Hackney Editorial Hero Banner (Screenshot 1) */}
+      {/* Hero banner */}
       <section className="mx-auto max-w-7xl px-5 pt-8 pb-12 sm:px-8 md:px-12 md:pt-14 md:pb-16">
         <div className="grid grid-cols-1 md:grid-cols-12 gap-8 md:gap-14 items-center">
-          {/* Left Column: Atmospheric Lifestyle Image */}
           <div className="md:col-span-5 lg:col-span-5">
             <div className="relative aspect-[4/3] sm:aspect-[5/4] overflow-hidden rounded-md bg-[#e8e2d7] shadow-sm">
               <img
@@ -506,7 +564,6 @@ function Products() {
             </div>
           </div>
 
-          {/* Right Column: Editorial Title, Narrative & Action Links */}
           <div className="md:col-span-7 lg:col-span-7 flex flex-col justify-center">
             <h1 className="font-serif text-4xl sm:text-5xl lg:text-6xl tracking-wide uppercase text-[#171713]">
               {currentHero.title}
@@ -531,7 +588,7 @@ function Products() {
         </div>
       </section>
 
-      {/* 2. Subcategory Navigation Pills Bar (Screenshot 2) */}
+      {/* Subcategories */}
       <section className="border-t border-[#d8d1c5] bg-[#f6f3ec]">
         <div className="mx-auto max-w-7xl px-5 py-4 sm:px-8 md:px-12">
           <p className="text-[10px] font-medium tracking-[2.5px] uppercase text-[#777267] text-center mb-3">
@@ -642,7 +699,67 @@ function Products() {
         </section>
       )}
 
-      {/* 3. Filter and Sort Toolbar (Screenshot 2) */}
+      {/* 2b. Sub-Category Motif Chips (Wallpaper, Fabric, Paint, Decor) */}
+      {SUB_CATEGORIES_BY_CATEGORY[activeCategory] && (
+        <section className="border-b border-[#d8d1c5] bg-[#eae5db] px-5 py-2.5 sm:px-8 md:px-12">
+          <div className="mx-auto flex max-w-7xl items-center gap-2 overflow-x-auto scrollbar-none py-1">
+            <span className="shrink-0 text-[10px] font-semibold uppercase tracking-wider text-[#171713] mr-1">
+              Motif & Style:
+            </span>
+            {SUB_CATEGORIES_BY_CATEGORY[activeCategory].map((sub) => {
+              let isSelected = false;
+              if (sub.filterKey === "clear") {
+                isSelected = !urlStyle && !urlColour && (!urlProductType || urlProductType === "All") && !urlSearch;
+              } else if (sub.filterKey === "style") {
+                isSelected = urlStyle === sub.value;
+              } else if (sub.filterKey === "colour") {
+                isSelected = urlColour === sub.value;
+              } else if (sub.filterKey === "productType") {
+                isSelected = urlProductType === sub.value;
+              } else if (sub.filterKey === "search") {
+                isSelected = urlSearch === sub.value;
+              }
+
+              return (
+                <button
+                  key={sub.label}
+                  type="button"
+                  onClick={() => {
+                    const nextParams = new URLSearchParams(searchParams);
+                    if (sub.filterKey === "clear") {
+                      nextParams.delete("style");
+                      nextParams.delete("colour");
+                      nextParams.delete("color");
+                      nextParams.delete("productType");
+                      nextParams.delete("type");
+                      nextParams.delete("search");
+                      nextParams.delete("q");
+                    } else if (sub.filterKey === "style") {
+                      nextParams.set("style", sub.value);
+                    } else if (sub.filterKey === "colour") {
+                      nextParams.set("colour", sub.value);
+                    } else if (sub.filterKey === "productType") {
+                      nextParams.set("productType", sub.value);
+                    } else if (sub.filterKey === "search") {
+                      nextParams.set("search", sub.value);
+                    }
+                    setSearchParams(nextParams);
+                  }}
+                  className={`shrink-0 rounded-full px-3.5 py-1 text-[10px] uppercase tracking-wider transition ${
+                    isSelected
+                      ? "bg-[#394132] font-semibold text-white shadow-xs"
+                      : "border border-[#d8d1c5] bg-white/80 text-[#171713] hover:border-[#171713]"
+                  }`}
+                >
+                  {sub.label}
+                </button>
+              );
+            })}
+          </div>
+        </section>
+      )}
+
+      {/* 3. Filter and Sort Toolbar */}
       <section className="sticky top-0 z-20 border-y border-[#d8d1c5] bg-[#f6f3ec]/95 backdrop-blur">
         <div className="mx-auto flex max-w-7xl flex-col gap-3 px-5 py-3 sm:px-8 md:flex-row md:items-center md:justify-between md:px-12">
           {/* Left: Product Count */}
@@ -680,7 +797,7 @@ function Products() {
             )}
           </div>
 
-          {/* Right: Sort Selector */}
+          {/* Right: Sort Selector & Grid View Toggles */}
           <div className="flex items-center gap-2">
             <span className="text-[10px] uppercase tracking-[1.5px] text-[#777267]">
               SORT BY:
@@ -698,7 +815,50 @@ function Products() {
               <option value="name-asc">Name: A–Z</option>
               <option value="name-desc">Name: Z–A</option>
             </select>
+
+            {/* Grid Layout Switcher (2, 3, 4 columns) */}
+            <div className="hidden sm:flex items-center gap-1 border-l border-[#d8d1c5] pl-3 ml-1">
+              <span className="text-[9px] uppercase tracking-wider text-[#777267] mr-1">
+                VIEW:
+              </span>
+              <button
+                type="button"
+                onClick={() => setGridCols(2)}
+                title="2 Columns (Editorial view)"
+                className={`p-1.5 rounded-sm transition ${
+                  gridCols === 2 ? "bg-[#394132] text-white" : "text-[#777267] hover:text-[#171713]"
+                }`}
+              >
+                <Grid2X2 size={13} />
+              </button>
+              <button
+                type="button"
+                onClick={() => setGridCols(3)}
+                title="3 Columns (Balanced view)"
+                className={`p-1.5 rounded-sm transition ${
+                  gridCols === 3 ? "bg-[#394132] text-white" : "text-[#777267] hover:text-[#171713]"
+                }`}
+              >
+                <Grid3X3 size={13} />
+              </button>
+              <button
+                type="button"
+                onClick={() => setGridCols(4)}
+                title="4 Columns (Compact grid)"
+                className={`p-1.5 rounded-sm transition ${
+                  gridCols === 4 ? "bg-[#394132] text-white" : "text-[#777267] hover:text-[#171713]"
+                }`}
+              >
+                <LayoutGrid size={13} />
+              </button>
+            </div>
           </div>
+        </div>
+
+        {/* Sample postage strip */}
+        <div className="border-t border-[#d8d1c5] bg-[#394132] py-2 px-4 text-center text-white text-[10px] tracking-[1.5px] uppercase font-medium flex items-center justify-center gap-2">
+          <Truck size={13} />
+          <span>Complimentary A4 Wallpaper & Fabric Swatch Delivery on All Sample Orders</span>
         </div>
 
         {/* Active Filters Chip Row */}
@@ -831,8 +991,16 @@ function Products() {
                 </button>
               </div>
             ) : (
-              <div className="grid grid-cols-2 gap-x-4 gap-y-12 sm:gap-x-6 sm:gap-y-14 lg:grid-cols-4">
-                {products.map((product) => {
+              <div
+                className={
+                  gridCols === 2
+                    ? "grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-14"
+                    : gridCols === 3
+                    ? "grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-12"
+                    : "grid grid-cols-2 gap-x-4 gap-y-12 sm:gap-x-6 sm:gap-y-14 lg:grid-cols-4"
+                }
+              >
+                {products.map((product, index) => {
                   const imageData = getProductImage(product);
                   const image = imageData?.url || "";
 
@@ -870,146 +1038,212 @@ function Products() {
                     : categoryName || product.productType || "";
 
                   return (
-                    <article key={product._id} className="group flex flex-col justify-between min-w-0">
-                      <div>
-                        {/* Image Container with Luxury Swatch Presentation */}
-                        <Link
-                          to={`/products/${targetSlug}`}
-                          className="block relative aspect-[4/5] overflow-hidden bg-[#e8e2d7] rounded-sm p-3.5 flex items-center justify-center transition-shadow duration-300 group-hover:shadow-md"
-                        >
-                          {image ? (
-                            <>
-                              <img
-                                src={optimizeImageUrl(image, 600)}
-                                alt={imageData?.alt || product.name}
-                                loading="lazy"
-                                className="max-h-full max-w-full object-contain transition-transform duration-700 ease-out group-hover:scale-105"
-                                onError={(event) => {
-                                  if (event.currentTarget.src !== image && image) {
-                                    event.currentTarget.src = image;
-                                  } else {
-                                    event.currentTarget.style.display = "none";
-                                    const fb = event.currentTarget.nextElementSibling;
-                                    if (fb) fb.style.display = "flex";
-                                  }
-                                }}
-                              />
-                              <div className="hidden flex-col items-center justify-center p-4 text-center text-[#777267]">
-                                <span className="font-serif text-xs italic line-clamp-2">{product.name}</span>
-                                <span className="mt-1 text-[9px] uppercase tracking-widest text-[#999285]">House of Hackney</span>
-                              </div>
-                            </>
-                          ) : (
-                            <div className="flex flex-col items-center justify-center px-3 text-center text-xs text-[#777267]">
-                              <span className="font-serif text-xs italic">{product.name}</span>
-                              <span className="mt-1 text-[9px] uppercase tracking-widest text-[#999285]">House of Hackney</span>
-                            </div>
-                          )}
-
-                          {/* Bestseller Badge (Screenshot 2) */}
-                          {product.isFeatured && (
-                            <span className="absolute top-2.5 left-2.5 bg-[#eae4d9] text-[#171713] text-[8px] sm:text-[9px] font-medium uppercase px-2.5 py-0.5 rounded-full shadow-xs tracking-wider">
-                              Bestseller
+                    <div key={product._id} className="contents">
+                      {/* Editorial In-Grid Banner 1 (at position 4) */}
+                      {index === 4 && (
+                        <div className="col-span-full my-4 rounded-sm bg-[#32392b] text-[#f6f3ec] p-6 sm:p-9 flex flex-col md:flex-row items-center justify-between gap-6 shadow-sm">
+                          <div className="max-w-xl">
+                            <span className="text-[9px] font-semibold tracking-[2.5px] uppercase text-[#d8c4a5]">
+                              COMPLIMENTARY INTERIOR SERVICES
                             </span>
-                          )}
-
-                          {hasDiscount && !product.isFeatured && (
-                            <span className="absolute top-2.5 left-2.5 bg-[#394132] text-white text-[8px] sm:text-[9px] font-medium uppercase px-2 py-0.5 tracking-wider shadow-xs">
-                              Sale
-                            </span>
-                          )}
-
-                          {!inStock && (
-                            <span className="absolute top-2.5 right-2.5 bg-stone-700/90 text-white text-[8px] sm:text-[9px] font-medium uppercase px-2 py-0.5 tracking-wider shadow-xs">
-                              Out of Stock
-                            </span>
-                          )}
-
-                          <span className="absolute bottom-3 right-3 flex h-7 w-7 items-center justify-center rounded-full bg-[#f6f3ec]/90 text-[#171713] opacity-0 group-hover:opacity-100 transition-opacity duration-300 shadow-xs">
-                            <ArrowRight size={13} />
-                          </span>
-                        </Link>
-
-                        {/* Title in Uppercase Serif (Screenshot 2) */}
-                        <div className="mt-3.5">
+                            <h3 className="font-serif text-2xl sm:text-3xl text-white mt-1">
+                              Need help bringing your sanctuary to life?
+                            </h3>
+                            <p className="mt-2 text-xs leading-5 text-[#d8d3c5]">
+                              Our dedicated design consultants offer 1-on-1 virtual consultations, bespoke paint pairings, and roll calculations tailored to your room dimensions.
+                            </p>
+                          </div>
                           <Link
-                            to={`/products/${targetSlug}`}
-                            className="block font-serif text-base sm:text-lg tracking-wide uppercase text-[#171713] hover:underline line-clamp-1"
-                            title={product.name}
+                            to="/design-services"
+                            className="shrink-0 inline-flex items-center gap-2 rounded-full border border-white bg-white text-[#32392b] px-6 py-2.5 text-[10px] font-semibold tracking-[2px] uppercase hover:bg-transparent hover:text-white transition"
                           >
-                            {product.name}
+                            BOOK FREE APPOINTMENT <ArrowRight size={13} />
                           </Link>
-
-                          {/* Subtitle / Finish (e.g. Cotton Linen - Spring) */}
-                          <p className="mt-0.5 text-xs text-[#666257] line-clamp-1">
-                            {subtitleText}
-                          </p>
                         </div>
+                      )}
 
-                        {/* Price */}
-                        <div className="mt-1 flex items-baseline gap-2 text-xs">
-                          {sellingPrice !== null && (
-                            <span className="font-semibold text-[#171713]">
-                              {formatPrice(sellingPrice, currency)}
-                              {priceUnit && (
-                                <span className="font-normal text-[#666257]"> / {priceUnit === "meter" ? "per meter" : priceUnit}</span>
+                      {/* Editorial In-Grid Banner 2 (at position 10) */}
+                      {index === 10 && (
+                        <div className="col-span-full my-4 rounded-sm bg-[#eae4d9] border border-[#d8d1c5] p-6 sm:p-9 flex flex-col md:flex-row items-center justify-between gap-6 shadow-2xs">
+                          <div className="max-w-xl">
+                            <span className="text-[9px] font-semibold tracking-[2.5px] uppercase text-[#394132]">
+                              TRY BEFORE YOU BUY
+                            </span>
+                            <h3 className="font-serif text-2xl text-[#171713] mt-1">
+                              Curate your personal sample pack
+                            </h3>
+                            <p className="mt-2 text-xs leading-5 text-[#666257]">
+                              Experience the true texture, paper finish, and colour vibrancy of our designs in your own lighting. All A4 wallpaper & fabric samples include complimentary Royal Mail shipping.
+                            </p>
+                          </div>
+                          <div className="shrink-0 flex items-center gap-3">
+                            <span className="text-xs font-semibold text-[#171713]">£5.00 / sample</span>
+                            <span className="text-[10px] uppercase tracking-wider text-[#394132] font-medium bg-[#394132]/10 px-3 py-1.5 rounded-full">
+                              Free UK Postage
+                            </span>
+                          </div>
+                        </div>
+                      )}
+
+                      <article className="group flex flex-col justify-between min-w-0">
+                        <div>
+                          {/* Image card with wishlist button */}
+                          <div className="relative aspect-[4/5] overflow-hidden bg-[#e8e2d7] rounded-sm p-3.5 flex items-center justify-center transition-shadow duration-300 group-hover:shadow-md">
+                            <Link
+                              to={`/products/${targetSlug}`}
+                              className="block h-full w-full flex items-center justify-center"
+                            >
+                              {image ? (
+                                <>
+                                  <img
+                                    src={optimizeImageUrl(image, 800)}
+                                    alt={imageData?.alt || product.name}
+                                    className="max-h-full max-w-full object-contain transition-transform duration-700 ease-out group-hover:scale-105"
+                                    onError={(event) => {
+                                      event.currentTarget.onerror = null;
+                                      event.currentTarget.src =
+                                        "https://res.cloudinary.com/tysd8i65/image/upload/c_scale,w_800,f_auto,q_auto/house_of_hackney/wallpaper/artemis_wallpaper___blush/artemis-wallpaper-blush-0";
+                                    }}
+                                  />
+                                  <div className="hidden flex-col items-center justify-center p-4 text-center text-[#777267]">
+                                    <span className="font-serif text-xs italic line-clamp-2">{product.name}</span>
+                                    <span className="mt-1 text-[9px] uppercase tracking-widest text-[#999285]">House of Hackney</span>
+                                  </div>
+                                </>
+                              ) : (
+                                <div className="flex flex-col items-center justify-center px-3 text-center text-xs text-[#777267]">
+                                  <span className="font-serif text-xs italic">{product.name}</span>
+                                  <span className="mt-1 text-[9px] uppercase tracking-widest text-[#999285]">House of Hackney</span>
+                                </div>
                               )}
-                            </span>
-                          )}
+                            </Link>
 
-                          {hasDiscount && (
-                            <span className="text-[11px] text-[#8e8a7f] line-through">
-                              {formatPrice(compareAtPrice, currency)}
-                            </span>
-                          )}
-                        </div>
-
-                        {/* Swatch indicators (Screenshot 2) */}
-                        {colours.length > 0 && (
-                          <div className="mt-2.5 flex items-center gap-1.5">
-                            {colours.slice(0, 4).map((c, idx) => (
-                              <span
-                                key={idx}
-                                title={c.name}
-                                className="h-3.5 w-3.5 rounded-sm border border-[#d8d1c5] shadow-xs"
-                                style={{ backgroundColor: c.colorHex || "#d8d1c5" }}
+                            {/* Wishlist Heart Button */}
+                            <button
+                              type="button"
+                              aria-label={isWishlisted(product._id) ? "Remove from wishlist" : "Add to wishlist"}
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                toggleWishlist(product);
+                              }}
+                              className={`absolute top-2.5 right-2.5 z-10 flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-full transition-all duration-200 shadow-xs cursor-pointer ${
+                                isWishlisted(product._id)
+                                  ? "bg-white text-[#b83232] shadow-sm scale-105"
+                                  : "bg-white/80 text-[#171713] hover:bg-white hover:text-[#b83232] hover:scale-105"
+                              }`}
+                            >
+                              <Heart
+                                size={14}
+                                className={isWishlisted(product._id) ? "fill-[#b83232]" : ""}
                               />
-                            ))}
-                            {colours.length > 4 && (
-                              <span className="text-[9px] text-[#777267] font-medium">+{colours.length - 4}</span>
+                            </button>
+
+                            {/* Bestseller Badge */}
+                            {product.isFeatured && (
+                              <span className="absolute top-2.5 left-2.5 bg-[#eae4d9] text-[#171713] text-[8px] sm:text-[9px] font-medium uppercase px-2.5 py-0.5 rounded-full shadow-xs tracking-wider">
+                                Bestseller
+                              </span>
+                            )}
+
+                            {hasDiscount && !product.isFeatured && (
+                              <span className="absolute top-2.5 left-2.5 bg-[#394132] text-white text-[8px] sm:text-[9px] font-medium uppercase px-2 py-0.5 tracking-wider shadow-xs">
+                                Sale
+                              </span>
+                            )}
+
+                            {!inStock && (
+                              <span className="absolute bottom-2.5 left-2.5 bg-stone-700/90 text-white text-[8px] sm:text-[9px] font-medium uppercase px-2 py-0.5 tracking-wider shadow-xs">
+                                Out of Stock
+                              </span>
+                            )}
+
+                            <span className="absolute bottom-2.5 right-2.5 flex h-7 w-7 items-center justify-center rounded-full bg-[#f6f3ec]/90 text-[#171713] opacity-0 group-hover:opacity-100 transition-opacity duration-300 shadow-xs pointer-events-none">
+                              <ArrowRight size={13} />
+                            </span>
+                          </div>
+
+                          {/* Title in Uppercase Serif */}
+                          <div className="mt-3.5">
+                            <Link
+                              to={`/products/${targetSlug}`}
+                              className="block font-serif text-base sm:text-lg tracking-wide uppercase text-[#171713] hover:underline line-clamp-1"
+                              title={product.name}
+                            >
+                              {product.name}
+                            </Link>
+
+                            {/* Subtitle / Finish (e.g. Cotton Linen - Spring) */}
+                            <p className="mt-0.5 text-xs text-[#666257] line-clamp-1">
+                              {subtitleText}
+                            </p>
+                          </div>
+
+                          {/* Price */}
+                          <div className="mt-1 flex items-baseline gap-2 text-xs">
+                            {sellingPrice !== null && (
+                              <span className="font-semibold text-[#171713]">
+                                {formatPrice(sellingPrice, currency)}
+                                {priceUnit && (
+                                  <span className="font-normal text-[#666257]"> / {priceUnit === "meter" ? "per meter" : priceUnit}</span>
+                                )}
+                              </span>
+                            )}
+
+                            {hasDiscount && (
+                              <span className="text-[11px] text-[#8e8a7f] line-through">
+                                {formatPrice(compareAtPrice, currency)}
+                              </span>
                             )}
                           </div>
-                        )}
-                      </div>
 
-                      {/* Action Button: Exact "Add Sample +" Pill Button (Screenshot 2) */}
-                      <div className="mt-4 flex flex-col gap-2">
-                        {sampleSupported && samplePrice !== null ? (
-                          <button
-                            type="button"
-                            onClick={() => handleAddToCart(product, true)}
-                            className="flex w-full items-center justify-center gap-1.5 rounded-full border border-[#171713] py-2 text-[10px] font-medium tracking-[1.5px] uppercase text-[#171713] hover:bg-[#171713] hover:text-white transition shadow-2xs"
-                          >
-                            <Sparkles size={12} />
-                            Add Sample ({formatPrice(samplePrice, currency)})
-                          </button>
-                        ) : (
-                          <button
-                            type="button"
-                            disabled={!inStock}
-                            onClick={() => handleAddToCart(product, false)}
-                            className={`flex w-full items-center justify-center gap-2 rounded-full border py-2 text-[10px] font-medium tracking-[1.5px] uppercase transition ${
-                              inStock
-                                ? "border-[#171713] text-[#171713] hover:bg-[#171713] hover:text-white"
-                                : "border-[#c4bcaf] bg-[#d5cec3] text-[#7d776c] cursor-not-allowed"
-                            }`}
-                          >
-                            <ShoppingBag size={12} />
-                            {inStock ? "Add to Bag" : "Out of Stock"}
-                          </button>
-                        )}
-                      </div>
-                    </article>
+                          {/* Swatch indicators with names */}
+                          {colours.length > 0 && (
+                            <div className="mt-2.5 flex items-center gap-1.5">
+                              {colours.slice(0, 4).map((c, idx) => (
+                                <span
+                                  key={idx}
+                                  title={c.name}
+                                  className="h-3.5 w-3.5 rounded-sm border border-[#d8d1c5] shadow-xs"
+                                  style={{ backgroundColor: c.colorHex || "#d8d1c5" }}
+                                />
+                              ))}
+                              {colours.length > 4 && (
+                                <span className="text-[9px] text-[#777267] font-medium">+{colours.length - 4}</span>
+                              )}
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Action Button: Exact "Add Sample +" Pill Button */}
+                        <div className="mt-4 flex flex-col gap-2">
+                          {sampleSupported && samplePrice !== null ? (
+                            <button
+                              type="button"
+                              onClick={() => handleAddToCart(product, true)}
+                              className="flex w-full items-center justify-center gap-1.5 rounded-full border border-[#171713] py-2 text-[10px] font-medium tracking-[1.5px] uppercase text-[#171713] hover:bg-[#171713] hover:text-white transition shadow-2xs"
+                            >
+                              <Sparkles size={12} />
+                              Add Sample ({formatPrice(samplePrice, currency)})
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              disabled={!inStock}
+                              onClick={() => handleAddToCart(product, false)}
+                              className={`flex w-full items-center justify-center gap-2 rounded-full border py-2 text-[10px] font-medium tracking-[1.5px] uppercase transition ${
+                                inStock
+                                  ? "border-[#171713] text-[#171713] hover:bg-[#171713] hover:text-white"
+                                  : "border-[#c4bcaf] bg-[#d5cec3] text-[#7d776c] cursor-not-allowed"
+                              }`}
+                            >
+                              <ShoppingBag size={12} />
+                              {inStock ? "Add to Bag" : "Out of Stock"}
+                            </button>
+                          )}
+                        </div>
+                      </article>
+                    </div>
                   );
                 })}
               </div>
@@ -1136,6 +1370,32 @@ function Products() {
                 />
               </div>
             </div>
+          </div>
+        </div>
+      </section>
+
+      {/* 8. Brand Trust & Sustainability Footer Bar */}
+      <section className="border-t border-[#d8d1c5] bg-[#eae5db] py-12 px-5 sm:px-8">
+        <div className="mx-auto max-w-7xl grid grid-cols-2 sm:grid-cols-4 gap-6 text-center">
+          <div className="flex flex-col items-center">
+            <TreePine size={24} className="text-[#394132] mb-2" />
+            <h4 className="font-serif text-sm text-[#171713] uppercase tracking-wider font-semibold">World Land Trust</h4>
+            <p className="text-[11px] text-[#666257] mt-1">35m² of endangered forest protected per order</p>
+          </div>
+          <div className="flex flex-col items-center">
+            <ShieldCheck size={24} className="text-[#394132] mb-2" />
+            <h4 className="font-serif text-sm text-[#171713] uppercase tracking-wider font-semibold">Certified B Corp</h4>
+            <p className="text-[11px] text-[#666257] mt-1">Highest social & environmental rigor</p>
+          </div>
+          <div className="flex flex-col items-center">
+            <Truck size={24} className="text-[#394132] mb-2" />
+            <h4 className="font-serif text-sm text-[#171713] uppercase tracking-wider font-semibold">Sample Swatch Delivery</h4>
+            <p className="text-[11px] text-[#666257] mt-1">Complimentary UK Royal Mail postage</p>
+          </div>
+          <div className="flex flex-col items-center">
+            <Sparkles size={24} className="text-[#394132] mb-2" />
+            <h4 className="font-serif text-sm text-[#171713] uppercase tracking-wider font-semibold">Made in England</h4>
+            <p className="text-[11px] text-[#666257] mt-1">Sustainably printed on FSC-certified paper</p>
           </div>
         </div>
       </section>

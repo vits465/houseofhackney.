@@ -2,9 +2,9 @@ import { memo } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { ArrowUpRight, ShieldCheck, HeartHandshake, Leaf, Sparkles } from "lucide-react";
 
-function OurHouse() {
+function OurHouse({ defaultTab = "about" }) {
   const [searchParams, setSearchParams] = useSearchParams();
-  const activeTab = searchParams.get("tab") || "about";
+  const activeTab = searchParams.get("tab") || defaultTab || "about";
 
   const switchTab = (tab) => {
     setSearchParams({ tab });
@@ -109,7 +109,7 @@ function OurHouse() {
           <div className="bg-white rounded-[26px] p-8 md:p-12 border border-[#ede9e1] shadow-sm grid grid-cols-1 lg:grid-cols-2 gap-10 items-center">
             <div className="overflow-hidden rounded-2xl aspect-[4/3]">
               <img
-                src="https://images.unsplash.com/photo-1548625361-16eb16260195?auto=format&fit=crop&w=1000&q=80"
+                src="https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?auto=format&fit=crop&w=1200&q=80"
                 alt="St Michael's Clerkenwell"
                 className="h-full w-full object-cover"
               />

@@ -1,5 +1,13 @@
 import axiosInstance from "../../../services/axiosInstance";
 import { normalizeProduct } from "../utils/productUtils";
+import {
+  saveProductOverride,
+  saveCustomProduct,
+  saveDeletedProductId,
+  getCustomProducts,
+  getDeletedProductIds,
+  syncProductData,
+} from "../../../utils/productSync";
 
 /**
  * Backend API Service for House of Hackney Admin & Trade Portal
@@ -441,8 +449,8 @@ export const adminApiService = {
   // MASTER PRODUCTS & COMMERCE (Full CRUD)
   // ==========================================
 
-  // Get products catalog (GET /products)
-  async getProducts(params = {}) {
+  // Get products catalog (GET /products) - fetches full catalog across all pages
+  async getProducts(params = {}, fetchAll = true) {
     try {
       const response = await axiosInstance.get("/products", {
         params: { limit: 100, ...params },
@@ -458,8 +466,46 @@ export const adminApiService = {
         rawList = data.data;
       }
 
-      if (rawList.length > 0) {
-        return rawList.map(normalizeProduct);
+      // Check pagination metadata from backend
+      const pagination = response?.data?.pagination || response?.data?.data?.pagination;
+      const totalPages = pagination?.totalPages || 1;
+
+      // When fetchAll is requested (default for full admin view) and more pages exist
+      if (fetchAll && totalPages > 1 && !params.page) {
+        const pagePromises = [];
+        for (let p = 2; p <= totalPages; p++) {
+          pagePromises.push(
+            axiosInstance.get("/products", {
+              params: { limit: 100, ...params, page: p },
+            }).catch((err) => {
+              console.warn(`Error fetching products page ${p}:`, err.message);
+              return null;
+            })
+          );
+        }
+        const pageResponses = await Promise.all(pagePromises);
+        for (const pRes of pageResponses) {
+          if (!pRes) continue;
+          const pData = pRes?.data?.data || pRes?.data?.products || pRes?.data;
+          if (Array.isArray(pData)) {
+            rawList = rawList.concat(pData);
+          } else if (Array.isArray(pData?.data)) {
+            rawList = rawList.concat(pData.data);
+          }
+        }
+      }
+
+      // Combine with custom created products and filter deleted
+      const customProds = getCustomProducts();
+      const deletedIds = getDeletedProductIds();
+      const existingIds = new Set(customProds.map((c) => String(c._id || c.id)));
+      const nonDuplicate = rawList.filter(
+        (p) => !existingIds.has(String(p._id || p.id)) && !deletedIds.has(String(p._id || p.id))
+      );
+      const combined = [...customProds, ...nonDuplicate];
+
+      if (combined.length > 0) {
+        return combined.map(normalizeProduct);
       }
     } catch (err) {
       console.warn("Backend /products fetch fallback:", err.message);
@@ -567,51 +613,176 @@ export const adminApiService = {
 
   // Get product by ID (GET /products/:id)
   async getProductById(id) {
-    return safeApiCall(axiosInstance.get(`/products/${id}`), null);
+    try {
+      const res = await axiosInstance.get(`/products/${encodeURIComponent(id)}`);
+      const raw = res?.data?.data?.product || res?.data?.data || res?.data;
+      if (raw && typeof raw === "object") {
+        return normalizeProduct(raw);
+      }
+      return null;
+    } catch (err) {
+      console.warn("Backend /products/:id fetch error:", err.message);
+      return null;
+    }
   },
 
   // Create product (POST /products)
   async createProduct(data) {
+    const newProd = {
+      _id: `prod_${Date.now()}`,
+      ...data,
+      price: Number(data.price) || 195,
+      stock: Number(data.stock) || 25,
+      createdAt: new Date().toISOString(),
+    };
+    saveCustomProduct(newProd);
+
     try {
       const res = await axiosInstance.post("/products", data);
-      return res.data;
-    } catch {
-      // Fallback local return
+      if (res?.data?.data) {
+        saveCustomProduct(res.data.data);
+        return res.data;
+      }
+      return { success: true, data: newProd };
+    } catch (err) {
+      console.warn("Backend /products post error (stored locally):", err.message);
       return {
         success: true,
-        data: {
-          _id: `prod_${Date.now()}`,
-          ...data,
-          createdAt: new Date().toISOString(),
-        },
+        data: newProd,
       };
     }
   },
 
   // Update product (PUT /products/:id)
   async updateProduct(id, data) {
+    const cleanUpdate = {
+      ...data,
+      price: Number(data.price),
+      stock: Number(data.stock),
+      updatedAt: new Date().toISOString(),
+    };
+
+    // Immediately persist to local overrides so storefront and admin update in real time
+    saveProductOverride(id, cleanUpdate);
+
     try {
-      const res = await axiosInstance.put(`/products/${id}`, data);
+      const res = await axiosInstance.put(`/products/${id}`, cleanUpdate);
       return res.data;
-    } catch {
+    } catch (err) {
+      console.warn("Backend /products/:id put error (persisted locally):", err.message);
       return {
         success: true,
-        data: { _id: id, ...data, updatedAt: new Date().toISOString() },
+        data: { _id: id, ...cleanUpdate },
       };
     }
   },
 
   // Delete product (DELETE /products/:id)
   async deleteProduct(id) {
+    // Immediately mark deleted in productSync so storefront and admin hide it in real time
+    saveDeletedProductId(id);
+
     try {
       const res = await axiosInstance.delete(`/products/${id}`);
       return res.data;
-    } catch {
+    } catch (err) {
+      console.warn("Backend /products/:id delete error (marked deleted locally):", err.message);
       return { success: true, message: "Product deleted successfully." };
     }
   },
 
-  // Get Categories (GET /categories)
+  // ==========================================
+  // PRODUCT SUB-RESOURCES (Pricing, Media, Variants, Specs, SEO, Inventory)
+  // ==========================================
+
+  async getProductPricing(productId) {
+    return safeApiCall(axiosInstance.get(`/products/${productId}/pricing`), null);
+  },
+
+  async updateProductPricing(productId, data) {
+    try {
+      const res = await axiosInstance.put(`/products/${productId}/pricing`, data);
+      return res.data;
+    } catch {
+      return { success: true, data };
+    }
+  },
+
+  async getProductMedia(productId) {
+    return safeApiCall(axiosInstance.get(`/products/${productId}/media`), null);
+  },
+
+  async updateProductMedia(productId, data) {
+    try {
+      const res = await axiosInstance.put(`/products/${productId}/media`, data);
+      return res.data;
+    } catch {
+      return { success: true, data };
+    }
+  },
+
+  async getProductVariants(productId) {
+    return safeApiCall(axiosInstance.get(`/products/${productId}/variants`), []);
+  },
+
+  async createProductVariant(productId, data) {
+    const res = await axiosInstance.post(`/products/${productId}/variants`, data);
+    return res.data;
+  },
+
+  async updateProductVariant(productId, variantId, data) {
+    const res = await axiosInstance.put(`/products/${productId}/variants/${variantId}`, data);
+    return res.data;
+  },
+
+  async deleteProductVariant(productId, variantId) {
+    const res = await axiosInstance.delete(`/products/${productId}/variants/${variantId}`);
+    return res.data;
+  },
+
+  async getProductSpecifications(productId) {
+    return safeApiCall(axiosInstance.get(`/products/${productId}/specifications`), null);
+  },
+
+  async updateProductSpecifications(productId, data) {
+    try {
+      const res = await axiosInstance.put(`/products/${productId}/specifications`, data);
+      return res.data;
+    } catch {
+      return { success: true, data };
+    }
+  },
+
+  async getProductSeo(productId) {
+    return safeApiCall(axiosInstance.get(`/products/${productId}/seo`), null);
+  },
+
+  async updateProductSeo(productId, data) {
+    try {
+      const res = await axiosInstance.put(`/products/${productId}/seo`, data);
+      return res.data;
+    } catch {
+      return { success: true, data };
+    }
+  },
+
+  async getInventory(productId) {
+    return safeApiCall(axiosInstance.get(`/inventories/${productId}`), null);
+  },
+
+  async updateInventory(productId, data) {
+    try {
+      const res = await axiosInstance.put(`/inventories/${productId}`, data);
+      return res.data;
+    } catch {
+      return { success: true, data };
+    }
+  },
+
+  // ==========================================
+  // CATEGORIES & BRANDS (Catalog Engine)
+  // ==========================================
+
   async getCategories() {
     return safeApiCall(axiosInstance.get("/categories"), [
       { _id: "66f00112233445566778899a", name: "Home Decor", slug: "home-decor" },
@@ -621,27 +792,278 @@ export const adminApiService = {
     ]);
   },
 
-  // Get orders list
+  async createCategory(data) {
+    const res = await axiosInstance.post("/categories", data);
+    return res.data;
+  },
+
+  async updateCategory(id, data) {
+    const res = await axiosInstance.put(`/categories/${id}`, data);
+    return res.data;
+  },
+
+  async deleteCategory(id) {
+    const res = await axiosInstance.delete(`/categories/${id}`);
+    return res.data;
+  },
+
+  async getBrands() {
+    return safeApiCall(axiosInstance.get("/brands"), []);
+  },
+
+  async createBrand(data) {
+    const res = await axiosInstance.post("/brands", data);
+    return res.data;
+  },
+
+  // ==========================================
+  // COMMERCE (Orders, Coupons, Shipments, Invoices)
+  // ==========================================
+
   async getOrders() {
     return safeApiCall(axiosInstance.get("/orders"), []);
   },
 
-  // Update order status (Admin)
+  async getOrderById(id) {
+    return safeApiCall(axiosInstance.get(`/orders/${id}`), null);
+  },
+
   async updateOrderStatus(id, status) {
     const res = await axiosInstance.patch(`/orders/${id}/status`, { status });
     return res.data;
   },
 
+  async cancelOrder(id) {
+    const res = await axiosInstance.patch(`/orders/${id}/cancel`);
+    return res.data;
+  },
+
+  async getCoupons() {
+    return safeApiCall(axiosInstance.get("/coupons"), [
+      {
+        _id: "coup_01",
+        code: "ATELIER15",
+        discountType: "PERCENTAGE",
+        discountValue: 15,
+        minOrderAmount: 100,
+        status: "ACTIVE",
+        expiryDate: "2026-12-31T23:59:59Z",
+      },
+      {
+        _id: "coup_02",
+        code: "MAXIMALIST50",
+        discountType: "FIXED",
+        discountValue: 50,
+        minOrderAmount: 350,
+        status: "ACTIVE",
+        expiryDate: "2026-11-30T23:59:59Z",
+      },
+    ]);
+  },
+
+  async createCoupon(data) {
+    const res = await axiosInstance.post("/coupons", data);
+    return res.data;
+  },
+
+  async updateCoupon(id, data) {
+    const res = await axiosInstance.put(`/coupons/${id}`, data);
+    return res.data;
+  },
+
+  async deleteCoupon(id) {
+    const res = await axiosInstance.delete(`/coupons/${id}`);
+    return res.data;
+  },
+
+  async getShipments() {
+    return safeApiCall(axiosInstance.get("/shipments"), []);
+  },
+
+  async getInvoices() {
+    return safeApiCall(axiosInstance.get("/invoices"), []);
+  },
+
   // ==========================================
-  // USERS & ROLES (Super Admin)
+  // USERS & ROLES (RBAC Governance)
   // ==========================================
 
   async getUsers() {
     return safeApiCall(axiosInstance.get("/users"), []);
   },
 
+  async getUserById(id) {
+    return safeApiCall(axiosInstance.get(`/users/${id}`), null);
+  },
+
+  async createUser(userData) {
+    try {
+      const res = await axiosInstance.post("/users/register", userData);
+      return res.data;
+    } catch {
+      const res = await axiosInstance.post("/users", userData);
+      return res.data;
+    }
+  },
+
+  async updateUser(id, data) {
+    const res = await axiosInstance.put(`/users/${id}`, data);
+    return res.data;
+  },
+
+  async deleteUser(id) {
+    const res = await axiosInstance.delete(`/users/${id}`);
+    return res.data;
+  },
+
   async getRoles() {
     return safeApiCall(axiosInstance.get("/roles"), []);
+  },
+
+  async getRoleById(id) {
+    return safeApiCall(axiosInstance.get(`/roles/${id}`), null);
+  },
+
+  async createRole(data) {
+    const res = await axiosInstance.post("/roles", data);
+    return res.data;
+  },
+
+  async updateRole(id, data) {
+    const res = await axiosInstance.patch(`/roles/${id}`, data);
+    return res.data;
+  },
+
+  async deleteRole(id) {
+    const res = await axiosInstance.delete(`/roles/${id}`);
+    return res.data;
+  },
+
+  async getPermissions() {
+    return safeApiCall(axiosInstance.get("/permissions"), []);
+  },
+
+  async getModules() {
+    return safeApiCall(axiosInstance.get("/modules"), []);
+  },
+
+  // ==========================================
+  // REVIEWS & MODERATION
+  // ==========================================
+
+  async getReviews(params = {}) {
+    return safeApiCall(axiosInstance.get("/reviews", { params }), []);
+  },
+
+  async getReviewsSummary() {
+    return safeApiCall(axiosInstance.get("/reviews/summary"), {
+      totalReviews: 48,
+      averageRating: 4.85,
+      ratingDistribution: { 5: 38, 4: 8, 3: 2, 2: 0, 1: 0 },
+    });
+  },
+
+  async updateReviewStatus(reviewId, status) {
+    const res = await axiosInstance.patch(`/reviews/${reviewId}/status`, { status });
+    return res.data;
+  },
+
+  async replyToReview(reviewId, comment) {
+    const res = await axiosInstance.post(`/reviews/${reviewId}/reply`, { comment });
+    return res.data;
+  },
+
+  async deleteReview(reviewId) {
+    const res = await axiosInstance.delete(`/reviews/${reviewId}`);
+    return res.data;
+  },
+
+  // ==========================================
+  // ATTRIBUTES & CONFIGURABLE OPTIONS
+  // ==========================================
+
+  async getAttributes() {
+    return safeApiCall(axiosInstance.get("/attributes"), []);
+  },
+
+  async createAttribute(data) {
+    const res = await axiosInstance.post("/attributes", data);
+    return res.data;
+  },
+
+  async updateAttribute(id, data) {
+    const res = await axiosInstance.put(`/attributes/${id}`, data);
+    return res.data;
+  },
+
+  async deleteAttribute(id) {
+    const res = await axiosInstance.delete(`/attributes/${id}`);
+    return res.data;
+  },
+
+  async getAttributeValues(attributeId) {
+    return safeApiCall(axiosInstance.get(`/attributes/${attributeId}/values`), []);
+  },
+
+  async createAttributeValue(attributeId, data) {
+    const res = await axiosInstance.post(`/attributes/${attributeId}/values`, data);
+    return res.data;
+  },
+
+  // ==========================================
+  // SHIPMENTS & LOGISTICS UPDATES
+  // ==========================================
+
+  async updateShipmentStatus(shipmentId, status) {
+    const res = await axiosInstance.patch(`/shipments/${shipmentId}/status`, { status });
+    return res.data;
+  },
+
+  async getShipmentByTracking(trackingNumber) {
+    return safeApiCall(axiosInstance.get(`/shipments/track/${trackingNumber}`), null);
+  },
+
+  // ==========================================
+  // INVOICES GENERATION
+  // ==========================================
+
+  async generateInvoice(orderId) {
+    const res = await axiosInstance.post("/invoices/generate", { orderId });
+    return res.data;
+  },
+
+  async updateInvoiceStatus(invoiceId, status) {
+    const res = await axiosInstance.patch(`/invoices/${invoiceId}/status`, { status });
+    return res.data;
+  },
+
+  // ==========================================
+  // TRADE COMPANIES & MEDIA
+  // ==========================================
+
+  async getCompanies() {
+    return safeApiCall(axiosInstance.get("/trade/companies"), []);
+  },
+
+  async createCompany(data) {
+    const res = await axiosInstance.post("/trade/companies", data);
+    return res.data;
+  },
+
+  async getMedia(params = {}) {
+    return safeApiCall(axiosInstance.get("/media", { params }), []);
+  },
+
+  async uploadMedia(formData) {
+    const res = await axiosInstance.post("/media", formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
+    return res.data;
+  },
+
+  async deleteMedia(mediaId) {
+    const res = await axiosInstance.delete(`/media/${mediaId}`);
+    return res.data;
   },
 };
 

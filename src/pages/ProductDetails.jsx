@@ -13,7 +13,55 @@ import {
   RotateCcw,
   ShieldCheck,
   AlertCircle,
+  Calculator,
+  TreePine,
+  Palette,
+  Heart,
 } from "lucide-react";
+import { useWishlist } from "../utils/wishlist";
+
+const CURATED_PAINT_PAIRINGS = [
+  {
+    name: "Mallow",
+    shade: "Dusky Plaster Pink",
+    hex: "#dfc0be",
+    finish: "Mineral Emulsion",
+    price: 6,
+    unit: "sample pot",
+    description: "A restorative, chalky rose reminiscent of ancient Venetian plaster.",
+    link: "/products?category=paint&colour=pink",
+  },
+  {
+    name: "Cirrus",
+    shade: "Pale Chalky Sky Grey",
+    hex: "#d5dede",
+    finish: "Mineral Emulsion",
+    price: 6,
+    unit: "sample pot",
+    description: "An ethereal mineral grey-blue that allows botanical prints to sing.",
+    link: "/products?category=paint&colour=neutral",
+  },
+  {
+    name: "Jadeite",
+    shade: "Serene Celadon Green",
+    hex: "#9bb0a3",
+    finish: "Mineral Emulsion",
+    price: 6,
+    unit: "sample pot",
+    description: "A calming eucalyptus sage inspired by English kitchen garden foliage.",
+    link: "/products?category=paint&colour=green",
+  },
+  {
+    name: "Woad",
+    shade: "Heritage Botanical Indigo",
+    hex: "#2e4156",
+    finish: "Mineral Emulsion",
+    price: 6,
+    unit: "sample pot",
+    description: "A soulful, deep English ink blue named after the ancient dye plant.",
+    link: "/products?category=paint&colour=blue",
+  },
+];
 
 import {
   getProducts,
@@ -25,7 +73,7 @@ import {
   getRelatedProducts,
 } from "../services/productservice";
 
-import { getProductImage, optimizeImageUrl } from "../utils/getProductImage";
+import { getProductImage, optimizeImageUrl, isValidImageUrl } from "../utils/getProductImage";
 import { addToCart } from "../features/carts/cartSlice";
 import { setSelectedProduct } from "../features/products/productSlice";
 import { showToast, showError } from "../utils/sweetAlert";
@@ -54,6 +102,7 @@ function getVariantId(variant) {
 function ProductDetails() {
   const { productId } = useParams();
   const dispatch = useDispatch();
+  const { isWishlisted, toggleWishlist } = useWishlist();
 
   const [product, setProduct] = useState(null);
   const [media, setMedia] = useState(null);
@@ -69,6 +118,36 @@ function ProductDetails() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [openSection, setOpenSection] = useState("description");
+
+  // Interactive Wallpaper Roll Calculator & View Scale States
+  const [showCalculator, setShowCalculator] = useState(false);
+  const [calcUnit, setCalcUnit] = useState("meters"); // "meters" or "feet"
+  const [wallWidth, setWallWidth] = useState(3.5);
+  const [wallHeight, setWallHeight] = useState(2.6);
+  const [numWalls, setNumWalls] = useState(1);
+  const [calculatedRolls, setCalculatedRolls] = useState(null);
+  const [calcFeedback, setCalcFeedback] = useState("");
+  const [viewScale, setViewScale] = useState("pattern"); // "pattern" or "room"
+
+  const handleCalculateRolls = () => {
+    const widthInM = calcUnit === "feet" ? Number(wallWidth) * 0.3048 : Number(wallWidth);
+    const heightInM = calcUnit === "feet" ? Number(wallHeight) * 0.3048 : Number(wallHeight);
+    const totalArea = Math.max(0.1, widthInM * heightInM * numWalls);
+    // Standard roll covers ~5.4m² (180cm x 300cm), plus 15% allowance for repeat matching & trimming
+    const needed = Math.max(1, Math.ceil((totalArea * 1.15) / 5.4));
+    setCalculatedRolls(needed);
+  };
+
+  const handleApplyCalculatedRolls = () => {
+    if (calculatedRolls) {
+      setQuantity(calculatedRolls);
+      setCalcFeedback(`Applied ${calculatedRolls} rolls to quantity!`);
+      setTimeout(() => {
+        setCalcFeedback("");
+        setShowCalculator(false);
+      }, 1400);
+    }
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -200,6 +279,23 @@ function ProductDetails() {
     };
   }, [productId, dispatch]);
 
+  // Live auto-refresh when an admin modifies this product
+  useEffect(() => {
+    const handleUpdate = () => {
+      getProductById(productId)
+        .then((updated) => {
+          if (updated) {
+            setProduct(updated);
+            dispatch(setSelectedProduct(updated));
+            if (updated.pricing) setPricing(updated.pricing);
+          }
+        })
+        .catch(() => {});
+    };
+    window.addEventListener("hoh_catalog_updated", handleUpdate);
+    return () => window.removeEventListener("hoh_catalog_updated", handleUpdate);
+  }, [productId, dispatch]);
+
   // Selected Variant
   const selectedVariant = useMemo(() => {
     return variants.find((v) => getVariantId(v) === selectedVariantId) || null;
@@ -219,7 +315,8 @@ function ProductDetails() {
 
     const addUrl = (rawUrl, alt) => {
       if (typeof rawUrl !== "string" || !rawUrl.trim()) return;
-      const url = optimizeImageUrl(rawUrl.trim(), 1200);
+      if (!isValidImageUrl(rawUrl)) return;
+      const url = optimizeImageUrl(rawUrl.trim(), 1400);
 
       // Extract filename to avoid cross-folder duplicates
       const parts = url.split("/");
@@ -298,6 +395,13 @@ function ProductDetails() {
       if (product.thumbnail) addUrl(product.thumbnail, product.name);
       if (Array.isArray(product.images)) {
         product.images.forEach((u) => addUrl(u, product.name));
+      }
+    }
+
+    if (urls.length === 0 && product) {
+      const fallback = getProductImage(product);
+      if (fallback?.url) {
+        urls.push(fallback);
       }
     }
 
@@ -572,14 +676,26 @@ function ProductDetails() {
   return (
     <main className="min-h-screen bg-[#f6f3ec] text-[#171713]">
       <div className="mx-auto max-w-7xl px-5 pb-20 pt-8 sm:px-8 md:px-12">
-        {/* Back navigation */}
-        <Link
-          to="/products"
-          className="mb-8 inline-flex items-center gap-2 text-[10px] font-medium tracking-[1.5px] uppercase text-[#666257] hover:text-[#171713] transition"
-        >
-          <ArrowLeft size={14} />
-          Back to Collection
-        </Link>
+        {/* Breadcrumb Navigation & Back Link */}
+        <div className="mb-8 flex flex-wrap items-center justify-between gap-4 border-b border-[#d8d1c5]/50 pb-4 text-xs">
+          <nav aria-label="Breadcrumb" className="flex flex-wrap items-center gap-1.5 text-[10px] uppercase tracking-[1.5px] text-[#777267]">
+            <Link to="/" className="hover:text-[#171713] transition">Home</Link>
+            <span>/</span>
+            <Link to="/products" className="hover:text-[#171713] transition">
+              {typeof product.category === "object" ? product.category?.name : product.category || "Collection"}
+            </Link>
+            <span>/</span>
+            <span className="font-semibold text-[#171713] line-clamp-1">{product.name}</span>
+          </nav>
+
+          <Link
+            to="/products"
+            className="inline-flex items-center gap-2 text-[10px] font-medium tracking-[1.5px] uppercase text-[#666257] hover:text-[#171713] transition"
+          >
+            <ArrowLeft size={13} />
+            Back to Collection
+          </Link>
+        </div>
 
         {/* Product Hero Grid */}
         <div className="grid items-start gap-9 md:grid-cols-2 md:gap-14">
@@ -609,13 +725,37 @@ function ProductDetails() {
               </div>
             )}
 
-            {/* Primary Main Display Image */}
+            {/* Primary Main Display Image with Scale View Toggle */}
             <div className="relative aspect-[4/5] overflow-hidden bg-[#e8e2d7] rounded-sm shadow-sm flex items-center justify-center p-3 sm:p-5">
+              {/* Scale View Toggle */}
+              <div className="absolute top-3 right-3 z-10 flex items-center gap-1 bg-white/90 backdrop-blur-xs p-1 rounded-full shadow-xs text-[9px] uppercase tracking-wider">
+                <button
+                  type="button"
+                  onClick={() => setViewScale("pattern")}
+                  className={`px-2.5 py-0.5 rounded-full transition ${
+                    viewScale === "pattern" ? "bg-[#394132] text-white font-medium shadow-2xs" : "text-[#666257] hover:text-[#171713]"
+                  }`}
+                >
+                  Pattern Detail
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setViewScale("room")}
+                  className={`px-2.5 py-0.5 rounded-full transition ${
+                    viewScale === "room" ? "bg-[#394132] text-white font-medium shadow-2xs" : "text-[#666257] hover:text-[#171713]"
+                  }`}
+                >
+                  Room Scale
+                </button>
+              </div>
+
               {currentImage?.url ? (
                 <img
                   src={optimizeImageUrl(currentImage.url, 1200)}
                   alt={currentImage.alt || product.name}
-                  className="max-h-full max-w-full object-contain transition-opacity duration-300 drop-shadow-xs"
+                  className={`max-h-full max-w-full transition-all duration-700 drop-shadow-xs ${
+                    viewScale === "room" ? "object-cover h-full w-full scale-100" : "object-contain scale-95"
+                  }`}
                 />
               ) : (
                 <div className="flex h-full items-center justify-center text-sm text-[#777267]">
@@ -631,7 +771,7 @@ function ProductDetails() {
               )}
 
               {!inStock && (
-                <span className="absolute top-3 right-3 bg-stone-700/90 text-white text-[10px] font-medium uppercase px-2.5 py-1 tracking-wider shadow-sm">
+                <span className="absolute top-3 left-3 bg-stone-700/90 text-white text-[10px] font-medium uppercase px-2.5 py-1 tracking-wider shadow-sm">
                   Out of Stock
                 </span>
               )}
@@ -765,19 +905,148 @@ function ProductDetails() {
               </div>
             )}
 
-            {/* Quantity Selector */}
+            {/* Quantity Selector & Wallpaper Roll Estimator Tool */}
             <div className={`mt-6 ${!inStock ? "opacity-50 pointer-events-none" : ""}`}>
-              <label htmlFor="quantity" className="mb-2 block text-[10px] font-medium uppercase tracking-[1.5px] text-[#171713]">
-                Quantity
-              </label>
+              <div className="flex items-center justify-between mb-2">
+                <label htmlFor="quantity" className="text-[10px] font-medium uppercase tracking-[1.5px] text-[#171713]">
+                  Quantity ({priceUnit || "Rolls"})
+                </label>
 
+                {/* Wallpaper Calculator Trigger */}
+                {(labelHeader.toLowerCase().includes("wallpaper") || labelHeader.toLowerCase().includes("mural")) && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowCalculator(!showCalculator);
+                      if (!calculatedRolls) handleCalculateRolls();
+                    }}
+                    className="inline-flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-[#394132] hover:underline cursor-pointer"
+                  >
+                    <Calculator size={13} />
+                    <span>How Many Rolls Do I Need?</span>
+                  </button>
+                )}
+              </div>
+
+              {/* Wallpaper Roll Calculator Tool Widget */}
+              {showCalculator && (
+                <div className="mb-6 rounded-sm border border-[#394132] bg-[#fbf9f5] p-4 text-xs shadow-sm">
+                  <div className="flex items-center justify-between border-b border-[#e5dfd4] pb-2">
+                    <span className="font-serif text-sm font-semibold text-[#171713] flex items-center gap-2">
+                      <Calculator size={14} className="text-[#394132]" />
+                      Roll Estimator Tool
+                    </span>
+                    <div className="flex rounded border border-[#d8d1c5] bg-white p-0.5 text-[9px] uppercase">
+                      <button
+                        type="button"
+                        onClick={() => setCalcUnit("meters")}
+                        className={`px-2 py-0.5 rounded-xs transition ${
+                          calcUnit === "meters" ? "bg-[#394132] text-white font-medium" : "text-[#777267]"
+                        }`}
+                      >
+                        Metres (m)
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setCalcUnit("feet")}
+                        className={`px-2 py-0.5 rounded-xs transition ${
+                          calcUnit === "feet" ? "bg-[#394132] text-white font-medium" : "text-[#777267]"
+                        }`}
+                      >
+                        Feet (ft)
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="mt-3 grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-[9px] uppercase tracking-wider text-[#777267] block mb-1">
+                        Wall Width ({calcUnit === "meters" ? "m" : "ft"})
+                      </label>
+                      <input
+                        type="number"
+                        step="0.1"
+                        min="0.5"
+                        value={wallWidth}
+                        onChange={(e) => {
+                          setWallWidth(Number(e.target.value));
+                          setTimeout(handleCalculateRolls, 50);
+                        }}
+                        className="w-full border border-[#d8d1c5] bg-white px-2.5 py-1.5 text-xs text-[#171713] outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[9px] uppercase tracking-wider text-[#777267] block mb-1">
+                        Wall Height ({calcUnit === "meters" ? "m" : "ft"})
+                      </label>
+                      <input
+                        type="number"
+                        step="0.1"
+                        min="1"
+                        value={wallHeight}
+                        onChange={(e) => {
+                          setWallHeight(Number(e.target.value));
+                          setTimeout(handleCalculateRolls, 50);
+                        }}
+                        className="w-full border border-[#d8d1c5] bg-white px-2.5 py-1.5 text-xs text-[#171713] outline-none"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="mt-3 flex items-center justify-between">
+                    <span className="text-[10px] text-[#666257]">Number of Walls:</span>
+                    <div className="flex gap-1.5">
+                      {[1, 2, 4].map((n) => (
+                        <button
+                          key={n}
+                          type="button"
+                          onClick={() => {
+                            setNumWalls(n);
+                            setTimeout(handleCalculateRolls, 50);
+                          }}
+                          className={`px-2.5 py-1 text-[10px] border rounded-xs transition ${
+                            numWalls === n ? "border-[#394132] bg-[#394132] text-white" : "border-[#d8d1c5] bg-white text-[#171713]"
+                          }`}
+                        >
+                          {n} {n === 1 ? "Wall" : "Walls"}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {calculatedRolls !== null && (
+                    <div className="mt-3 rounded border border-[#c5d3bc] bg-[#eff5ec] p-2.5 text-center">
+                      <p className="font-semibold text-xs text-[#2b4c20]">
+                        Recommended: {calculatedRolls} {calculatedRolls === 1 ? "Roll" : "Rolls"}
+                      </p>
+                      <p className="mt-0.5 text-[10px] text-[#4d6a43]">
+                        Includes 15% allowance for vertical pattern repeat and trimming waste.
+                      </p>
+                      <button
+                        type="button"
+                        onClick={handleApplyCalculatedRolls}
+                        className="mt-2 w-full rounded bg-[#394132] py-1.5 text-[10px] font-semibold uppercase tracking-wider text-white hover:bg-[#282e23] transition cursor-pointer"
+                      >
+                        Apply {calculatedRolls} Rolls to Order
+                      </button>
+                      {calcFeedback && (
+                        <p className="mt-1.5 text-[10px] font-medium text-emerald-700 animate-fadeIn">
+                          ✓ {calcFeedback}
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Quantity Counter */}
               <div className="flex h-11 w-36 items-center justify-between border border-[#d8d1c5] bg-white/50">
                 <button
                   type="button"
                   disabled={!inStock}
                   onClick={() => setQuantity((q) => Math.max(1, q - 1))}
                   aria-label="Decrease quantity"
-                  className="h-full w-10 flex items-center justify-center hover:bg-black/5 disabled:cursor-not-allowed"
+                  className="h-full w-10 flex items-center justify-center hover:bg-black/5 disabled:cursor-not-allowed cursor-pointer"
                 >
                   <Minus size={13} />
                 </button>
@@ -801,7 +1070,7 @@ function ProductDetails() {
                   disabled={!inStock}
                   onClick={() => setQuantity((q) => Math.min(99, q + 1))}
                   aria-label="Increase quantity"
-                  className="h-full w-10 flex items-center justify-center hover:bg-black/5 disabled:cursor-not-allowed"
+                  className="h-full w-10 flex items-center justify-center hover:bg-black/5 disabled:cursor-not-allowed cursor-pointer"
                 >
                   <Plus size={13} />
                 </button>
@@ -809,12 +1078,12 @@ function ProductDetails() {
             </div>
 
             {/* Action Buttons */}
-            <div className="mt-6 flex flex-col gap-3">
+            <div className="mt-6 flex items-center gap-3">
               <button
                 type="button"
                 onClick={() => handleAddToCart(false)}
                 disabled={!inStock}
-                className={`flex w-full items-center justify-center gap-3 px-6 py-4 text-[10px] font-semibold tracking-[2px] uppercase transition shadow-sm ${
+                className={`flex flex-1 items-center justify-center gap-3 px-6 py-4 text-[10px] font-semibold tracking-[2px] uppercase transition shadow-sm cursor-pointer ${
                   inStock
                     ? "bg-[#394132] text-white hover:bg-[#26251f]"
                     : "bg-[#d5cec3] text-[#7d776c] cursor-not-allowed border border-[#c4bcaf]"
@@ -824,16 +1093,70 @@ function ProductDetails() {
                 {inStock ? "Add to Bag" : "Out of Stock"}
               </button>
 
-              {sampleSupported && samplePrice !== null && (
+              {/* Wishlist Button */}
+              <button
+                type="button"
+                aria-label={isWishlisted(product?._id) ? "Remove from wishlist" : "Add to wishlist"}
+                onClick={() => toggleWishlist(product)}
+                className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-sm border transition shadow-xs cursor-pointer ${
+                  isWishlisted(product?._id)
+                    ? "border-[#b83232] bg-[#fbf5f5] text-[#b83232]"
+                    : "border-[#d8d1c5] bg-white text-[#171713] hover:border-[#b83232] hover:text-[#b83232]"
+                }`}
+                title={isWishlisted(product?._id) ? "In Wishlist" : "Add to Wishlist"}
+              >
+                <Heart
+                  size={18}
+                  className={isWishlisted(product?._id) ? "fill-[#b83232]" : ""}
+                />
+              </button>
+            </div>
+
+            {/* Dedicated Sample Box Card */}
+            {sampleSupported && samplePrice !== null && (
+              <div className="mt-6 rounded-sm border border-[#394132] bg-[#fbf9f5] p-4 text-xs">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <span className="text-[9px] font-bold uppercase tracking-wider text-[#394132]">
+                      Try Before You Buy
+                    </span>
+                    <h4 className="font-serif text-sm font-semibold text-[#171713] mt-0.5">
+                      Order A4 Swatch Sample
+                    </h4>
+                    <p className="text-[11px] text-[#666257] mt-1">
+                      Generous 21cm × 29.7cm swatch. Test the paper texture and lighting in your room.
+                    </p>
+                  </div>
+                  <span className="shrink-0 font-semibold text-sm text-[#171713]">
+                    {formatPrice(samplePrice, sampleCurrency)}
+                  </span>
+                </div>
                 <button
                   type="button"
                   onClick={() => handleAddToCart(true)}
-                  className="flex w-full items-center justify-center gap-2 border border-[#394132] bg-transparent py-3 text-[10px] font-semibold tracking-[1.5px] uppercase text-[#394132] hover:bg-[#394132] hover:text-white transition"
+                  className="mt-3 flex w-full items-center justify-center gap-2 rounded-full border border-[#394132] bg-[#394132] py-2.5 text-[10px] font-semibold tracking-[1.5px] uppercase text-white hover:bg-[#26251f] transition cursor-pointer"
                 >
-                  <Sparkles size={14} />
-                  Order a Sample ({formatPrice(samplePrice, sampleCurrency)})
+                  <Sparkles size={13} />
+                  Add Sample to Bag ({formatPrice(samplePrice, sampleCurrency)})
                 </button>
-              )}
+                <div className="mt-2 flex items-center justify-center gap-1.5 text-[10px] text-[#394132] font-medium">
+                  <Truck size={12} />
+                  <span>Complimentary UK Royal Mail Sample Postage</span>
+                </div>
+              </div>
+            )}
+
+            {/* World Land Trust & B-Corp Impact Banner */}
+            <div className="mt-6 rounded-sm bg-[#32392b] text-[#f6f3ec] p-4 text-xs flex items-center gap-3.5 shadow-2xs">
+              <TreePine size={22} className="text-[#d8c4a5] shrink-0" />
+              <div>
+                <p className="font-semibold text-white tracking-wide">
+                  35m² Rainforest Protected Forever
+                </p>
+                <p className="text-[10px] text-[#d8d3c5] mt-0.5">
+                  With every order, we buy and preserve endangered wild habitat via World Land Trust. Certified B Corp™.
+                </p>
+              </div>
             </div>
 
             {/* Trust Features */}
@@ -942,7 +1265,7 @@ function ProductDetails() {
                 <button
                   type="button"
                   onClick={() => setOpenSection((s) => (s === "shipping" ? "" : "shipping"))}
-                  className="flex w-full items-center justify-between py-4 text-left text-xs font-medium tracking-wide uppercase"
+                  className="flex w-full items-center justify-between py-4 text-left text-xs font-medium tracking-wide uppercase cursor-pointer"
                 >
                   <span>Delivery & Returns</span>
                   <ChevronDown size={15} className={`transition-transform duration-300 ${openSection === "shipping" ? "rotate-180" : ""}`} />
@@ -955,13 +1278,104 @@ function ProductDetails() {
                   </div>
                 )}
               </div>
+
+              {/* 4. Hanging & Application Guide */}
+              <div className="border-b border-[#d8d1c5]">
+                <button
+                  type="button"
+                  onClick={() => setOpenSection((s) => (s === "installation" ? "" : "installation"))}
+                  className="flex w-full items-center justify-between py-4 text-left text-xs font-medium tracking-wide uppercase cursor-pointer"
+                >
+                  <span>Hanging & Installation Guide</span>
+                  <ChevronDown size={15} className={`transition-transform duration-300 ${openSection === "installation" ? "rotate-180" : ""}`} />
+                </button>
+                {openSection === "installation" && (
+                  <div className="pb-5 text-xs leading-6 text-[#666257] space-y-2">
+                    <p><strong>Paste-the-Wall Technique:</strong> Our wallpapers are printed on heavy non-woven substrate, meaning you apply paste directly to the wall — no soaking or pasting table required.</p>
+                    <p><strong>Adhesive:</strong> We recommend a premium ready-mixed non-woven tub paste (e.g. Solvite or Beeline).</p>
+                    <p><strong>Pattern Match:</strong> Straight match or half-drop as specified on the roll label. Smooth down with a clean felt roller or decorator sponge.</p>
+                    <p><strong>Maintenance:</strong> Spongeable. Wipe gently with a soft damp cloth.</p>
+                  </div>
+                )}
+              </div>
+
+              {/* 5. Sustainability & Craftsmanship */}
+              <div className="border-b border-[#d8d1c5]">
+                <button
+                  type="button"
+                  onClick={() => setOpenSection((s) => (s === "sustainability" ? "" : "sustainability"))}
+                  className="flex w-full items-center justify-between py-4 text-left text-xs font-medium tracking-wide uppercase cursor-pointer"
+                >
+                  <span>B Corp & Environmental Impact</span>
+                  <ChevronDown size={15} className={`transition-transform duration-300 ${openSection === "sustainability" ? "rotate-180" : ""}`} />
+                </button>
+                {openSection === "sustainability" && (
+                  <div className="pb-5 text-xs leading-6 text-[#666257] space-y-2">
+                    <p><strong>Certified B Corporation™:</strong> We meet the highest verified standards of social and environmental performance, transparency and accountability.</p>
+                    <p><strong>World Land Trust:</strong> Every roll or metre purchased buys and permanently protects 35m² of endangered rainforest habitat.</p>
+                    <p><strong>Materials:</strong> 100% FSC-certified paper sourced from sustainably managed British forests. Printed with non-toxic, water-based mineral inks.</p>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
 
+        {/* Curated Paint Pairings Section */}
+        <section className="mt-20 border-t border-[#d8d1c5] pt-14">
+          <div className="mb-8 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
+            <div>
+              <p className="text-[10px] font-semibold tracking-[2.5px] uppercase text-[#394132] flex items-center gap-1.5">
+                <Palette size={14} />
+                Complete The Look
+              </p>
+              <h2 className="font-serif text-2xl sm:text-3xl text-[#171713] mt-1">
+                Curated Paint Pairings
+              </h2>
+              <p className="text-xs text-[#666257] mt-1 max-w-xl">
+                Our in-house colourists have specifically handpicked these mineral paint shades to harmonize with {product.name}.
+              </p>
+            </div>
+            <Link
+              to="/products?category=paint"
+              className="text-xs uppercase tracking-wider underline underline-offset-4 text-[#394132]"
+            >
+              Explore All Paint
+            </Link>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+            {CURATED_PAINT_PAIRINGS.map((paint) => (
+              <div
+                key={paint.name}
+                className="rounded-sm border border-[#d8d1c5] bg-white p-4 shadow-2xs flex flex-col justify-between"
+              >
+                <div>
+                  <div
+                    className="aspect-square w-full rounded-sm shadow-inner mb-3 border border-black/10"
+                    style={{ backgroundColor: paint.hex }}
+                  />
+                  <h4 className="font-serif text-base text-[#171713]">{paint.name} Mineral Paint</h4>
+                  <p className="text-[10px] uppercase tracking-wider text-[#777267] mt-0.5">{paint.shade}</p>
+                  <p className="text-[11px] text-[#666257] mt-1.5 leading-4 line-clamp-2">{paint.description}</p>
+                </div>
+                <div className="mt-4 pt-3 border-t border-[#e8e2d7] flex items-center justify-between">
+                  <span className="text-xs font-semibold text-[#171713]">£{paint.price}.00</span>
+                  <Link
+                    to={paint.link}
+                    className="inline-flex items-center gap-1 rounded-full border border-[#394132] px-3 py-1 text-[9px] uppercase tracking-wider text-[#394132] hover:bg-[#394132] hover:text-white transition font-medium"
+                  >
+                    View Shade
+                  </Link>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+
         {/* Related Designs Section */}
         {relatedProducts.length > 0 && (
-          <section className="mt-24 border-t border-[#d8d1c5] pt-16">
+          <section className="mt-20 border-t border-[#d8d1c5] pt-16">
             <div className="mb-8 flex items-end justify-between">
               <div>
                 <p className="text-[10px] font-medium tracking-[2.5px] uppercase text-[#394132]">You May Also Like</p>
@@ -1051,6 +1465,60 @@ function ProductDetails() {
             </div>
           </section>
         )}
+
+        {/* Real Homes Community Lookbook */}
+        <section className="mt-20 border-t border-[#d8d1c5] pt-14">
+          <div className="mb-8 text-center">
+            <p className="text-[10px] font-semibold tracking-[2.5px] uppercase text-[#394132]">
+              #HOUSEOFHACKNEY
+            </p>
+            <h2 className="font-serif text-2xl sm:text-3xl text-[#171713] mt-1">
+              In Real Homes
+            </h2>
+            <p className="text-xs text-[#666257] mt-1">
+              See how interior designers and customers style House of Hackney prints in their own sanctuaries.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+            {[
+              {
+                title: "Living Room Alcove",
+                location: "London, UK",
+                img: "https://images.unsplash.com/photo-1616486338812-3dadae4b4ace?auto=format&fit=crop&w=700&q=80",
+              },
+              {
+                title: "Master Suite",
+                location: "Cotswolds, England",
+                img: "https://images.unsplash.com/photo-1600210492486-724fe5c67fb0?auto=format&fit=crop&w=700&q=80",
+              },
+              {
+                title: "Dining Sanctuary",
+                location: "Edinburgh, Scotland",
+                img: "https://images.unsplash.com/photo-1616486029423-aaa4789e8c9a?auto=format&fit=crop&w=700&q=80",
+              },
+              {
+                title: "Powder Room",
+                location: "New York, USA",
+                img: "https://images.unsplash.com/photo-1584622650111-993a426fbf0a?auto=format&fit=crop&w=700&q=80",
+              },
+            ].map((home, idx) => (
+              <div key={idx} className="group relative aspect-[3/4] overflow-hidden rounded-sm bg-[#e8e2d7]">
+                <img
+                  src={home.img}
+                  alt={home.title}
+                  loading="lazy"
+                  className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent opacity-80 group-hover:opacity-100 transition-opacity" />
+                <div className="absolute inset-x-0 bottom-0 p-3 text-white">
+                  <p className="text-[9px] uppercase tracking-wider text-[#d8c4a5]">{home.location}</p>
+                  <p className="font-serif text-sm text-white">{home.title}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
       </div>
     </main>
   );

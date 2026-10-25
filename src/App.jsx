@@ -2,14 +2,15 @@ import { useEffect } from "react";
 import { BrowserRouter, Routes, Route, Link, useLocation } from "react-router-dom";
 import { useDispatch } from "react-redux";
 
-import Header from "./componets/layout/Header";
-import Footer from "./componets/layout/Footer";
-import Cart from "./componets/Cart";
+import Header from "./components/layout/Header";
+import Footer from "./components/layout/Footer";
+import ScrollToTop from "./components/common/ScrollToTop";
+import Cart from "./components/Cart";
 import Home from "./pages/Home";
 import Products from "./pages/Products";
 import Login from "./pages/Login";
 import ProductDetails from "./pages/ProductDetails";
-import ProtectedRoute from "./componets/auth/ProtectedRoute";
+import ProtectedRoute from "./components/auth/ProtectedRoute";
 import Register from "./pages/Register";
 import VerifyEmail from "./pages/VerifyEmail";
 import ForgotPassword from "./pages/ForgotPassword";
@@ -19,6 +20,10 @@ import Inspiration from "./pages/Inspiration";
 import OurHouse from "./pages/OurHouse";
 import DesignServices from "./pages/DesignServices";
 import Trade from "./pages/Trade";
+import Profile from "./pages/Profile";
+import HelpFaq from "./pages/HelpFaq";
+import Legal from "./pages/Legal";
+import GiftVoucher from "./pages/GiftVoucher";
 import { restoreSession } from "./features/auth/authService";
 import {
   setCredentials,
@@ -26,9 +31,9 @@ import {
   setAuthInitialized,
 } from "./features/auth/authSlice";
 
-// Dashboard V14 Admin Panel
+// Admin panel
 import AdminLayout from "./pages/admin/AdminLayout";
-import AdminProtectedRoute from "./componets/auth/AdminProtectedRoute";
+import AdminProtectedRoute from "./components/auth/AdminProtectedRoute";
 
 function NotFound() {
   return (
@@ -81,12 +86,12 @@ function AppContent() {
       {!isAdmin && <Header />}
 
       <Routes>
-        {/* Dashboard V14 Admin Panel (Secured Route) */}
+        {/* Admin routes */}
         <Route element={<AdminProtectedRoute />}>
           <Route path="/admin/*" element={<AdminLayout />} />
         </Route>
 
-        {/* Public pages */}
+        {/* Auth routes */}
         <Route path="/" element={<Home />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
@@ -95,7 +100,7 @@ function AppContent() {
         <Route path="/verify-reset-otp" element={<VerifyResetOtp />} />
         <Route path="/reset-password" element={<ResetPassword />} />
 
-        {/* Product & Storefront pages */}
+        {/* Store and products */}
         <Route path="/products" element={<Products />} />
         <Route path="/products/:productId" element={<ProductDetails />} />
         <Route path="/shop" element={<Products />} />
@@ -111,15 +116,47 @@ function AppContent() {
         <Route path="/search" element={<Products />} />
         <Route path="/cart" element={<Cart />} />
 
-        {/* Inspiration & Brand Editorial pages */}
+        {/* Editorial and services */}
         <Route path="/inspiration" element={<Inspiration />} />
         <Route path="/our-house" element={<OurHouse />} />
         <Route path="/design-services" element={<DesignServices />} />
         <Route path="/trade" element={<Trade />} />
 
-        {/* Protected pages */}
+        {/* Help and FAQs */}
+        <Route path="/help" element={<HelpFaq />} />
+        <Route path="/faq" element={<HelpFaq />} />
+        <Route path="/faqs" element={<HelpFaq />} />
+        <Route path="/contact" element={<HelpFaq />} />
+
+        {/* Legal pages */}
+        <Route path="/privacy" element={<Legal defaultTopic="privacy" />} />
+        <Route path="/terms" element={<Legal defaultTopic="terms" />} />
+        <Route path="/cookies" element={<Legal defaultTopic="cookies" />} />
+        <Route path="/accessibility" element={<Legal defaultTopic="accessibility" />} />
+        <Route path="/legal" element={<Legal />} />
+        <Route path="/legal/:topic" element={<Legal />} />
+
+        {/* Stockists and showrooms */}
+        <Route path="/stockists" element={<OurHouse defaultTab="showrooms" />} />
+        <Route path="/our-stockists" element={<OurHouse defaultTab="showrooms" />} />
+        <Route path="/showrooms" element={<OurHouse defaultTab="showrooms" />} />
+
+        {/* Samples and vouchers */}
+        <Route path="/samples" element={<Products />} />
+        <Route path="/samples/:category" element={<Products />} />
+        <Route path="/gift-voucher" element={<GiftVoucher />} />
+        <Route path="/gift-card" element={<GiftVoucher />} />
+        <Route path="/vouchers" element={<GiftVoucher />} />
+
+        {/* Customer account pages */}
         <Route element={<ProtectedRoute />}>
-          {/* Add account, profile, and orders routes here */}
+          <Route path="/account" element={<Profile />} />
+          <Route path="/account/:tab" element={<Profile />} />
+          <Route path="/profile" element={<Profile />} />
+          <Route path="/profile/:tab" element={<Profile />} />
+          <Route path="/orders" element={<Profile defaultTab="orders" />} />
+          <Route path="/wishlist" element={<Profile defaultTab="wishlist" />} />
+          <Route path="/addresses" element={<Profile defaultTab="addresses" />} />
         </Route>
 
         <Route path="*" element={<NotFound />} />
@@ -133,10 +170,11 @@ function AppContent() {
 function App() {
   return (
     <BrowserRouter>
+      {/* Scroll to top whenever route changes */}
+      <ScrollToTop />
       <AppContent />
     </BrowserRouter>
   );
 }
 
 export default App;
-

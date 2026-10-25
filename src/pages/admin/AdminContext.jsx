@@ -77,6 +77,8 @@ export function AdminProvider({ children }) {
   const [loadingProducts, setLoadingProducts] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
   const [productModalOpen, setProductModalOpen] = useState(false);
+  const [viewingProduct, setViewingProduct] = useState(null);
+  const [viewProductModalOpen, setViewProductModalOpen] = useState(false);
 
   // Sync theme
   useEffect(() => {
@@ -100,6 +102,7 @@ export function AdminProvider({ children }) {
         setNotificationsOpen(false);
         setNewProductOpen(false);
         setProductModalOpen(false);
+        setViewProductModalOpen(false);
         setSelectedOrder(null);
       }
     };
@@ -175,6 +178,43 @@ export function AdminProvider({ children }) {
   const openEditProductModal = (prod) => {
     setEditingProduct(prod);
     setProductModalOpen(true);
+  };
+
+  const openViewProductModal = async (prod) => {
+    if (!prod) return;
+    setViewingProduct(prod);
+    setViewProductModalOpen(true);
+    // Asynchronously try to fetch full product details to ensure all variants and specifications are populated
+    try {
+      const prodId = prod._id || prod.id;
+      if (prodId) {
+        const full = await adminApiService.getProductById(prodId);
+        if (full) {
+          setViewingProduct((prev) => (prev?._id === prodId || prev?.id === prodId ? full : prev));
+        }
+      }
+    } catch (err) {
+      console.warn("Product detail enrichment error:", err);
+    }
+  };
+
+  const closeViewProductModal = () => {
+    setViewProductModalOpen(false);
+    setViewingProduct(null);
+  };
+
+  const refreshProducts = async () => {
+    setLoadingProducts(true);
+    try {
+      const prodsData = await adminApiService.getProducts({}, true);
+      setProducts(prodsData || []);
+      showToast(`Loaded ${prodsData?.length || 0} catalog products.`);
+    } catch (err) {
+      console.warn("Failed to refresh products:", err);
+      showToast("Could not refresh products from backend.");
+    } finally {
+      setLoadingProducts(false);
+    }
   };
 
   // Role Switcher function with security tab reset
@@ -378,11 +418,16 @@ export function AdminProvider({ children }) {
         editingProduct,
         productModalOpen,
         setProductModalOpen,
+        viewingProduct,
+        viewProductModalOpen,
+        openCreateProductModal,
+        openEditProductModal,
+        openViewProductModal,
+        closeViewProductModal,
+        refreshProducts,
         addProduct,
         editProduct,
         deleteProduct,
-        openCreateProductModal,
-        openEditProductModal,
         // Trade B2B
         tradeProfile,
         tradeCredit,
