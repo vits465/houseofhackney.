@@ -109,7 +109,7 @@ function Footer() {
         {/* Lower Legal Bar */}
         <div className="mt-14 border-t border-[#f6f3ec]/15 pt-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-[10px] tracking-wider text-[#d8d3c5]/60">
           <p>© {new Date().getFullYear()} HOUSE OF HACKNEY. ALL RIGHTS RESERVED.</p>
-          <div className="flex flex-wrap gap-4 sm:gap-6">
+          <div className="flex flex-wrap items-center gap-4 sm:gap-6">
             <Link to="/privacy" className="hover:text-white transition">
               Privacy Policy
             </Link>
@@ -121,6 +121,13 @@ function Footer() {
             </Link>
             <Link to="/accessibility" className="hover:text-white transition">
               Accessibility
+            </Link>
+            <span className="opacity-30">•</span>
+            <Link
+              to="/admin"
+              className="text-[#b89758] hover:text-[#d6bb82] font-semibold transition"
+            >
+              Atelier CMS (Admin)
             </Link>
           </div>
         </div>

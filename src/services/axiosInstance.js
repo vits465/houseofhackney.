@@ -41,6 +41,26 @@ axiosInstance.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
+const handleSessionExpired = () => {
+  store.dispatch(logout());
+  try {
+    sessionStorage.removeItem("refreshToken");
+    sessionStorage.removeItem("hoh_preview_role");
+  } catch (e) {
+    console.warn("Storage clear error:", e);
+  }
+
+  if (typeof window !== "undefined" && window.location) {
+    const currentPath = window.location.pathname;
+    if (currentPath !== "/login") {
+      const fromParam = currentPath.startsWith("/admin")
+        ? `&from=${encodeURIComponent(currentPath)}`
+        : "";
+      window.location.href = `/login?expired=true${fromParam}`;
+    }
+  }
+};
+
 // Refresh tokens after a 401 response.
 axiosInstance.interceptors.response.use(
   (response) => response,
@@ -65,7 +85,7 @@ axiosInstance.interceptors.response.use(
     const refreshToken = store.getState().auth?.refreshToken;
 
     if (!refreshToken) {
-      store.dispatch(logout());
+      handleSessionExpired();
       return Promise.reject(error);
     }
 
@@ -110,7 +130,7 @@ axiosInstance.interceptors.response.use(
 
       return axiosInstance(originalRequest);
     } catch (refreshError) {
-      store.dispatch(logout());
+      handleSessionExpired();
       return Promise.reject(refreshError);
     }
   }

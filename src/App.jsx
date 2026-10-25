@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { BrowserRouter, Routes, Route, Link } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Link, useLocation } from "react-router-dom";
 import { useDispatch } from "react-redux";
 
 import Header from "./componets/layout/Header";
@@ -26,6 +26,10 @@ import {
   setAuthInitialized,
 } from "./features/auth/authSlice";
 
+// Dashboard V14 Admin Panel
+import AdminLayout from "./pages/admin/AdminLayout";
+import AdminProtectedRoute from "./componets/auth/AdminProtectedRoute";
+
 function NotFound() {
   return (
     <main className="bg-[#f6f3ec] px-5 py-20 text-center text-[#171713]">
@@ -39,6 +43,8 @@ function NotFound() {
 
 function AppContent() {
   const dispatch = useDispatch();
+  const location = useLocation();
+  const isAdmin = location.pathname.startsWith("/admin");
 
   useEffect(() => {
     let active = true;
@@ -72,9 +78,14 @@ function AppContent() {
 
   return (
     <>
-      <Header />
+      {!isAdmin && <Header />}
 
       <Routes>
+        {/* Dashboard V14 Admin Panel (Secured Route) */}
+        <Route element={<AdminProtectedRoute />}>
+          <Route path="/admin/*" element={<AdminLayout />} />
+        </Route>
+
         {/* Public pages */}
         <Route path="/" element={<Home />} />
         <Route path="/login" element={<Login />} />
@@ -114,7 +125,7 @@ function AppContent() {
         <Route path="*" element={<NotFound />} />
       </Routes>
 
-      <Footer />
+      {!isAdmin && <Footer />}
     </>
   );
 }
@@ -128,3 +139,4 @@ function App() {
 }
 
 export default App;
+

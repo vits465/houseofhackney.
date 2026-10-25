@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useDispatch } from "react-redux";
-import { Eye, EyeOff, ArrowRight } from "lucide-react";
+import { Eye, EyeOff, ArrowRight, AlertCircle } from "lucide-react";
 
 import axiosInstance from "../services/axiosInstance";
 import {
@@ -20,6 +20,10 @@ const Login = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const location = useLocation();
+
+  const searchParams = new URLSearchParams(location.search);
+  const isSessionExpired = searchParams.get("expired") === "true";
+  const urlFrom = searchParams.get("from");
 
   const [formData, setFormData] = useState({
     email: location.state?.email || "",
@@ -88,16 +92,37 @@ const Login = () => {
         })
       );
 
-      const requestedPath = location.state?.from?.pathname;
+      const requestedPath = urlFrom || location.state?.from?.pathname;
 
-      const destination =
-        requestedPath?.startsWith("/") &&
-        !requestedPath.startsWith("//")
-          ? requestedPath
-          : "/";
+      // Determine role destination
+      const userRoles = Array.isArray(user?.roles) ? user.roles : [];
+      const roleSlugs = userRoles.map((r) =>
+        typeof r === "string" ? r.toLowerCase() : r?.slug?.toLowerCase() || ""
+      );
+      const isTradeUser =
+        roleSlugs.includes("trade") ||
+        roleSlugs.includes("trade-user") ||
+        roleSlugs.includes("trade_user") ||
+        user?.accountType === "TRADE";
+      const isAdminUser =
+        roleSlugs.includes("admin") ||
+        roleSlugs.includes("super-admin") ||
+        roleSlugs.includes("super_admin") ||
+        roleSlugs.includes("manager");
+
+      let destination = "/";
+      if (requestedPath?.startsWith("/") && !requestedPath.startsWith("//")) {
+        destination = requestedPath;
+      } else if (isTradeUser || isAdminUser) {
+        destination = "/admin";
+      }
 
       // Show a small, elegant success notification.
-      showToast("Welcome back to House of Hackney");
+      showToast(
+        isTradeUser
+          ? "Welcome to House of Hackney Trade B2B Atelier"
+          : "Welcome back to House of Hackney"
+      );
 
       navigate(destination, { replace: true });
     } catch (err) {
@@ -126,6 +151,18 @@ const Login = () => {
         >
           HOUSE OF HACKNEY
         </Link>
+
+        {isSessionExpired && (
+          <div className="mb-6 flex items-start gap-3 rounded-2xl border border-amber-300 bg-amber-50 p-4 text-xs text-amber-900 shadow-sm animate-in fade-in">
+            <AlertCircle className="h-5 w-5 flex-shrink-0 text-amber-600 mt-0.5" />
+            <div>
+              <p className="font-bold text-amber-950">Atelier Session Expired</p>
+              <p className="text-amber-800 mt-0.5">
+                Your authentication token has expired. Please sign in again with your credentials to resume your atelier session.
+              </p>
+            </div>
+          </div>
+        )}
 
         <div className="mb-9 text-center">
           <p className="mb-3 text-xs uppercase tracking-[0.22em] text-[#68675f]">
