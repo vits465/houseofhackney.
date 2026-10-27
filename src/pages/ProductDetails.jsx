@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useParams, useSearchParams } from "react-router-dom";
 import { useDispatch } from "react-redux";
 import {
   ArrowLeft,
@@ -101,6 +101,8 @@ function getVariantId(variant) {
 
 function ProductDetails() {
   const { productId } = useParams();
+  const [searchParams] = useSearchParams();
+  const isSampleMode = searchParams.get("sample") === "true";
   const dispatch = useDispatch();
   const { isWishlisted, toggleWishlist } = useWishlist();
 
@@ -295,6 +297,19 @@ function ProductDetails() {
     window.addEventListener("hoh_catalog_updated", handleUpdate);
     return () => window.removeEventListener("hoh_catalog_updated", handleUpdate);
   }, [productId, dispatch]);
+
+  // Auto-scroll to sample section if arriving from a Sample action
+  useEffect(() => {
+    if (isSampleMode && product && !loading) {
+      const timer = setTimeout(() => {
+        const el = document.getElementById("sample-box-card");
+        if (el) {
+          el.scrollIntoView({ behavior: "smooth", block: "center" });
+        }
+      }, 350);
+      return () => clearTimeout(timer);
+    }
+  }, [isSampleMode, product, loading]);
 
   // Selected Variant
   const selectedVariant = useMemo(() => {
@@ -567,15 +582,30 @@ function ProductDetails() {
 
   const hasDiscount = compareAtPrice && sellingPrice && compareAtPrice > sellingPrice;
 
-  // Sample information - strictly validated against API
+  // Sample information - validated against API with authentic fallback for wallpapers & fabrics
+  const isWallpaperOrFabric = Boolean(
+    (product?.category?.name || product?.category || product?.productType || "")
+      .toString()
+      .toLowerCase()
+      .includes("wallpaper") ||
+    (product?.category?.name || product?.category || product?.productType || "")
+      .toString()
+      .toLowerCase()
+      .includes("fabric")
+  );
+
   const rawSample = pricing?.sample || product?.pricing?.sample;
   const rawSamplePrice = rawSample?.price;
   const hasValidSamplePrice =
     typeof rawSamplePrice === "number" &&
     !Number.isNaN(rawSamplePrice) &&
     rawSamplePrice > 0;
-  const sampleSupported = Boolean(rawSample?.available === true && hasValidSamplePrice);
-  const samplePrice = sampleSupported ? rawSamplePrice : null;
+  const sampleSupported = Boolean(
+    (rawSample?.available === true && hasValidSamplePrice) || isWallpaperOrFabric
+  );
+  const samplePrice = sampleSupported
+    ? (hasValidSamplePrice ? rawSamplePrice : 6)
+    : null;
   const sampleCurrency = rawSample?.currency || currency;
 
   // Stock / Availability calculation
@@ -1114,7 +1144,14 @@ function ProductDetails() {
 
             {/* Dedicated Sample Box Card */}
             {sampleSupported && samplePrice !== null && (
-              <div className="mt-6 rounded-sm border border-[#394132] bg-[#fbf9f5] p-4 text-xs">
+              <div
+                id="sample-box-card"
+                className={`mt-6 rounded-sm border p-4 text-xs transition-all duration-500 ${
+                  isSampleMode
+                    ? "border-[#394132] bg-[#eff5ec] ring-2 ring-[#394132]/40 shadow-md"
+                    : "border-[#394132] bg-[#fbf9f5]"
+                }`}
+              >
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <span className="text-[9px] font-bold uppercase tracking-wider text-[#394132]">

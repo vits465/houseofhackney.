@@ -5,6 +5,11 @@ import {
   getDeletedProductIds,
   registerCacheInvalidator,
 } from "../utils/productSync";
+import {
+  CURATED_PRODUCTS,
+  SLUG_TO_BACKEND_MAP,
+  findCuratedProduct,
+} from "../utils/curatedProducts";
 
 const productsCache = new Map();
 const productCache = new Map();
@@ -67,16 +72,23 @@ const normalizeProductsResponse = (body) => {
     products = body;
   }
 
-  // Prepend any custom products added via Admin
+  // Prepend any custom products added via Admin and curated flagship creations
   const customProds = getCustomProducts();
   const deletedIds = getDeletedProductIds();
 
-  // Combine custom products with backend products (preventing duplicates)
-  const existingIds = new Set(customProds.map((c) => String(c._id || c.id)));
+  // Combine custom products, curated creations, and backend products (preventing duplicates)
+  const curatedClean = CURATED_PRODUCTS.filter(
+    (c) => !deletedIds.has(String(c._id || c.id))
+  );
+  const existingIds = new Set([
+    ...customProds.map((c) => String(c._id || c.id)),
+    ...curatedClean.map((c) => String(c._id || c.id)),
+  ]);
+
   const nonDuplicateBackend = products.filter(
     (p) => !existingIds.has(String(p._id || p.id))
   );
-  const combined = [...customProds, ...nonDuplicateBackend];
+  const combined = [...customProds, ...curatedClean, ...nonDuplicateBackend];
 
   // Apply synchronization, admin overrides, and smart stock
   const synchronized = combined
@@ -124,20 +136,36 @@ export const getProductById = (productId) => {
     return Promise.reject(new Error("Product ID or slug is missing."));
   }
 
-  const id = String(productId).trim();
+  const rawId = String(productId).trim();
+  const lowerId = rawId.toLowerCase();
 
-  // Check if this is a custom product created in Admin
+  // 1. Check custom products created in Admin Panel
   const customProds = getCustomProducts();
   const customMatch = customProds.find(
-    (p) => String(p._id) === id || String(p.id) === id || String(p.slug) === id
+    (p) =>
+      String(p._id) === rawId ||
+      String(p.id) === rawId ||
+      String(p.slug || "").toLowerCase() === lowerId
   );
   if (customMatch) {
     return Promise.resolve(syncProductData(customMatch));
   }
 
-  return cacheRequest(productCache, id, async () => {
+  // 2. Check curated flagship House Favourites (Plantasia, Hollyhocks, Wild Card)
+  const curatedMatch = findCuratedProduct(lowerId);
+  if (curatedMatch) {
+    return Promise.resolve(syncProductData(curatedMatch));
+  }
+
+  // 3. Resolve target backend slug / ID (mapping friendly pattern slugs to backend records)
+  const targetBackendId = SLUG_TO_BACKEND_MAP[lowerId] || rawId;
+
+  return cacheRequest(productCache, lowerId, async () => {
+    // Attempt 1: Fetch directly using mapped or requested ID/slug
     try {
-      const response = await axiosInstance.get(`/products/${encodeURIComponent(id)}`);
+      const response = await axiosInstance.get(
+        `/products/${encodeURIComponent(targetBackendId)}`
+      );
       const body = getResponseData(response);
       const product = body?.data?.product ?? body?.data ?? body;
 
@@ -145,31 +173,78 @@ export const getProductById = (productId) => {
         return syncProductData(product);
       }
     } catch (primaryErr) {
-      // If fetching directly by ID fails (e.g. id is a slug or name), try searching products catalogue
+      // Attempt 2: Try underscore <-> hyphen conversion if slug format differs
+      const altSlug = lowerId.includes("-")
+        ? lowerId.replace(/-/g, "_")
+        : lowerId.replace(/_/g, "-");
+
+      if (altSlug !== targetBackendId && altSlug !== lowerId) {
+        try {
+          const altRes = await axiosInstance.get(
+            `/products/${encodeURIComponent(altSlug)}`
+          );
+          const altBody = getResponseData(altRes);
+          const altProd = altBody?.data?.product ?? altBody?.data ?? altBody;
+          if (altProd && typeof altProd === "object" && !Array.isArray(altProd)) {
+            return syncProductData(altProd);
+          }
+        } catch {
+          // ignore
+        }
+      }
+
+      // Attempt 3: Try searching catalogue for root keyword
       try {
+        const rootTerm = lowerId
+          .replace(/[-_]/g, " ")
+          .replace(
+            /\b(wallpaper|fabric|paint|spring|sage|blush|zenith|eau de nil|willow|dove)\b/gi,
+            ""
+          )
+          .trim();
+
         const fallbackRes = await axiosInstance.get("/products", {
-          params: { search: id, limit: 12 },
+          params: { search: rootTerm || lowerId, limit: 20 },
         });
+
         const listData =
           fallbackRes.data?.data?.data ||
           fallbackRes.data?.data ||
           fallbackRes.data ||
           [];
         const list = Array.isArray(listData) ? listData : [];
-        const match = list.find(
-          (p) =>
-            p &&
-            (String(p.slug) === id ||
-              String(p._id) === id ||
-              p.name?.toLowerCase().replace(/[^a-z0-9]+/g, "-") === id.toLowerCase() ||
-              p.name?.toLowerCase().includes(id.toLowerCase()))
-        );
+
+        const match = list.find((p) => {
+          if (!p) return false;
+          const pSlug = String(p.slug || "").toLowerCase();
+          const pName = String(p.name || "").toLowerCase();
+          const pId = String(p._id || p.id || "");
+
+          return (
+            pSlug === lowerId ||
+            pSlug === targetBackendId ||
+            pId === rawId ||
+            pName.replace(/[^a-z0-9]+/g, "-") === lowerId ||
+            (rootTerm && pName.includes(rootTerm)) ||
+            (rootTerm && pSlug.includes(rootTerm))
+          );
+        });
+
         if (match) {
           return syncProductData(match);
         }
       } catch {
-        // Fall back to original error
+        // ignore
       }
+
+      // Final fallback: Check curated products by partial match
+      const partialCurated = CURATED_PRODUCTS.find((cp) =>
+        lowerId.includes(cp.name.toLowerCase().split(" ")[0])
+      );
+      if (partialCurated) {
+        return syncProductData(partialCurated);
+      }
+
       throw primaryErr;
     }
 

@@ -503,7 +503,7 @@ function Home() {
                     View Pattern
                   </Link>
                   <Link
-                    to={`/products/${item.slug}`}
+                    to={`/products/${item.slug}?sample=true`}
                     className="flex items-center justify-center gap-1 rounded-full border border-[#394132] bg-[#394132]/10 px-3 py-2 text-[10px] font-medium tracking-wider uppercase text-[#394132] transition hover:bg-[#394132] hover:text-white"
                   >
                     <Sparkles size={11} />
