@@ -614,7 +614,8 @@ function ProductDetails() {
     inventory &&
     inventory.inStock !== false &&
     inventory.status !== "OUT_OF_STOCK" &&
-    (inventory.availableQuantity === undefined || inventory.availableQuantity > 0)
+    (inventory.availableQuantity === undefined || inventory.availableQuantity > 0) &&
+    (product?.stock === undefined || product.stock > 0)
   );
 
   // Handlers

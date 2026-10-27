@@ -11,6 +11,7 @@ export default function RazorpayModal({
   amount,
   currency = "INR",
   user = null,
+  shippingAddress = null,
   onSuccess,
 }) {
   useEffect(() => {
@@ -19,6 +20,7 @@ export default function RazorpayModal({
         amount,
         currency,
         user,
+        shippingAddress,
         onSuccess: (paymentData) => {
           if (onSuccess) {
             onSuccess(paymentData);

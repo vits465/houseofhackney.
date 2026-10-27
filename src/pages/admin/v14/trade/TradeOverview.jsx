@@ -26,16 +26,18 @@ export default function TradeOverview() {
     tradeQuotations,
     setActiveTab,
     approveQuote,
+    authUser,
   } = useAdmin();
   const isDark = theme === "dark";
 
   const [requestModalOpen, setRequestModalOpen] = useState(false);
   const [selectedQuoteForConvert, setSelectedQuoteForConvert] = useState(null);
 
+  const companyName = tradeProfile?.company?.name || authUser?.companyName || (authUser?.name ? `${authUser.name} Studio Ltd` : "Atelier Design Studio Ltd");
   const company = tradeProfile?.company || {
-    name: "Kensington Heritage Interiors Ltd",
+    name: companyName,
     businessType: "Interior Design Studio",
-    registrationNumber: "GB-9823145",
+    registrationNumber: `GB-${(authUser?._id || "9823145").slice(-7).toUpperCase()}`,
   };
 
   const tier = tradeProfile?.tier || {
@@ -46,8 +48,8 @@ export default function TradeOverview() {
 
   const credit = tradeCredit || {
     totalCredit: 50000,
-    usedCredit: 13580,
-    availableCredit: 36420,
+    usedCredit: 0,
+    availableCredit: 50000,
     paymentTerm: "NET_30",
   };
 

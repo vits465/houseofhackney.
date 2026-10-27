@@ -45,6 +45,7 @@ import {
   removeWishlistItem,
   clearAllWishlist,
 } from "../utils/wishlist";
+import { syncProductData } from "../utils/productSync";
 
 function formatCurrency(amount, currency = "GBP") {
   if (amount === null || amount === undefined || !Number.isFinite(Number(amount))) {
@@ -162,7 +163,11 @@ export default function Profile({ defaultTab }) {
           const localWishlist = getStoredWishlist();
           setWishlistItems(localWishlist);
           const localOrders = JSON.parse(localStorage.getItem("hoh_local_orders") || "[]");
-          setOrders(localOrders);
+          // For guests without an account, only show orders with no registered user ID
+          const guestOrders = localOrders.filter(
+            (o) => !o.userId && (!o.user?.email || o.user?.email === "patron@houseofhackney.com")
+          );
+          setOrders(guestOrders);
           return;
         }
 
@@ -184,19 +189,37 @@ export default function Profile({ defaultTab }) {
 
         if (!isMounted) return;
 
+        let activeUser = user;
         if (meRes.status === "fulfilled" && meRes.value) {
+          activeUser = meRes.value;
           setProfileData(meRes.value);
           dispatch(setAuthUser(meRes.value));
         }
 
-        // Merge server orders with local mock orders from Razorpay
+        // Merge server orders with local orders belonging strictly to THIS user
         const localOrders = JSON.parse(localStorage.getItem("hoh_local_orders") || "[]");
-        const apiOrders = ordersRes.status === "fulfilled" ? (ordersRes.value || []) : [];
+        const userEmail = (activeUser?.email || user?.email || "").toLowerCase().trim();
+        const userId = String(activeUser?._id || activeUser?.id || user?._id || user?.id || "");
+
+        // Only include local orders if they belong to this authenticated user
+        const userLocalOrders = localOrders.filter((lo) => {
+          const loEmail = (lo.user?.email || lo.client?.email || lo.email || "").toLowerCase().trim();
+          const loUserId = String(lo.userId || lo.user?._id || lo.user?.id || "");
+          if (userId && loUserId && loUserId === userId) return true;
+          if (userEmail && loEmail && loEmail === userEmail) return true;
+          return false;
+        });
+
+        const apiOrders = ordersRes.status === "fulfilled" && Array.isArray(ordersRes.value)
+          ? ordersRes.value
+          : [];
+
+        // Server orders from /orders are authoritative and already scoped by user ID
         const combinedOrders = [
-          ...localOrders,
-          ...apiOrders.filter(
-            (ao) => !localOrders.some((lo) => lo._id === ao._id || lo.orderNumber === ao.orderNumber)
+          ...userLocalOrders.filter(
+            (lo) => !apiOrders.some((ao) => ao._id === lo._id || ao.orderNumber === lo.orderNumber)
           ),
+          ...apiOrders,
         ];
         setOrders(combinedOrders);
 
@@ -246,6 +269,12 @@ export default function Profile({ defaultTab }) {
     try {
       showLoading("Signing out...");
       sessionStorage.removeItem("refreshToken");
+      setProfileData(null);
+      setOrders([]);
+      setAddresses([]);
+      setWishlistItems([]);
+      setSessions([]);
+      setTradeProfile(null);
       dispatch(logout());
       closeAlert();
       showToast("You have been signed out successfully.");
@@ -272,72 +301,72 @@ export default function Profile({ defaultTab }) {
     <div className="min-h-screen bg-[#f6f3ec] text-[#171713] pb-24">
       {/* Top Breadcrumb & Luxury Sanctuary Banner */}
       <div className="border-b border-[#dedbd4] bg-[#faf8f4]">
-        <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-          <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
+        <div className="mx-auto max-w-7xl px-4 py-5 sm:py-8 sm:px-6 lg:px-8">
+          <div className="flex flex-col gap-5 sm:gap-6 md:flex-row md:items-center md:justify-between">
             {/* Patron Profile Info */}
-            <div className="flex items-center gap-5">
-              <div className="relative flex h-18 w-18 sm:h-20 sm:w-20 shrink-0 items-center justify-center rounded-2xl bg-[#394132] text-white shadow-md ring-4 ring-[#dedbd4]/50">
-                <span className="font-serif text-2xl sm:text-3xl tracking-wider font-semibold">
+            <div className="flex items-center gap-3.5 sm:gap-5 min-w-0">
+              <div className="relative flex h-14 w-14 sm:h-20 sm:w-20 shrink-0 items-center justify-center rounded-2xl bg-[#394132] text-white shadow-md ring-2 sm:ring-4 ring-[#dedbd4]/50">
+                <span className="font-serif text-xl sm:text-3xl tracking-wider font-semibold">
                   {userInitials}
                 </span>
-                <span className="absolute -bottom-1 -right-1 flex h-6 w-6 items-center justify-center rounded-full bg-[#c29b38] text-white shadow">
-                  <Sparkles size={13} />
+                <span className="absolute -bottom-1 -right-1 flex h-5 w-5 sm:h-6 sm:w-6 items-center justify-center rounded-full bg-[#c29b38] text-white shadow">
+                  <Sparkles size={11} className="sm:w-3.5 sm:h-3.5" />
                 </span>
               </div>
 
-              <div>
-                <div className="flex flex-wrap items-center gap-2.5">
-                  <h1 className="font-serif text-2xl sm:text-3xl font-medium tracking-tight text-[#171713]">
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-center gap-2">
+                  <h1 className="font-serif text-xl sm:text-3xl font-medium tracking-tight text-[#171713] truncate">
                     {displayName}
                   </h1>
                   {isSuperAdmin ? (
-                    <span className="rounded-full bg-[#171713] px-3 py-0.5 text-[10px] font-semibold tracking-widest text-[#d4af37] border border-[#d4af37]/40 uppercase shadow-sm">
+                    <span className="rounded-full bg-[#171713] px-2.5 py-0.5 text-[9px] sm:text-[10px] font-semibold tracking-widest text-[#d4af37] border border-[#d4af37]/40 uppercase shadow-sm">
                       Super Admin
                     </span>
                   ) : isAdmin ? (
-                    <span className="rounded-full bg-[#394132] px-3 py-0.5 text-[10px] font-semibold tracking-widest text-white uppercase shadow-sm">
+                    <span className="rounded-full bg-[#394132] px-2.5 py-0.5 text-[9px] sm:text-[10px] font-semibold tracking-widest text-white uppercase shadow-sm">
                       Administrator
                     </span>
                   ) : tradeProfile?.status === "APPROVED" ? (
-                    <span className="rounded-full bg-[#c29b38]/15 px-3 py-0.5 text-[10px] font-semibold tracking-widest text-[#8a681c] border border-[#c29b38]/40 uppercase">
+                    <span className="rounded-full bg-[#c29b38]/15 px-2.5 py-0.5 text-[9px] sm:text-[10px] font-semibold tracking-widest text-[#8a681c] border border-[#c29b38]/40 uppercase">
                       Trade Partner
                     </span>
                   ) : (
-                    <span className="rounded-full bg-[#e8e4db] px-3 py-0.5 text-[10px] font-semibold tracking-widest text-[#555] uppercase">
+                    <span className="rounded-full bg-[#e8e4db] px-2.5 py-0.5 text-[9px] sm:text-[10px] font-semibold tracking-widest text-[#555] uppercase">
                       House Patron
                     </span>
                   )}
                 </div>
 
-                <p className="mt-1 text-xs sm:text-sm text-[#66645e]">
+                <p className="mt-0.5 sm:mt-1 text-xs sm:text-sm text-[#66645e] truncate">
                   {profileData?.email}
                   {profileData?.phone && ` • ${profileData.phone}`}
                 </p>
 
-                <p className="mt-0.5 text-[11px] uppercase tracking-wider text-[#99968e]">
+                <p className="mt-0.5 text-[10px] sm:text-[11px] uppercase tracking-wider text-[#99968e]">
                   Patron Sanctuary &bull; Member since {formatDate(profileData?.createdAt || new Date())}
                 </p>
               </div>
             </div>
 
             {/* Quick Actions (Admin switcher & Logout) */}
-            <div className="flex flex-wrap items-center gap-3">
+            <div className="flex items-center gap-2.5 w-full sm:w-auto">
               {isAdmin && (
                 <Link
                   to="/admin"
-                  className="flex items-center gap-2 rounded-xl bg-[#394132] px-4 py-2.5 text-xs font-medium tracking-[0.8px] text-white hover:bg-[#282e23] transition-all shadow-sm"
+                  className="flex-1 sm:flex-initial flex items-center justify-center gap-2 rounded-xl bg-[#394132] px-3.5 py-2.5 text-xs font-medium tracking-[0.8px] text-white hover:bg-[#282e23] transition-all shadow-sm"
                 >
                   <span>ADMIN DASHBOARD</span>
-                  <ExternalLink size={14} />
+                  <ExternalLink size={13} />
                 </Link>
               )}
 
               <button
                 type="button"
                 onClick={handleLogout}
-                className="flex items-center gap-2 rounded-xl border border-[#dedbd4] bg-white px-4 py-2.5 text-xs font-medium tracking-[0.8px] text-[#555] hover:border-red-400 hover:text-red-700 hover:bg-red-50/50 transition-all shadow-xs"
+                className="flex-1 sm:flex-initial flex items-center justify-center gap-2 rounded-xl border border-[#dedbd4] bg-white px-3.5 py-2.5 text-xs font-medium tracking-[0.8px] text-[#555] hover:border-red-400 hover:text-red-700 hover:bg-red-50/50 transition-all shadow-xs cursor-pointer"
               >
-                <LogOut size={14} />
+                <LogOut size={13} />
                 <span>SIGN OUT</span>
               </button>
             </div>
@@ -346,16 +375,60 @@ export default function Profile({ defaultTab }) {
       </div>
 
       {/* Main Sanctuary Layout */}
-      <div className="mx-auto max-w-7xl px-4 pt-8 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-1 gap-8 lg:grid-cols-4">
-          {/* Navigation Tab Sidebar (Desktop & Mobile Rail) */}
-          <aside className="lg:col-span-1">
+      <div className="mx-auto max-w-7xl px-4 pt-5 sm:pt-8 sm:px-6 lg:px-8">
+        {/* Mobile Horizontal Pill Navigation Rail (visible on mobile/tablet) */}
+        <div className="block lg:hidden mb-5">
+          <div className="flex items-center gap-2 overflow-x-auto pb-1.5 pt-0.5 no-scrollbar -mx-4 px-4 sm:mx-0 sm:px-0">
+            {TABS.map((tab) => {
+              const Icon = tab.icon;
+              const isActive = activeTab === tab.id;
+              let badgeCount = null;
+              if (tab.id === "orders") badgeCount = orders.length;
+              if (tab.id === "wishlist") badgeCount = wishlistItems.length;
+              if (tab.id === "addresses") badgeCount = addresses.length;
+
+              return (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => handleTabChange(tab.id)}
+                  className={`shrink-0 flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-medium whitespace-nowrap transition-all cursor-pointer ${
+                    isActive
+                      ? "bg-[#394132] text-white shadow-xs"
+                      : "bg-white border border-[#dedbd4] text-[#44423c] hover:bg-[#faf8f4] hover:text-[#171713]"
+                  }`}
+                >
+                  <Icon
+                    size={15}
+                    className={isActive ? "text-[#d4af37]" : "text-[#77746c]"}
+                  />
+                  <span>{tab.label}</span>
+                  {badgeCount !== null && (
+                    <span
+                      className={`rounded-full px-1.5 py-0.5 text-[9px] font-bold ${
+                        isActive
+                          ? "bg-white/20 text-white"
+                          : "bg-[#e8e5dc] text-[#555]"
+                      }`}
+                    >
+                      {badgeCount}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 gap-6 lg:gap-8 lg:grid-cols-4">
+          {/* Navigation Tab Sidebar (Desktop Only) */}
+          <aside className="hidden lg:block lg:col-span-1">
             <div className="sticky top-28 space-y-1.5 rounded-2xl border border-[#dedbd4] bg-white p-3 shadow-xs">
               <div className="px-3 py-2 text-[11px] font-semibold tracking-[1.5px] uppercase text-[#88857d]">
                 SANCTUARY MENU
               </div>
 
-              <nav className="flex lg:flex-col overflow-x-auto lg:overflow-visible gap-1.5 pb-2 lg:pb-0 no-scrollbar">
+              <nav className="flex flex-col gap-1.5">
                 {TABS.map((tab) => {
                   const Icon = tab.icon;
                   const isActive = activeTab === tab.id;
@@ -369,7 +442,7 @@ export default function Profile({ defaultTab }) {
                       key={tab.id}
                       type="button"
                       onClick={() => handleTabChange(tab.id)}
-                      className={`flex w-full shrink-0 items-center justify-between rounded-xl px-3.5 py-3 text-left transition-all text-xs sm:text-sm font-medium ${
+                      className={`flex w-full items-center justify-between rounded-xl px-3.5 py-3 text-left transition-all text-xs sm:text-sm font-medium cursor-pointer ${
                         isActive
                           ? "bg-[#394132] text-white shadow-sm"
                           : "text-[#44423c] hover:bg-[#f6f3ec] hover:text-[#171713]"
@@ -400,7 +473,7 @@ export default function Profile({ defaultTab }) {
               </nav>
 
               {/* Assistance Box */}
-              <div className="mt-4 hidden lg:block rounded-xl bg-[#f6f3ec] p-4 text-xs text-[#55534c] border border-[#dedbd4]">
+              <div className="mt-4 rounded-xl bg-[#f6f3ec] p-4 text-xs text-[#55534c] border border-[#dedbd4]">
                 <p className="font-semibold text-[#171713] uppercase tracking-[0.5px]">
                   Concierge Support
                 </p>
@@ -419,7 +492,7 @@ export default function Profile({ defaultTab }) {
           </aside>
 
           {/* Active Tab Main Content */}
-          <main className="lg:col-span-3">
+          <main className="lg:col-span-3 min-w-0">
             {activeTab === "overview" && (
               <OverviewSection
                 user={profileData}
@@ -484,6 +557,7 @@ export default function Profile({ defaultTab }) {
             {activeTab === "security" && (
               <SecuritySection
                 sessions={sessions}
+                user={profileData || user}
                 onRefresh={triggerRefresh}
               />
             )}
@@ -568,14 +642,14 @@ function OverviewSection({
   return (
     <div className="space-y-8 animate-fadeIn">
       {/* Welcome Banner */}
-      <div className="rounded-2xl border border-[#dedbd4] bg-white p-6 sm:p-8 shadow-xs relative overflow-hidden">
+      <div className="rounded-2xl border border-[#dedbd4] bg-white p-4 sm:p-8 shadow-xs relative overflow-hidden">
         <div className="absolute right-0 top-0 h-full w-1/3 bg-radial from-[#394132]/5 to-transparent pointer-events-none" />
 
         <div className="max-w-2xl">
-          <span className="text-[11px] font-semibold tracking-[2px] uppercase text-[#c29b38]">
+          <span className="text-[10px] sm:text-[11px] font-semibold tracking-[2px] uppercase text-[#c29b38]">
             SANCTUARY WELCOME
           </span>
-          <h2 className="mt-1 font-serif text-2xl sm:text-3xl text-[#171713]">
+          <h2 className="mt-1 font-serif text-xl sm:text-3xl text-[#171713]">
             Welcome to your Patron Portal
           </h2>
           <p className="mt-2 text-xs sm:text-sm text-[#66645e] leading-relaxed">
@@ -585,88 +659,96 @@ function OverviewSection({
         </div>
 
         {/* Quick Stat Cards */}
-        <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
+        <div className="mt-5 sm:mt-6 grid grid-cols-2 gap-2.5 sm:grid-cols-4 sm:gap-4">
           <button
             type="button"
             onClick={() => onNavigateTab("orders")}
-            className="flex flex-col rounded-xl border border-[#dedbd4] bg-[#faf8f4] p-4 text-left hover:border-[#394132] transition-colors group cursor-pointer"
+            className="flex flex-col rounded-xl border border-[#dedbd4] bg-[#faf8f4] p-3 sm:p-4 min-h-[96px] sm:min-h-[110px] justify-between text-left hover:border-[#394132] transition-colors group cursor-pointer"
           >
             <div className="flex items-center justify-between text-[#77746c]">
-              <Package size={18} />
-              <ArrowRight size={14} className="opacity-0 group-hover:opacity-100 transition-opacity" />
+              <Package size={17} />
+              <ArrowRight size={13} className="opacity-0 group-hover:opacity-100 transition-opacity" />
             </div>
-            <span className="mt-2 text-2xl font-serif font-medium text-[#171713]">
-              {orders.length}
-            </span>
-            <span className="text-[11px] font-medium uppercase tracking-[0.5px] text-[#77746c]">
-              Commissions Placed
-            </span>
+            <div>
+              <span className="block text-xl sm:text-2xl font-serif font-medium text-[#171713]">
+                {orders.length}
+              </span>
+              <span className="text-[10px] sm:text-[11px] font-medium uppercase tracking-[0.5px] text-[#77746c]">
+                Commissions Placed
+              </span>
+            </div>
           </button>
 
           <button
             type="button"
             onClick={() => onNavigateTab("wishlist")}
-            className="flex flex-col rounded-xl border border-[#dedbd4] bg-[#faf8f4] p-4 text-left hover:border-[#394132] transition-colors group cursor-pointer"
+            className="flex flex-col rounded-xl border border-[#dedbd4] bg-[#faf8f4] p-3 sm:p-4 min-h-[96px] sm:min-h-[110px] justify-between text-left hover:border-[#394132] transition-colors group cursor-pointer"
           >
             <div className="flex items-center justify-between text-[#77746c]">
-              <Heart size={18} />
-              <ArrowRight size={14} className="opacity-0 group-hover:opacity-100 transition-opacity" />
+              <Heart size={17} />
+              <ArrowRight size={13} className="opacity-0 group-hover:opacity-100 transition-opacity" />
             </div>
-            <span className="mt-2 text-2xl font-serif font-medium text-[#171713]">
-              {wishlistItems.length}
-            </span>
-            <span className="text-[11px] font-medium uppercase tracking-[0.5px] text-[#77746c]">
-              Saved Treasures
-            </span>
+            <div>
+              <span className="block text-xl sm:text-2xl font-serif font-medium text-[#171713]">
+                {wishlistItems.length}
+              </span>
+              <span className="text-[10px] sm:text-[11px] font-medium uppercase tracking-[0.5px] text-[#77746c]">
+                Saved Treasures
+              </span>
+            </div>
           </button>
 
           <button
             type="button"
             onClick={() => onNavigateTab("addresses")}
-            className="flex flex-col rounded-xl border border-[#dedbd4] bg-[#faf8f4] p-4 text-left hover:border-[#394132] transition-colors group cursor-pointer"
+            className="flex flex-col rounded-xl border border-[#dedbd4] bg-[#faf8f4] p-3 sm:p-4 min-h-[96px] sm:min-h-[110px] justify-between text-left hover:border-[#394132] transition-colors group cursor-pointer"
           >
             <div className="flex items-center justify-between text-[#77746c]">
-              <MapPin size={18} />
-              <ArrowRight size={14} className="opacity-0 group-hover:opacity-100 transition-opacity" />
+              <MapPin size={17} />
+              <ArrowRight size={13} className="opacity-0 group-hover:opacity-100 transition-opacity" />
             </div>
-            <span className="mt-2 text-2xl font-serif font-medium text-[#171713]">
-              {addresses.length}
-            </span>
-            <span className="text-[11px] font-medium uppercase tracking-[0.5px] text-[#77746c]">
-              Saved Residences
-            </span>
+            <div>
+              <span className="block text-xl sm:text-2xl font-serif font-medium text-[#171713]">
+                {addresses.length}
+              </span>
+              <span className="text-[10px] sm:text-[11px] font-medium uppercase tracking-[0.5px] text-[#77746c]">
+                Saved Residences
+              </span>
+            </div>
           </button>
 
           <button
             type="button"
             onClick={() => onNavigateTab("trade")}
-            className="flex flex-col rounded-xl border border-[#dedbd4] bg-[#faf8f4] p-4 text-left hover:border-[#394132] transition-colors group cursor-pointer"
+            className="flex flex-col rounded-xl border border-[#dedbd4] bg-[#faf8f4] p-3 sm:p-4 min-h-[96px] sm:min-h-[110px] justify-between text-left hover:border-[#394132] transition-colors group cursor-pointer"
           >
             <div className="flex items-center justify-between text-[#77746c]">
-              <Briefcase size={18} />
-              <ArrowRight size={14} className="opacity-0 group-hover:opacity-100 transition-opacity" />
+              <Briefcase size={17} />
+              <ArrowRight size={13} className="opacity-0 group-hover:opacity-100 transition-opacity" />
             </div>
-            <span className="mt-2 text-sm font-serif font-medium text-[#171713] truncate">
-              {tradeProfile?.status === "APPROVED" ? "Tier Active" : "Apply for B2B"}
-            </span>
-            <span className="text-[11px] font-medium uppercase tracking-[0.5px] text-[#77746c]">
-              Trade Tier
-            </span>
+            <div>
+              <span className="block text-sm sm:text-base font-serif font-medium text-[#171713] truncate">
+                {tradeProfile?.status === "APPROVED" ? "Tier Active" : "Apply for B2B"}
+              </span>
+              <span className="text-[10px] sm:text-[11px] font-medium uppercase tracking-[0.5px] text-[#77746c]">
+                Trade Tier
+              </span>
+            </div>
           </button>
         </div>
       </div>
 
       {/* Two Column Grid: Recent Orders & Default Address */}
-      <div className="grid grid-cols-1 gap-8 md:grid-cols-3">
+      <div className="grid grid-cols-1 gap-6 md:gap-8 md:grid-cols-3">
         {/* Recent Orders (2 cols) */}
-        <div className="md:col-span-2 space-y-4">
+        <div className="md:col-span-2 space-y-4 min-w-0">
           <div className="flex items-center justify-between">
-            <h3 className="font-serif text-xl text-[#171713]">Recent Commissions</h3>
+            <h3 className="font-serif text-lg sm:text-xl text-[#171713]">Recent Commissions</h3>
             {orders.length > 0 && (
               <button
                 type="button"
                 onClick={() => onNavigateTab("orders")}
-                className="text-xs font-medium text-[#394132] hover:underline uppercase tracking-wider"
+                className="text-xs font-medium text-[#394132] hover:underline uppercase tracking-wider cursor-pointer"
               >
                 View all ({orders.length})
               </button>
@@ -674,10 +756,10 @@ function OverviewSection({
           </div>
 
           {recentOrders.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-[#dedbd4] bg-white p-8 text-center">
-              <Package size={36} className="mx-auto text-[#bbb8b0]" />
-              <p className="mt-3 font-serif text-lg text-[#171713]">No orders yet</p>
-              <p className="mt-1 text-xs text-[#77746c]">
+            <div className="rounded-2xl border border-dashed border-[#dedbd4] bg-white p-6 sm:p-8 text-center">
+              <Package size={34} className="mx-auto text-[#bbb8b0]" />
+              <p className="mt-3 font-serif text-base sm:text-lg text-[#171713]">No orders yet</p>
+              <p className="mt-1 text-xs text-[#77746c] max-w-sm mx-auto">
                 Your bespoke wallpapers, fabrics, and artisanal home furnishings will appear here.
               </p>
               <Link
@@ -699,9 +781,9 @@ function OverviewSection({
                 return (
                   <div
                     key={orderId}
-                    className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-xl border border-[#dedbd4] bg-white p-4 shadow-2xs hover:border-[#394132]/60 transition-all"
+                    className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 rounded-xl border border-[#dedbd4] bg-white p-3.5 sm:p-4 shadow-2xs hover:border-[#394132]/60 transition-all"
                   >
-                    <div>
+                    <div className="min-w-0">
                       <div className="flex items-center gap-2.5">
                         <span className="font-mono text-xs font-semibold text-[#171713]">
                           #{orderId.slice(-8).toUpperCase()}
@@ -714,14 +796,14 @@ function OverviewSection({
                       </p>
                     </div>
 
-                    <div className="flex items-center justify-between sm:justify-end gap-4 border-t sm:border-t-0 pt-3 sm:pt-0 border-[#dedbd4]/50">
-                      <span className="font-serif text-base font-semibold text-[#171713]">
+                    <div className="flex items-center justify-between sm:justify-end gap-3 sm:gap-4 border-t sm:border-t-0 pt-2.5 sm:pt-0 border-[#dedbd4]/50">
+                      <span className="font-serif text-sm sm:text-base font-semibold text-[#171713]">
                         {formatCurrency(total, ord.currency || "GBP")}
                       </span>
                       <button
                         type="button"
                         onClick={() => onSelectOrder(ord)}
-                        className="rounded-lg border border-[#dedbd4] bg-[#faf8f4] px-3 py-1.5 text-xs font-medium text-[#171713] hover:bg-[#394132] hover:text-white transition-colors"
+                        className="rounded-lg border border-[#dedbd4] bg-[#faf8f4] px-3 py-1.5 text-xs font-medium text-[#171713] hover:bg-[#394132] hover:text-white transition-colors cursor-pointer"
                       >
                         Details
                       </button>
@@ -734,20 +816,20 @@ function OverviewSection({
         </div>
 
         {/* Primary Residence (1 col) */}
-        <div className="space-y-4">
+        <div className="space-y-4 min-w-0">
           <div className="flex items-center justify-between">
-            <h3 className="font-serif text-xl text-[#171713]">Default Residence</h3>
+            <h3 className="font-serif text-lg sm:text-xl text-[#171713]">Default Residence</h3>
             <button
               type="button"
               onClick={() => onNavigateTab("addresses")}
-              className="text-xs font-medium text-[#394132] hover:underline uppercase tracking-wider"
+              className="text-xs font-medium text-[#394132] hover:underline uppercase tracking-wider cursor-pointer"
             >
               Manage
             </button>
           </div>
 
           {defaultAddress ? (
-            <div className="rounded-2xl border border-[#dedbd4] bg-white p-5 shadow-xs space-y-3">
+            <div className="rounded-2xl border border-[#dedbd4] bg-white p-4 sm:p-5 shadow-xs space-y-3">
               <div className="flex items-center justify-between">
                 <span className="rounded-full bg-[#394132]/10 px-2.5 py-0.5 text-[10px] font-semibold text-[#394132] uppercase tracking-wider">
                   {defaultAddress.type || "DEFAULT"}
@@ -784,7 +866,7 @@ function OverviewSection({
               <button
                 type="button"
                 onClick={() => onNavigateTab("addresses")}
-                className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-[#394132] underline underline-offset-4"
+                className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-[#394132] underline underline-offset-4 cursor-pointer"
               >
                 + Add Address
               </button>
@@ -837,18 +919,18 @@ function OrdersSection({ orders, loading, onSelectOrder, onOpenCancel }) {
   return (
     <div className="space-y-6 animate-fadeIn">
       {/* Header & Controls */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
         <div>
-          <h2 className="font-serif text-2xl text-[#171713]">Order Commissions</h2>
+          <h2 className="font-serif text-xl sm:text-2xl text-[#171713]">Order Commissions</h2>
           <p className="text-xs text-[#77746c] mt-0.5">
             View status timelines, invoices, and tracking for all luxury orders.
           </p>
         </div>
 
         {/* Filters */}
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
           {/* Search */}
-          <div className="relative">
+          <div className="relative flex-1 sm:w-64">
             <Search
               size={14}
               className="absolute left-3 top-1/2 -translate-y-1/2 text-[#99968e]"
@@ -858,7 +940,7 @@ function OrdersSection({ orders, loading, onSelectOrder, onOpenCancel }) {
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder="Search by order ID or item..."
-              className="rounded-xl border border-[#dedbd4] bg-white pl-8 pr-3 py-2 text-xs text-[#171713] placeholder-[#99968e] focus:border-[#394132] focus:outline-hidden"
+              className="w-full rounded-xl border border-[#dedbd4] bg-white pl-8 pr-3 py-2 text-xs text-[#171713] placeholder-[#99968e] focus:border-[#394132] focus:outline-hidden"
             />
           </div>
 
@@ -866,7 +948,7 @@ function OrdersSection({ orders, loading, onSelectOrder, onOpenCancel }) {
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="rounded-xl border border-[#dedbd4] bg-white px-3 py-2 text-xs text-[#171713] focus:border-[#394132] focus:outline-hidden"
+            className="rounded-xl border border-[#dedbd4] bg-white px-3 py-2 text-xs text-[#171713] focus:border-[#394132] focus:outline-hidden cursor-pointer"
           >
             <option value="ALL">All Statuses</option>
             <option value="PENDING">Pending</option>
@@ -881,9 +963,9 @@ function OrdersSection({ orders, loading, onSelectOrder, onOpenCancel }) {
 
       {/* Orders List */}
       {filteredOrders.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-[#dedbd4] bg-white p-12 text-center">
-          <Package size={42} className="mx-auto text-[#bbb8b0]" />
-          <h3 className="mt-3 font-serif text-xl text-[#171713]">
+        <div className="rounded-2xl border border-dashed border-[#dedbd4] bg-white p-8 sm:p-12 text-center">
+          <Package size={38} className="mx-auto text-[#bbb8b0]" />
+          <h3 className="mt-3 font-serif text-lg sm:text-xl text-[#171713]">
             {orders.length === 0
               ? "No commissions placed yet"
               : "No orders match your filter"}
@@ -896,7 +978,7 @@ function OrdersSection({ orders, loading, onSelectOrder, onOpenCancel }) {
           {orders.length === 0 && (
             <Link
               to="/products"
-              className="mt-5 inline-flex items-center gap-2 rounded-xl bg-[#394132] px-6 py-3 text-xs font-semibold uppercase tracking-[1px] text-white hover:bg-[#282e23] transition-all"
+              className="mt-5 inline-flex items-center gap-2 rounded-xl bg-[#394132] px-6 py-2.5 sm:py-3 text-xs font-semibold uppercase tracking-[1px] text-white hover:bg-[#282e23] transition-all"
             >
               <span>EXPLORE ALL COLLECTIONS</span>
               <ArrowRight size={13} />
@@ -919,8 +1001,8 @@ function OrdersSection({ orders, loading, onSelectOrder, onOpenCancel }) {
                 className="overflow-hidden rounded-2xl border border-[#dedbd4] bg-white shadow-xs transition-all hover:shadow-md"
               >
                 {/* Order Top Bar */}
-                <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#dedbd4] bg-[#faf8f4] px-5 py-4">
-                  <div className="flex flex-wrap items-center gap-4">
+                <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#dedbd4] bg-[#faf8f4] px-3.5 sm:px-5 py-3 sm:py-4">
+                  <div className="flex flex-wrap items-center gap-3 sm:gap-4">
                     <div>
                       <span className="text-[10px] font-semibold uppercase tracking-wider text-[#88857d]">
                         Commission ID
@@ -959,7 +1041,7 @@ function OrdersSection({ orders, loading, onSelectOrder, onOpenCancel }) {
                 </div>
 
                 {/* Items in Order */}
-                <div className="divide-y divide-[#f2efe9] px-5 py-3">
+                <div className="divide-y divide-[#f2efe9] px-3.5 sm:px-5 py-2 sm:py-3">
                   {items.map((item, idx) => {
                     const productObj = item.product || item;
                     const imgInfo = getProductImage(productObj);
@@ -975,30 +1057,30 @@ function OrdersSection({ orders, loading, onSelectOrder, onOpenCancel }) {
                     return (
                       <div
                         key={idx}
-                        className="flex items-center justify-between gap-4 py-3"
+                        className="flex items-center justify-between gap-3 py-3"
                       >
-                        <div className="flex items-center gap-3.5">
+                        <div className="flex items-center gap-3 min-w-0 flex-1">
                           <img
                             src={imgInfo.url}
                             alt={title}
-                            className="h-14 w-14 shrink-0 rounded-xl object-cover border border-[#dedbd4]/60 bg-[#f6f3ec]"
+                            className="h-12 w-12 sm:h-14 sm:w-14 shrink-0 rounded-xl object-cover border border-[#dedbd4]/60 bg-[#f6f3ec]"
                           />
-                          <div>
-                            <h4 className="font-serif text-sm font-medium text-[#171713] line-clamp-1">
+                          <div className="min-w-0 flex-1">
+                            <h4 className="font-serif text-xs sm:text-sm font-medium text-[#171713] truncate">
                               {title}
                             </h4>
-                            <p className="text-[11px] text-[#77746c]">
+                            <p className="text-[10px] sm:text-[11px] text-[#77746c] truncate">
                               Qty: {qty} &bull; {formatCurrency(price, ord.currency || "GBP")} each
                             </p>
                             {item.variant?.title && (
-                              <p className="text-[10px] text-[#99968e]">
+                              <p className="text-[10px] text-[#99968e] truncate">
                                 Option: {item.variant.title}
                               </p>
                             )}
                           </div>
                         </div>
 
-                        <span className="font-serif text-xs font-semibold text-[#171713] shrink-0">
+                        <span className="font-serif text-xs sm:text-sm font-semibold text-[#171713] shrink-0 text-right">
                           {formatCurrency(price * qty, ord.currency || "GBP")}
                         </span>
                       </div>
@@ -1007,19 +1089,19 @@ function OrdersSection({ orders, loading, onSelectOrder, onOpenCancel }) {
                 </div>
 
                 {/* Order Footer Actions */}
-                <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[#dedbd4] bg-[#faf8f4]/60 px-5 py-3.5">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-t border-[#dedbd4] bg-[#faf8f4]/60 px-3.5 sm:px-5 py-3 sm:py-3.5">
                   <div className="text-[11px] text-[#77746c]">
                     {ord.shippingAddress
                       ? `Shipping to: ${ord.shippingAddress.fullName || ord.shippingAddress.city || "Client residence"}`
                       : "Standard English Courier Despatch"}
                   </div>
 
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 w-full sm:w-auto">
                     {canCancel && (
                       <button
                         type="button"
                         onClick={() => onOpenCancel(ord)}
-                        className="rounded-lg border border-red-200 bg-white px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50 transition-colors"
+                        className="flex-1 sm:flex-initial text-center rounded-lg border border-red-200 bg-white px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50 transition-colors cursor-pointer"
                       >
                         Cancel
                       </button>
@@ -1028,7 +1110,7 @@ function OrdersSection({ orders, loading, onSelectOrder, onOpenCancel }) {
                     <button
                       type="button"
                       onClick={() => onSelectOrder(ord)}
-                      className="rounded-lg bg-[#394132] px-4 py-1.5 text-xs font-medium text-white hover:bg-[#282e23] transition-colors"
+                      className="flex-1 sm:flex-initial text-center rounded-lg bg-[#394132] px-4 py-1.5 text-xs font-medium text-white hover:bg-[#282e23] transition-colors cursor-pointer"
                     >
                       View Invoice & Details
                     </button>
@@ -1083,9 +1165,9 @@ function AddressesSection({ addresses, loading, onUpdateAddresses, onOpenAdd, on
   return (
     <div className="space-y-6 animate-fadeIn">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
         <div>
-          <h2 className="font-serif text-2xl text-[#171713]">Saved Residences</h2>
+          <h2 className="font-serif text-xl sm:text-2xl text-[#171713]">Saved Residences</h2>
           <p className="text-xs text-[#77746c] mt-0.5">
             Manage your personal delivery sanctuaries and commercial billing residences.
           </p>
@@ -1094,7 +1176,7 @@ function AddressesSection({ addresses, loading, onUpdateAddresses, onOpenAdd, on
         <button
           type="button"
           onClick={onOpenAdd}
-          className="inline-flex items-center gap-2 rounded-xl bg-[#394132] px-4 py-2.5 text-xs font-semibold uppercase tracking-[1px] text-white hover:bg-[#282e23] transition-all shadow-sm"
+          className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl bg-[#394132] px-4 py-2.5 text-xs font-semibold uppercase tracking-[1px] text-white hover:bg-[#282e23] transition-all shadow-sm cursor-pointer"
         >
           <Plus size={15} />
           <span>ADD NEW RESIDENCE</span>
@@ -1102,15 +1184,15 @@ function AddressesSection({ addresses, loading, onUpdateAddresses, onOpenAdd, on
       </div>
 
       {loading && addresses.length === 0 ? (
-        <div className="flex h-48 items-center justify-center rounded-2xl border border-[#dedbd4] bg-white p-8">
+        <div className="flex h-48 items-center justify-center rounded-2xl border border-[#dedbd4] bg-white p-6 sm:p-8">
           <p className="font-serif text-sm text-[#77746c] animate-pulse">
             Loading your saved residences...
           </p>
         </div>
       ) : addresses.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-[#dedbd4] bg-white p-12 text-center">
+        <div className="rounded-2xl border border-dashed border-[#dedbd4] bg-white p-8 sm:p-12 text-center">
           <MapPin size={38} className="mx-auto text-[#bbb8b0]" />
-          <h3 className="mt-3 font-serif text-xl text-[#171713]">
+          <h3 className="mt-3 font-serif text-lg sm:text-xl text-[#171713]">
             No residences registered yet
           </h3>
           <p className="mt-1 text-xs text-[#77746c] max-w-sm mx-auto">
@@ -1119,14 +1201,14 @@ function AddressesSection({ addresses, loading, onUpdateAddresses, onOpenAdd, on
           <button
             type="button"
             onClick={onOpenAdd}
-            className="mt-5 inline-flex items-center gap-2 rounded-xl bg-[#394132] px-5 py-2.5 text-xs font-semibold uppercase tracking-[1px] text-white hover:bg-[#282e23] transition-all"
+            className="mt-5 w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl bg-[#394132] px-5 py-2.5 text-xs font-semibold uppercase tracking-[1px] text-white hover:bg-[#282e23] transition-all cursor-pointer"
           >
             <Plus size={14} />
             <span>ADD RESIDENCE NOW</span>
           </button>
         </div>
       ) : (
-        <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+        <div className="grid grid-cols-1 gap-4 sm:gap-5 md:grid-cols-2">
           {addresses.map((addr) => {
             const addrId = addr._id || addr.id;
             const isDefault = Boolean(addr.isDefault);
@@ -1134,7 +1216,7 @@ function AddressesSection({ addresses, loading, onUpdateAddresses, onOpenAdd, on
             return (
               <div
                 key={addrId}
-                className={`flex flex-col justify-between rounded-2xl border bg-white p-5 shadow-xs transition-all ${
+                className={`flex flex-col justify-between rounded-2xl border bg-white p-4 sm:p-5 shadow-xs transition-all ${
                   isDefault ? "border-[#394132] ring-1 ring-[#394132]/20" : "border-[#dedbd4]"
                 }`}
               >
@@ -1220,6 +1302,22 @@ function WishlistSection({ items, loading, onUpdateItems }) {
 
   const handleMoveToCart = (item) => {
     const product = item.product || item;
+    const synced = syncProductData(product) || product;
+    const inv = synced?.inventory || product?.inventory || item?.inventory;
+    const inStock = Boolean(
+      inv &&
+      inv.inStock !== false &&
+      inv.status !== "OUT_OF_STOCK" &&
+      (inv.availableQuantity === undefined || inv.availableQuantity > 0) &&
+      (synced?.stock === undefined || synced?.stock > 0) &&
+      item?.inStock !== false
+    );
+
+    if (!inStock) {
+      showError("Out of Stock", "This creation is currently out of stock and cannot be added to your shopping bag.");
+      return;
+    }
+
     const imgInfo = getProductImage(product);
     const productId = product._id || product.id || item.productId;
 
@@ -1228,7 +1326,7 @@ function WishlistSection({ items, loading, onUpdateItems }) {
         productId,
         _id: productId,
         title: product.title || product.name || "House of Hackney Creation",
-        price: product.pricing?.basePrice ?? product.price ?? 125,
+        price: product.pricing?.sellingPrice ?? product.pricing?.basePrice ?? product.price ?? 125,
         image: imgInfo.url,
         quantity: 1,
       })
@@ -1321,12 +1419,23 @@ function WishlistSection({ items, loading, onUpdateItems }) {
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {items.map((item, idx) => {
             const product = item.product || item;
+            const synced = syncProductData(product) || product;
             const imgInfo = getProductImage(product);
             const productId = product._id || product.id || item.productId;
             const title =
               product.title || product.name || "House of Hackney Luxury Creation";
-            const price = product.pricing?.basePrice ?? product.price ?? 125;
+            const price = product.pricing?.sellingPrice ?? product.pricing?.basePrice ?? product.price ?? 125;
             const category = product.category?.name || product.categoryName || "Botanical Decor";
+
+            const inv = synced?.inventory || product?.inventory || item?.inventory;
+            const inStock = Boolean(
+              inv &&
+              inv.inStock !== false &&
+              inv.status !== "OUT_OF_STOCK" &&
+              (inv.availableQuantity === undefined || inv.availableQuantity > 0) &&
+              (synced?.stock === undefined || synced?.stock > 0) &&
+              item?.inStock !== false
+            );
 
             return (
               <div
@@ -1340,6 +1449,11 @@ function WishlistSection({ items, loading, onUpdateItems }) {
                     alt={title}
                     className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
                   />
+                  {!inStock && (
+                    <span className="absolute top-3 left-3 z-10 bg-[#171713]/85 text-white text-[9px] uppercase tracking-[1px] px-2.5 py-1 font-semibold rounded-sm">
+                      OUT OF STOCK
+                    </span>
+                  )}
                   <button
                     type="button"
                     onClick={() => handleRemove(productId, item.variant?._id)}
@@ -1371,11 +1485,16 @@ function WishlistSection({ items, loading, onUpdateItems }) {
                   <div className="mt-4 flex items-center gap-2">
                     <button
                       type="button"
-                      onClick={() => handleMoveToCart(item)}
-                      className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-[#394132] py-2.5 text-xs font-semibold uppercase tracking-[0.8px] text-white hover:bg-[#282e23] transition-colors"
+                      disabled={!inStock}
+                      onClick={() => inStock && handleMoveToCart(item)}
+                      className={`flex-1 flex items-center justify-center gap-2 rounded-xl py-2.5 text-xs font-semibold uppercase tracking-[0.8px] transition-colors ${
+                        inStock
+                          ? "bg-[#394132] text-white hover:bg-[#282e23] cursor-pointer"
+                          : "bg-[#d5cec3] text-[#7d776c] cursor-not-allowed border border-[#c4bcaf]"
+                      }`}
                     >
                       <ShoppingBag size={14} />
-                      <span>MOVE TO BAG</span>
+                      <span>{inStock ? "MOVE TO BAG" : "OUT OF STOCK"}</span>
                     </button>
                   </div>
                 </div>
@@ -1430,16 +1549,16 @@ function PersonalDetailsSection({ user, onUpdateUser }) {
   };
 
   return (
-    <div className="rounded-2xl border border-[#dedbd4] bg-white p-6 sm:p-8 shadow-xs animate-fadeIn space-y-6">
+    <div className="rounded-2xl border border-[#dedbd4] bg-white p-4 sm:p-8 shadow-xs animate-fadeIn space-y-5 sm:space-y-6">
       <div>
-        <h2 className="font-serif text-2xl text-[#171713]">Personal Sanctuary Details</h2>
+        <h2 className="font-serif text-xl sm:text-2xl text-[#171713]">Personal Sanctuary Details</h2>
         <p className="text-xs text-[#77746c] mt-0.5">
           Manage your contact credentials and regional preferences for House of Hackney.
         </p>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-6">
-        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+      <form onSubmit={handleSubmit} className="space-y-5 sm:space-y-6">
+        <div className="grid grid-cols-1 gap-4 sm:gap-5 sm:grid-cols-2">
           {/* First Name */}
           <div>
             <label className="block text-xs font-semibold uppercase tracking-wider text-[#55534c]">
@@ -1505,7 +1624,7 @@ function PersonalDetailsSection({ user, onUpdateUser }) {
             <select
               value={formData.gender}
               onChange={(e) => setFormData({ ...formData, gender: e.target.value })}
-              className="mt-1.5 w-full rounded-xl border border-[#dedbd4] bg-white px-3.5 py-2.5 text-xs text-[#171713] focus:border-[#394132] focus:outline-hidden"
+              className="mt-1.5 w-full rounded-xl border border-[#dedbd4] bg-white px-3.5 py-2.5 text-xs text-[#171713] focus:border-[#394132] focus:outline-hidden cursor-pointer"
             >
               <option value="MALE">Lord / Gentleman (Male)</option>
               <option value="FEMALE">Lady / Gentlewoman (Female)</option>
@@ -1521,7 +1640,7 @@ function PersonalDetailsSection({ user, onUpdateUser }) {
             <select
               value={formData.currency}
               onChange={(e) => setFormData({ ...formData, currency: e.target.value })}
-              className="mt-1.5 w-full rounded-xl border border-[#dedbd4] bg-white px-3.5 py-2.5 text-xs text-[#171713] focus:border-[#394132] focus:outline-hidden"
+              className="mt-1.5 w-full rounded-xl border border-[#dedbd4] bg-white px-3.5 py-2.5 text-xs text-[#171713] focus:border-[#394132] focus:outline-hidden cursor-pointer"
             >
               <option value="GBP">British Pound (£ GBP)</option>
               <option value="USD">US Dollar ($ USD)</option>
@@ -1534,7 +1653,7 @@ function PersonalDetailsSection({ user, onUpdateUser }) {
           <button
             type="submit"
             disabled={saving}
-            className="inline-flex items-center gap-2 rounded-xl bg-[#394132] px-6 py-3 text-xs font-semibold uppercase tracking-[1px] text-white hover:bg-[#282e23] disabled:opacity-50 transition-all shadow-sm"
+            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl bg-[#394132] px-6 py-2.5 sm:py-3 text-xs font-semibold uppercase tracking-[1px] text-white hover:bg-[#282e23] disabled:opacity-50 transition-all shadow-sm cursor-pointer"
           >
             <span>{saving ? "SAVING..." : "SAVE CHANGES"}</span>
           </button>
@@ -1547,7 +1666,7 @@ function PersonalDetailsSection({ user, onUpdateUser }) {
 // ==========================================
 // 6. SECURITY & SESSIONS SECTION
 // ==========================================
-function SecuritySection({ sessions, onRefresh }) {
+function SecuritySection({ user, sessions, onRefresh }) {
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -1573,7 +1692,12 @@ function SecuritySection({ sessions, onRefresh }) {
     try {
       setUpdating(true);
       showLoading("Updating password...");
-      await userService.changePassword({ currentPassword, newPassword });
+      await userService.changePassword({
+        currentPassword,
+        newPassword,
+        userId: user?._id || user?.id,
+        email: user?.email,
+      });
       closeAlert();
       showToast("Password updated successfully.");
       setCurrentPassword("");
@@ -1595,7 +1719,7 @@ function SecuritySection({ sessions, onRefresh }) {
     if (!res.isConfirmed) return;
 
     try {
-      showLoading("Revoking sessions...");
+      showLoading("Revoking other sessions...");
       await userService.revokeOtherSessions();
       closeAlert();
       showToast("All other active sessions have been signed out.");
@@ -1606,18 +1730,38 @@ function SecuritySection({ sessions, onRefresh }) {
     }
   };
 
+  const handleRevokeSingle = async (sessionId) => {
+    if (!sessionId) return;
+    const res = await showConfirm(
+      "Sign Out Device",
+      "Are you sure you want to terminate this active device session?"
+    );
+    if (!res.isConfirmed) return;
+
+    try {
+      showLoading("Signing out device...");
+      await userService.revokeSession(sessionId);
+      closeAlert();
+      showToast("Device session terminated successfully.");
+      onRefresh();
+    } catch (err) {
+      closeAlert();
+      showError("Could not revoke session", err?.response?.data?.message || err.message);
+    }
+  };
+
   return (
-    <div className="space-y-8 animate-fadeIn">
+    <div className="space-y-6 sm:space-y-8 animate-fadeIn">
       {/* Password Change Box */}
-      <div className="rounded-2xl border border-[#dedbd4] bg-white p-6 sm:p-8 shadow-xs">
+      <div className="rounded-2xl border border-[#dedbd4] bg-white p-4 sm:p-8 shadow-xs">
         <div>
-          <h2 className="font-serif text-2xl text-[#171713]">Password Sanctuary</h2>
+          <h2 className="font-serif text-xl sm:text-2xl text-[#171713]">Password Sanctuary</h2>
           <p className="text-xs text-[#77746c] mt-0.5">
             Ensure your account is protected with a resilient, unique passphrase.
           </p>
         </div>
 
-        <form onSubmit={handlePasswordSubmit} className="mt-6 max-w-xl space-y-4">
+        <form onSubmit={handlePasswordSubmit} className="mt-5 sm:mt-6 max-w-xl space-y-4">
           <div>
             <label className="block text-xs font-semibold uppercase tracking-wider text-[#55534c]">
               Current Password *
@@ -1633,7 +1777,7 @@ function SecuritySection({ sessions, onRefresh }) {
               <button
                 type="button"
                 onClick={() => setShowCurrent(!showCurrent)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-[#88857d] hover:text-[#171713]"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-[#88857d] hover:text-[#171713] cursor-pointer"
               >
                 {showCurrent ? <EyeOff size={15} /> : <Eye size={15} />}
               </button>
@@ -1655,7 +1799,7 @@ function SecuritySection({ sessions, onRefresh }) {
               <button
                 type="button"
                 onClick={() => setShowNew(!showNew)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-[#88857d] hover:text-[#171713]"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-[#88857d] hover:text-[#171713] cursor-pointer"
               >
                 {showNew ? <EyeOff size={15} /> : <Eye size={15} />}
               </button>
@@ -1678,7 +1822,7 @@ function SecuritySection({ sessions, onRefresh }) {
           <button
             type="submit"
             disabled={updating}
-            className="mt-2 inline-flex items-center gap-2 rounded-xl bg-[#394132] px-6 py-2.5 text-xs font-semibold uppercase tracking-[1px] text-white hover:bg-[#282e23] disabled:opacity-50 transition-all shadow-sm"
+            className="w-full sm:w-auto mt-2 inline-flex items-center justify-center gap-2 rounded-xl bg-[#394132] px-6 py-2.5 text-xs font-semibold uppercase tracking-[1px] text-white hover:bg-[#282e23] disabled:opacity-50 transition-all shadow-sm cursor-pointer"
           >
             <span>{updating ? "UPDATING..." : "UPDATE PASSWORD"}</span>
           </button>
@@ -1686,10 +1830,10 @@ function SecuritySection({ sessions, onRefresh }) {
       </div>
 
       {/* Active Device Sessions */}
-      <div className="rounded-2xl border border-[#dedbd4] bg-white p-6 sm:p-8 shadow-xs">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="rounded-2xl border border-[#dedbd4] bg-white p-4 sm:p-8 shadow-xs">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
           <div>
-            <h3 className="font-serif text-xl text-[#171713]">Active Sessions & Devices</h3>
+            <h3 className="font-serif text-lg sm:text-xl text-[#171713]">Active Sessions & Devices</h3>
             <p className="text-xs text-[#77746c] mt-0.5">
               Devices currently authorized to access your House of Hackney patron portal.
             </p>
@@ -1699,7 +1843,7 @@ function SecuritySection({ sessions, onRefresh }) {
             <button
               type="button"
               onClick={handleRevokeOthers}
-              className="text-xs font-semibold text-red-600 hover:underline uppercase tracking-wider"
+              className="self-start sm:self-auto text-xs font-semibold text-red-600 hover:underline uppercase tracking-wider cursor-pointer"
             >
               Sign Out Other Devices
             </button>
@@ -1712,32 +1856,45 @@ function SecuritySection({ sessions, onRefresh }) {
               Current session active on this browser.
             </div>
           ) : (
-            sessions.map((sess, idx) => (
-              <div key={idx} className="flex items-center justify-between py-3.5">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#faf8f4] border border-[#dedbd4] text-[#394132]">
-                    {sess.device?.toLowerCase().includes("phone") ? (
-                      <Smartphone size={16} />
-                    ) : (
-                      <Laptop size={16} />
-                    )}
+            sessions.map((sess, idx) => {
+              const isCurrent = idx === 0;
+              const isMobile =
+                (sess.deviceType || sess.deviceName || "").toLowerCase().includes("mobile") ||
+                (sess.deviceType || sess.deviceName || "").toLowerCase().includes("phone");
+
+              return (
+                <div key={idx} className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 py-3.5">
+                  <div className="flex items-center gap-3 min-w-0 flex-1">
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#faf8f4] border border-[#dedbd4] text-[#394132]">
+                      {isMobile ? <Smartphone size={16} /> : <Laptop size={16} />}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs font-semibold text-[#171713] truncate">
+                        {sess.browser || "Web Browser"} on {sess.operatingSystem || sess.deviceName || sess.deviceType || "Device"}
+                        {isCurrent && (
+                          <span className="ml-2 inline-block rounded-full bg-emerald-100 px-2 py-0.5 text-[9px] font-bold text-emerald-800">
+                            THIS DEVICE
+                          </span>
+                        )}
+                      </p>
+                      <p className="text-[11px] text-[#77746c] truncate">
+                        IP: {sess.ipAddress || sess.ip || "127.0.0.1"} &bull; Last active: {formatDate(sess.lastUsedAt || sess.lastActive || sess.createdAt)}
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-xs font-semibold text-[#171713]">
-                      {sess.browser || "Web Browser"} on {sess.os || "Device"}
-                      {idx === 0 && (
-                        <span className="ml-2 rounded-full bg-emerald-100 px-2 py-0.5 text-[9px] font-bold text-emerald-800">
-                          THIS DEVICE
-                        </span>
-                      )}
-                    </p>
-                    <p className="text-[11px] text-[#77746c]">
-                      IP: {sess.ip || "127.0.0.1"} &bull; Last active: {formatDate(sess.lastActive || sess.createdAt)}
-                    </p>
-                  </div>
+
+                  {!isCurrent && (
+                    <button
+                      type="button"
+                      onClick={() => handleRevokeSingle(sess._id || sess.id)}
+                      className="self-end sm:self-center text-[11px] font-semibold text-red-600 hover:text-red-700 hover:underline uppercase tracking-wider cursor-pointer"
+                    >
+                      Sign Out
+                    </button>
+                  )}
                 </div>
-              </div>
-            ))
+              );
+            })
           )}
         </div>
       </div>
@@ -1969,22 +2126,22 @@ function OrderDetailsModal({ order, onClose }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 overflow-y-auto">
-      <div className="relative w-full max-w-2xl rounded-2xl bg-white shadow-2xl border border-[#dedbd4] max-h-[90vh] flex flex-col my-auto">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-2 sm:p-4 overflow-y-auto">
+      <div className="relative w-full max-w-2xl rounded-2xl bg-white shadow-2xl border border-[#dedbd4] max-h-[92vh] flex flex-col my-auto">
         {/* Modal Header */}
-        <div className="flex items-center justify-between border-b border-[#dedbd4] px-6 py-4 bg-[#faf8f4]">
-          <div className="flex items-center gap-3">
-            <FileText size={18} className="text-[#394132]" />
-            <h3 className="font-serif text-lg text-[#171713]">
+        <div className="flex items-center justify-between border-b border-[#dedbd4] px-4 sm:px-6 py-3.5 sm:py-4 bg-[#faf8f4]">
+          <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
+            <FileText size={18} className="text-[#394132] shrink-0" />
+            <h3 className="font-serif text-base sm:text-lg text-[#171713] truncate">
               Order Commission #{orderId.slice(-8).toUpperCase()}
             </h3>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 shrink-0">
             <button
               type="button"
               onClick={handlePrint}
               aria-label="Print Invoice"
-              className="p-1.5 rounded-lg border border-[#dedbd4] text-[#555] hover:text-[#171713] hover:bg-white"
+              className="p-1.5 rounded-lg border border-[#dedbd4] text-[#555] hover:text-[#171713] hover:bg-white cursor-pointer"
             >
               <Printer size={16} />
             </button>
@@ -1992,7 +2149,7 @@ function OrderDetailsModal({ order, onClose }) {
               type="button"
               onClick={onClose}
               aria-label="Close"
-              className="p-1.5 rounded-lg border border-[#dedbd4] text-[#555] hover:text-[#171713] hover:bg-white"
+              className="p-1.5 rounded-lg border border-[#dedbd4] text-[#555] hover:text-[#171713] hover:bg-white cursor-pointer"
             >
               <X size={16} />
             </button>
@@ -2000,27 +2157,27 @@ function OrderDetailsModal({ order, onClose }) {
         </div>
 
         {/* Modal Content */}
-        <div className="overflow-y-auto p-6 space-y-6 flex-1 text-xs text-[#171713]">
+        <div className="overflow-y-auto p-4 sm:p-6 space-y-4 sm:space-y-6 flex-1 text-xs text-[#171713]">
           {/* Brand Emblem & Header */}
-          <div className="flex justify-between items-start border-b border-[#dedbd4] pb-4">
+          <div className="flex justify-between items-start border-b border-[#dedbd4] pb-4 gap-2">
             <div>
-              <p className="font-serif text-xl font-bold tracking-wider uppercase text-[#171713]">
+              <p className="font-serif text-lg sm:text-xl font-bold tracking-wider uppercase text-[#171713]">
                 HOUSE OF HACKNEY
               </p>
-              <p className="text-[#77746c] text-[11px] mt-0.5">
+              <p className="text-[#77746c] text-[10px] sm:text-[11px] mt-0.5">
                 St. Michael’s, Castle of Trematon, Cornwall, UK
               </p>
             </div>
-            <div className="text-right">
+            <div className="text-right shrink-0">
               <OrderStatusPill status={status} />
-              <p className="mt-1 text-[#77746c] text-[11px]">
+              <p className="mt-1 text-[#77746c] text-[10px] sm:text-[11px]">
                 Date: {formatDate(order.createdAt)}
               </p>
             </div>
           </div>
 
           {/* Delivery & Billing Info */}
-          <div className="grid grid-cols-2 gap-4 rounded-xl bg-[#faf8f4] p-4 border border-[#dedbd4]/60">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 rounded-xl bg-[#faf8f4] p-3.5 sm:p-4 border border-[#dedbd4]/60">
             <div>
               <span className="text-[10px] font-semibold uppercase tracking-wider text-[#88857d]">
                 Delivery Residence
@@ -2063,21 +2220,21 @@ function OrderDetailsModal({ order, onClose }) {
                 const qty = it.quantity || 1;
 
                 return (
-                  <div key={idx} className="flex items-center justify-between p-3 bg-white">
-                    <div className="flex items-center gap-3">
+                  <div key={idx} className="flex items-center justify-between p-2.5 sm:p-3 bg-white gap-2 sm:gap-3">
+                    <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
                       <img
                         src={img.url}
                         alt={title}
-                        className="h-10 w-10 rounded-lg object-cover border border-[#dedbd4]"
+                        className="h-10 w-10 shrink-0 rounded-lg object-cover border border-[#dedbd4]"
                       />
-                      <div>
-                        <p className="font-serif font-medium">{title}</p>
-                        <p className="text-[10px] text-[#777]">
+                      <div className="min-w-0 flex-1">
+                        <p className="font-serif font-medium truncate text-xs sm:text-sm">{title}</p>
+                        <p className="text-[10px] text-[#777] truncate">
                           Qty: {qty} &bull; {formatCurrency(price, order.currency || "GBP")}
                         </p>
                       </div>
                     </div>
-                    <span className="font-serif font-semibold">
+                    <span className="font-serif font-semibold shrink-0 text-xs sm:text-sm text-right">
                       {formatCurrency(price * qty, order.currency || "GBP")}
                     </span>
                   </div>
@@ -2100,7 +2257,7 @@ function OrderDetailsModal({ order, onClose }) {
               <span>Delivery / Shipping</span>
               <span>Complimentary</span>
             </div>
-            <div className="flex justify-between text-base font-serif font-bold text-[#171713] border-t border-[#dedbd4] pt-2">
+            <div className="flex justify-between text-sm sm:text-base font-serif font-bold text-[#171713] border-t border-[#dedbd4] pt-2">
               <span>Grand Total</span>
               <span>{formatCurrency(total, order.currency || "GBP")}</span>
             </div>
@@ -2108,11 +2265,11 @@ function OrderDetailsModal({ order, onClose }) {
         </div>
 
         {/* Modal Footer */}
-        <div className="border-t border-[#dedbd4] bg-[#faf8f4] px-6 py-3 flex justify-end">
+        <div className="border-t border-[#dedbd4] bg-[#faf8f4] px-4 sm:px-6 py-3 flex justify-end">
           <button
             type="button"
             onClick={onClose}
-            className="rounded-xl bg-[#394132] px-5 py-2 text-xs font-semibold uppercase tracking-wider text-white hover:bg-[#282e23]"
+            className="w-full sm:w-auto rounded-xl bg-[#394132] px-5 py-2 text-xs font-semibold uppercase tracking-wider text-white hover:bg-[#282e23] cursor-pointer"
           >
             Close
           </button>
@@ -2232,16 +2389,16 @@ function AddressFormModal({ address, onClose, onSuccess, onOptimisticSave }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 overflow-y-auto">
-      <div className="w-full max-w-lg rounded-2xl bg-white shadow-2xl border border-[#dedbd4] p-6 space-y-4 my-auto max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-2 sm:p-4 overflow-y-auto">
+      <div className="w-full max-w-lg rounded-2xl bg-white shadow-2xl border border-[#dedbd4] p-4 sm:p-6 space-y-4 my-auto max-h-[92vh] overflow-y-auto">
         <div className="flex items-center justify-between border-b border-[#dedbd4] pb-3">
-          <h3 className="font-serif text-xl text-[#171713]">
+          <h3 className="font-serif text-lg sm:text-xl text-[#171713]">
             {isEdit ? "Edit Residence" : "Register New Residence"}
           </h3>
           <button
             type="button"
             onClick={onClose}
-            className="p-1 text-[#888] hover:text-[#111]"
+            className="p-1 text-[#888] hover:text-[#111] cursor-pointer"
           >
             <X size={18} />
           </button>
@@ -2262,7 +2419,7 @@ function AddressFormModal({ address, onClose, onSuccess, onOptimisticSave }) {
               />
             </div>
 
-            <div>
+            <div className="col-span-2 sm:col-span-1">
               <label className="font-semibold uppercase tracking-wider text-[#555]">
                 Phone *
               </label>
@@ -2275,7 +2432,7 @@ function AddressFormModal({ address, onClose, onSuccess, onOptimisticSave }) {
               />
             </div>
 
-            <div>
+            <div className="col-span-2 sm:col-span-1">
               <label className="font-semibold uppercase tracking-wider text-[#555]">
                 Email
               </label>
@@ -2313,7 +2470,7 @@ function AddressFormModal({ address, onClose, onSuccess, onOptimisticSave }) {
               />
             </div>
 
-            <div>
+            <div className="col-span-2 sm:col-span-1">
               <label className="font-semibold uppercase tracking-wider text-[#555]">
                 City *
               </label>
@@ -2326,7 +2483,7 @@ function AddressFormModal({ address, onClose, onSuccess, onOptimisticSave }) {
               />
             </div>
 
-            <div>
+            <div className="col-span-2 sm:col-span-1">
               <label className="font-semibold uppercase tracking-wider text-[#555]">
                 County / State *
               </label>
@@ -2339,7 +2496,7 @@ function AddressFormModal({ address, onClose, onSuccess, onOptimisticSave }) {
               />
             </div>
 
-            <div>
+            <div className="col-span-2 sm:col-span-1">
               <label className="font-semibold uppercase tracking-wider text-[#555]">
                 Postal Code *
               </label>
@@ -2352,7 +2509,7 @@ function AddressFormModal({ address, onClose, onSuccess, onOptimisticSave }) {
               />
             </div>
 
-            <div>
+            <div className="col-span-2 sm:col-span-1">
               <label className="font-semibold uppercase tracking-wider text-[#555]">
                 Country *
               </label>
@@ -2365,14 +2522,14 @@ function AddressFormModal({ address, onClose, onSuccess, onOptimisticSave }) {
               />
             </div>
 
-            <div>
+            <div className="col-span-2 sm:col-span-1">
               <label className="font-semibold uppercase tracking-wider text-[#555]">
                 Residence Type
               </label>
               <select
                 value={form.type}
                 onChange={(e) => setForm({ ...form, type: e.target.value })}
-                className="mt-1 w-full rounded-xl border border-[#dedbd4] bg-white p-2.5 text-xs text-[#171713] focus:border-[#394132] focus:outline-hidden"
+                className="mt-1 w-full rounded-xl border border-[#dedbd4] bg-white p-2.5 text-xs text-[#171713] focus:border-[#394132] focus:outline-hidden cursor-pointer"
               >
                 <option value="HOME">Home Residence</option>
                 <option value="OFFICE">Office / Studio</option>
@@ -2381,32 +2538,32 @@ function AddressFormModal({ address, onClose, onSuccess, onOptimisticSave }) {
               </select>
             </div>
 
-            <div className="flex items-center gap-2 pt-6">
+            <div className="col-span-2 flex items-center gap-2 pt-2 sm:pt-4">
               <input
                 type="checkbox"
                 id="isDefaultCheck"
                 checked={form.isDefault}
                 onChange={(e) => setForm({ ...form, isDefault: e.target.checked })}
-                className="h-4 w-4 rounded accent-[#394132]"
+                className="h-4 w-4 rounded accent-[#394132] cursor-pointer"
               />
-              <label htmlFor="isDefaultCheck" className="text-xs text-[#333]">
+              <label htmlFor="isDefaultCheck" className="text-xs text-[#333] cursor-pointer">
                 Set as default delivery residence
               </label>
             </div>
           </div>
 
-          <div className="flex justify-end gap-2 pt-4 border-t border-[#dedbd4]">
+          <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 pt-4 border-t border-[#dedbd4]">
             <button
               type="button"
               onClick={onClose}
-              className="rounded-xl border border-[#dedbd4] px-4 py-2 text-xs font-medium text-[#555] hover:bg-[#faf8f4]"
+              className="w-full sm:w-auto text-center rounded-xl border border-[#dedbd4] px-4 py-2.5 text-xs font-medium text-[#555] hover:bg-[#faf8f4] cursor-pointer"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={saving}
-              className="rounded-xl bg-[#394132] px-5 py-2 text-xs font-semibold uppercase tracking-wider text-white hover:bg-[#282e23] disabled:opacity-50"
+              className="w-full sm:w-auto text-center rounded-xl bg-[#394132] px-5 py-2.5 text-xs font-semibold uppercase tracking-wider text-white hover:bg-[#282e23] disabled:opacity-50 cursor-pointer"
             >
               {saving ? "Saving..." : isEdit ? "Update Residence" : "Save Residence"}
             </button>

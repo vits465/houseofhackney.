@@ -26,92 +26,16 @@ import { useAdmin } from "../AdminContext";
 import adminApiService from "../services/adminApiService";
 import { showToast } from "../../../utils/sweetAlert";
 
-// Authentic Fallback Orders for House of Hackney Atelier
-const FALLBACK_LIVE_ORDERS = [
-  {
-    _id: "ord_001",
-    orderNumber: "ORD-2026-0001",
-    user: { name: "Aditya Chauhan", email: "adichauha465@gmail.com" },
-    items: [
-      {
-        product: { name: "Artemis Velvet Fringe Cushion" },
-        quantity: 2,
-        price: 195,
-      },
-    ],
-    totalAmount: 390,
-    status: "CONFIRMED",
-    shippingMethod: "White Glove Archival Delivery",
-    createdAt: "2026-10-25T11:30:00.000Z",
-  },
-  {
-    _id: "ord_002",
-    orderNumber: "ORD-2026-0002",
-    user: { name: "Eleanor Vance", email: "eleanor.vance@chelseadesign.co.uk" },
-    items: [
-      {
-        product: { name: "Babylon Wallpaper - Dove & Willow" },
-        quantity: 8,
-        price: 220,
-      },
-    ],
-    totalAmount: 1760,
-    status: "PROCESSING",
-    shippingMethod: "Express Courier Tracked",
-    createdAt: "2026-10-24T15:45:00.000Z",
-  },
-  {
-    _id: "ord_003",
-    orderNumber: "ORD-2026-0003",
-    user: { name: "Julian Montgomery", email: "j.montgomery@mayfair-estates.com" },
-    items: [
-      {
-        product: { name: "Bambusa Botanical Wall Hanging" },
-        quantity: 1,
-        price: 1450,
-      },
-    ],
-    totalAmount: 1450,
-    status: "SHIPPED",
-    shippingMethod: "Artisan Courier Insured",
-    createdAt: "2026-10-23T09:20:00.000Z",
-  },
-  {
-    _id: "ord_004",
-    orderNumber: "ORD-2026-0004",
-    user: { name: "Lady Beatrice Sterling", email: "beatrice.sterling@heritage.uk" },
-    items: [
-      {
-        product: { name: "Phantasia Jacquard Fabric" },
-        quantity: 12,
-        price: 240,
-      },
-    ],
-    totalAmount: 2880,
-    status: "DELIVERED",
-    shippingMethod: "White Glove Archival Delivery",
-    createdAt: "2026-10-22T13:10:00.000Z",
-  },
-  {
-    _id: "ord_005",
-    orderNumber: "ORD-2026-0005",
-    user: { name: "Harrison Palmer", email: "harrison@palmerarchitects.com" },
-    items: [
-      {
-        product: { name: "Woad Mineral Velvet Paint" },
-        quantity: 6,
-        price: 68,
-      },
-    ],
-    totalAmount: 408,
-    status: "CONFIRMED",
-    shippingMethod: "Standard Carbon-Neutral Ground",
-    createdAt: "2026-10-21T18:00:00.000Z",
-  },
-];
-
 export default function V14Overview() {
-  const { theme, authUser, currentRole, setSelectedOrder } = useAdmin();
+  const {
+    theme,
+    authUser,
+    currentRole,
+    setSelectedOrder,
+    products: contextProducts,
+    users: contextUsers,
+    orders: contextOrders,
+  } = useAdmin();
   const isDark = theme === "dark";
 
   // Currency Selection: GBP (Base Atelier), USD, EUR
@@ -126,7 +50,7 @@ export default function V14Overview() {
   const [productsCount, setProductsCount] = useState(0);
   const [usersCount, setUsersCount] = useState(0);
   const [invoicesCount, setInvoicesCount] = useState(0);
-  const [satisfactionRating, setSatisfactionRating] = useState(4.9);
+  const [satisfactionRating, setSatisfactionRating] = useState(5.0);
   const [monthlyData, setMonthlyData] = useState([]);
 
   // Fetch real backend data
@@ -147,15 +71,15 @@ export default function V14Overview() {
         localOrders = JSON.parse(localStorage.getItem("hoh_local_orders") || "[]");
       } catch (e) {}
 
-      let liveOrders = Array.isArray(ordersRes?.data)
+      const rawLive = Array.isArray(ordersRes?.data)
         ? ordersRes.data
-        : Array.isArray(ordersRes) && ordersRes.length > 0
+        : Array.isArray(ordersRes)
         ? ordersRes
-        : FALLBACK_LIVE_ORDERS;
+        : contextOrders || [];
 
       const combinedOrders = Array.isArray(localOrders) && localOrders.length > 0
-        ? [...localOrders, ...liveOrders.filter((b) => !localOrders.some((l) => (l.id || l._id) === (b.id || b._id)))]
-        : liveOrders;
+        ? [...localOrders, ...rawLive.filter((b) => !localOrders.some((l) => (l.id || l._id) === (b.id || b._id)))]
+        : rawLive;
 
       setOrders(combinedOrders);
 
@@ -164,16 +88,16 @@ export default function V14Overview() {
         ? prodsRes.data.products
         : Array.isArray(prodsRes)
         ? prodsRes
-        : [];
-      setProductsCount(prodsList.length > 0 ? prodsList.length : 32);
+        : contextProducts || [];
+      setProductsCount(prodsList.length > 0 ? prodsList.length : (contextProducts?.length || 0));
 
       // Normalize users count
       const usrList = Array.isArray(usersRes?.data)
         ? usersRes.data
         : Array.isArray(usersRes)
         ? usersRes
-        : [];
-      setUsersCount(usrList.length > 0 ? usrList.length : 19);
+        : contextUsers || [];
+      setUsersCount(usrList.length > 0 ? usrList.length : (contextUsers?.length || 0));
 
       // Invoices
       const invList = Array.isArray(invoicesRes?.data)
@@ -181,40 +105,50 @@ export default function V14Overview() {
         : Array.isArray(invoicesRes)
         ? invoicesRes
         : [];
-      setInvoicesCount(invList.length > 0 ? invList.length : 6);
+      setInvoicesCount(invList.length);
 
       // Satisfaction
       if (revSummary?.averageRating) {
         setSatisfactionRating(revSummary.averageRating);
       }
 
-      // Generate dynamic real monthly chart data from orders and volume
-      const baseMonths = [
-        { month: "May", baseOrders: 42, baseRev: 38200 },
-        { month: "Jun", baseOrders: 58, baseRev: 46500 },
-        { month: "Jul", baseOrders: 51, baseRev: 41800 },
-        { month: "Aug", baseOrders: 64, baseRev: 52400 },
-        { month: "Sep", baseOrders: 78, baseRev: 63100 },
-        { month: "Oct", baseOrders: 89, baseRev: 74900 },
-      ];
+      // Generate dynamic real monthly chart data from orders trailing 6 months
+      const now = new Date();
+      const months = [];
+      for (let i = 5; i >= 0; i--) {
+        const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+        months.push({
+          month: d.toLocaleDateString("en-GB", { month: "short" }),
+          year: d.getFullYear(),
+          monthIndex: d.getMonth(),
+        });
+      }
 
-      const computed = baseMonths.map((m) => {
-        const profit = Math.round(m.baseRev * 0.68);
-        const loss = Math.round(m.baseRev * 0.32);
+      const computed = months.map((m) => {
+        const monthOrders = combinedOrders.filter((ord) => {
+          if (!ord.createdAt) return false;
+          const od = new Date(ord.createdAt);
+          return od.getMonth() === m.monthIndex && od.getFullYear() === m.year;
+        });
+        const gross = monthOrders.reduce((sum, ord) => {
+          return sum + (Number(ord.totalAmount || ord.grandTotal || ord.totalPrice || ord.total) || 0);
+        }, 0);
+        const profit = Math.round(gross * 0.70);
+        const loss = Math.round(gross * 0.30);
         return {
           month: m.month,
-          orders: m.baseOrders,
-          grossGBP: m.baseRev,
+          orders: monthOrders.length,
+          grossGBP: gross,
           profitGBP: profit,
           lossGBP: loss,
         };
       });
       setMonthlyData(computed);
     } catch (err) {
-      console.warn("Telemetry load fallback:", err.message);
-      setOrders(FALLBACK_LIVE_ORDERS);
-      setProductsCount(32);
-      setUsersCount(19);
+      console.warn("Telemetry load warning:", err.message);
+      setOrders(contextOrders || []);
+      setProductsCount(contextProducts?.length || 0);
+      setUsersCount(contextUsers?.length || 0);
     } finally {
       setLoading(false);
     }
@@ -222,7 +156,7 @@ export default function V14Overview() {
 
   useEffect(() => {
     loadLiveTelemetry();
-  }, []);
+  }, [contextOrders, contextProducts, contextUsers]);
 
   // Real-time synchronization when user completes checkout in store
   useEffect(() => {
@@ -253,23 +187,21 @@ export default function V14Overview() {
     return `£${gbp.toLocaleString("en-GB", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
   };
 
-  // Dynamic Metrics Computed in Real-Time
+  // Dynamic Metrics Computed in Real-Time Purely from Live Data
   const liveMetrics = useMemo(() => {
-    const rawOrderTotalGBP = orders.reduce((sum, ord) => {
+    const totalGrossGBP = orders.reduce((sum, ord) => {
       const val =
         Number(ord.totalAmount) ||
         Number(ord.grandTotal) ||
         Number(ord.totalPrice) ||
-        Number(ord.subtotal) ||
-        450;
+        Number(ord.total) ||
+        0;
       return sum + val;
     }, 0);
 
-    // Baseline atelier gross merchandise volume (GMV)
-    const totalGrossGBP = 316900 + rawOrderTotalGBP;
-    const totalProfitGBP = Math.round(totalGrossGBP * 0.69);
-    const totalFulfillmentGBP = Math.round(totalGrossGBP * 0.31);
-    const avgOrderValueGBP = Math.round(totalGrossGBP / Math.max(orders.length + 180, 1));
+    const totalProfitGBP = Math.round(totalGrossGBP * 0.70);
+    const totalFulfillmentGBP = Math.round(totalGrossGBP * 0.30);
+    const avgOrderValueGBP = orders.length > 0 ? Math.round(totalGrossGBP / orders.length) : 0;
 
     return {
       totalGrossGBP,
@@ -728,84 +660,88 @@ export default function V14Overview() {
 
           {/* Dynamic Interactive Dual-Stacked Chart */}
           <div className="my-4">
-            <div className="flex items-end justify-between h-40 pt-4 px-1 gap-2">
-              {/* Y-axis labels dynamically scaled to selected currency */}
-              <div
-                className={`flex flex-col justify-between h-full text-[10px] font-mono pr-2 ${
-                  isDark ? "text-[#7f9183]" : "text-[#7b9180]"
-                }`}
-              >
-                <span>{selectedCurrency === "USD" ? "$80k" : selectedCurrency === "EUR" ? "€75k" : "£65k"}</span>
-                <span>{selectedCurrency === "USD" ? "$60k" : selectedCurrency === "EUR" ? "€55k" : "£50k"}</span>
-                <span>{selectedCurrency === "USD" ? "$40k" : selectedCurrency === "EUR" ? "€35k" : "£30k"}</span>
-                <span>{selectedCurrency === "USD" ? "$20k" : selectedCurrency === "EUR" ? "€20k" : "£15k"}</span>
-                <span>00</span>
-              </div>
-
-              {/* 6 Monthly Dual-Color Bars in Light Green & Soft Mint */}
-              {monthlyData.map((bar, idx) => {
-                const isHovered = hoveredBar === idx;
-                const maxVal = 75000;
-                const totalHeight = Math.min((bar.grossGBP / maxVal) * 100, 100);
-                const lossFraction = (bar.lossGBP / bar.grossGBP) * 100;
-                const profitFraction = 100 - lossFraction;
-
-                return (
+            {(() => {
+              const chartMaxVal = Math.max(...monthlyData.map((b) => b.grossGBP), 500);
+              return (
+                <div className="flex items-end justify-between h-40 pt-4 px-1 gap-2">
+                  {/* Y-axis labels dynamically scaled to selected currency */}
                   <div
-                    key={idx}
-                    onMouseEnter={() => setHoveredBar(idx)}
-                    onMouseLeave={() => setHoveredBar(null)}
-                    className="flex-1 flex flex-col items-center justify-end h-full group cursor-pointer relative"
+                    className={`flex flex-col justify-between h-full text-[10px] font-mono pr-2 ${
+                      isDark ? "text-[#7f9183]" : "text-[#7b9180]"
+                    }`}
                   >
-                    {/* Floating Tooltip */}
-                    {isHovered && (
-                      <div className="absolute -top-12 bg-[#1b3d24] text-white text-[10px] font-sans px-3 py-1.5 rounded-xl shadow-xl whitespace-nowrap z-30 border border-white/20">
-                        <p className="font-bold">{bar.month} 2026: {formatMoney(bar.grossGBP)}</p>
-                        <p className="text-[#a5d8b2] text-[9px]">
-                          Profit: {formatMoney(bar.profitGBP)} • {bar.orders} orders
-                        </p>
-                      </div>
-                    )}
-
-                    {/* Dual Stacked Rounded Bar */}
-                    <motion.div
-                      initial={{ scaleY: 0 }}
-                      animate={{ scaleY: 1 }}
-                      transition={{
-                        duration: 0.55,
-                        delay: idx * 0.04,
-                        ease: [0.16, 1, 0.3, 1],
-                      }}
-                      className="w-full max-w-[22px] rounded-full overflow-hidden flex flex-col justify-end transition-transform duration-200 group-hover:scale-105 origin-bottom shadow-xs"
-                      style={{ height: `${totalHeight}%` }}
-                    >
-                      <div
-                        className="w-full bg-[#3e7b52] rounded-t-full"
-                        style={{ height: `${profitFraction}%` }}
-                      />
-                      <div
-                        className={`w-full ${
-                          isDark ? "bg-[#2d4633]" : "bg-[#b2d9bc]"
-                        } rounded-b-full`}
-                        style={{ height: `${lossFraction}%` }}
-                      />
-                    </motion.div>
-
-                    <span
-                      className={`text-[10px] font-sans mt-2 transition-colors ${
-                        isHovered
-                          ? "text-[#3e7b52] font-bold"
-                          : isDark
-                          ? "text-[#7f9183]"
-                          : "text-[#7b9180]"
-                      }`}
-                    >
-                      {bar.month}
-                    </span>
+                    <span>{formatMoney(chartMaxVal)}</span>
+                    <span>{formatMoney(chartMaxVal * 0.75)}</span>
+                    <span>{formatMoney(chartMaxVal * 0.50)}</span>
+                    <span>{formatMoney(chartMaxVal * 0.25)}</span>
+                    <span>00</span>
                   </div>
-                );
-              })}
-            </div>
+
+                  {/* 6 Monthly Dual-Color Bars in Light Green & Soft Mint */}
+                  {monthlyData.map((bar, idx) => {
+                    const isHovered = hoveredBar === idx;
+                    const totalHeight = bar.grossGBP > 0 ? Math.min((bar.grossGBP / chartMaxVal) * 100, 100) : 4;
+                    const lossFraction = bar.grossGBP > 0 ? (bar.lossGBP / bar.grossGBP) * 100 : 30;
+                    const profitFraction = 100 - lossFraction;
+
+                    return (
+                      <div
+                        key={idx}
+                        onMouseEnter={() => setHoveredBar(idx)}
+                        onMouseLeave={() => setHoveredBar(null)}
+                        className="flex-1 flex flex-col items-center justify-end h-full group cursor-pointer relative"
+                      >
+                        {/* Floating Tooltip */}
+                        {isHovered && (
+                          <div className="absolute -top-12 bg-[#1b3d24] text-white text-[10px] font-sans px-3 py-1.5 rounded-xl shadow-xl whitespace-nowrap z-30 border border-white/20">
+                            <p className="font-bold">{bar.month}: {formatMoney(bar.grossGBP)}</p>
+                            <p className="text-[#a5d8b2] text-[9px]">
+                              Profit: {formatMoney(bar.profitGBP)} • {bar.orders} orders
+                            </p>
+                          </div>
+                        )}
+
+                        {/* Dual Stacked Rounded Bar */}
+                        <motion.div
+                          initial={{ scaleY: 0 }}
+                          animate={{ scaleY: 1 }}
+                          transition={{
+                            duration: 0.55,
+                            delay: idx * 0.04,
+                            ease: [0.16, 1, 0.3, 1],
+                          }}
+                          className="w-full max-w-[22px] rounded-full overflow-hidden flex flex-col justify-end transition-transform duration-200 group-hover:scale-105 origin-bottom shadow-xs"
+                          style={{ height: `${totalHeight}%` }}
+                        >
+                          <div
+                            className="w-full bg-[#3e7b52] rounded-t-full"
+                            style={{ height: `${profitFraction}%` }}
+                          />
+                          <div
+                            className={`w-full ${
+                              isDark ? "bg-[#2d4633]" : "bg-[#b2d9bc]"
+                            } rounded-b-full`}
+                            style={{ height: `${lossFraction}%` }}
+                          />
+                        </motion.div>
+
+                        <span
+                          className={`text-[10px] font-sans mt-2 transition-colors ${
+                            isHovered
+                              ? "text-[#3e7b52] font-bold"
+                              : isDark
+                              ? "text-[#7f9183]"
+                              : "text-[#7b9180]"
+                          }`}
+                        >
+                          {bar.month}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })()}
           </div>
         </div>
       </div>
@@ -830,7 +766,7 @@ export default function V14Overview() {
                 Monthly Operating Limit
               </h3>
               <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-[#3e7b52]/10 text-[#3e7b52] font-semibold">
-                October 2026
+                {new Date().toLocaleDateString("en-GB", { month: "long", year: "numeric" })}
               </span>
             </div>
             <p
@@ -842,44 +778,52 @@ export default function V14Overview() {
             </p>
           </div>
 
-          <div className="my-6">
-            <div
-              className={`w-full h-4 rounded-full overflow-hidden p-0.5 border ${
-                isDark
-                  ? "bg-[#141a15] border-[#253327]"
-                  : "bg-[#edf6f0] border-[#cce3d2]"
-              }`}
-            >
-              <motion.div
-                initial={{ width: 0 }}
-                animate={{ width: "38%" }}
-                transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
-                className="h-full rounded-full"
-                style={{
-                  background:
-                    "repeating-linear-gradient(-45deg, #3e7b52, #3e7b52 6px, #a8dcb5 6px, #a8dcb5 12px)",
-                }}
-              />
-            </div>
+          {(() => {
+            const spentGBP = Math.round(liveMetrics.totalFulfillmentGBP * 0.45);
+            const budgetGBP = Math.max(Math.round(liveMetrics.totalFulfillmentGBP * 1.25), 1000);
+            const budgetPct = Math.min(Math.round((spentGBP / budgetGBP) * 100), 100);
 
-            <div className="flex items-center justify-between text-xs font-sans mt-3">
-              <span className="font-medium">
-                <strong
-                  className={`font-bold text-sm ${
-                    isDark ? "text-[#f2f7f3]" : "text-[#142617]"
+            return (
+              <div className="my-6">
+                <div
+                  className={`w-full h-4 rounded-full overflow-hidden p-0.5 border ${
+                    isDark
+                      ? "bg-[#141a15] border-[#253327]"
+                      : "bg-[#edf6f0] border-[#cce3d2]"
                   }`}
                 >
-                  {formatMoney(liveMetrics.totalFulfillmentGBP * 0.18)}
-                </strong>{" "}
-                <span className={isDark ? "text-[#9db3a1]" : "text-[#526956]"}>
-                  spent out of
-                </span>
-              </span>
-              <span className="font-bold text-sm font-mono text-[#3e7b52] dark:text-[#7ec792]">
-                {formatMoney(liveMetrics.totalFulfillmentGBP * 0.45)}
-              </span>
-            </div>
-          </div>
+                  <motion.div
+                    initial={{ width: 0 }}
+                    animate={{ width: `${budgetPct}%` }}
+                    transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+                    className="h-full rounded-full"
+                    style={{
+                      background:
+                        "repeating-linear-gradient(-45deg, #3e7b52, #3e7b52 6px, #a8dcb5 6px, #a8dcb5 12px)",
+                    }}
+                  />
+                </div>
+
+                <div className="flex items-center justify-between text-xs font-sans mt-3">
+                  <span className="font-medium">
+                    <strong
+                      className={`font-bold text-sm ${
+                        isDark ? "text-[#f2f7f3]" : "text-[#142617]"
+                      }`}
+                    >
+                      {formatMoney(spentGBP)}
+                    </strong>{" "}
+                    <span className={isDark ? "text-[#9db3a1]" : "text-[#526956]"}>
+                      spent out of
+                    </span>
+                  </span>
+                  <span className="font-bold text-sm font-mono text-[#3e7b52] dark:text-[#7ec792]">
+                    {formatMoney(budgetGBP)}
+                  </span>
+                </div>
+              </div>
+            );
+          })()}
 
           <div className="pt-3 border-t border-inherit flex items-center justify-between text-[11px]">
             <span className={isDark ? "text-[#7f9183]" : "text-[#7b9180]"}>

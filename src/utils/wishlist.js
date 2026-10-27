@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import userService from "../services/userService";
 import { showToast } from "./sweetAlert";
+import { syncProductData } from "./productSync";
 
 const STORAGE_KEY = "hoh_wishlist_items";
 
@@ -57,6 +58,16 @@ export function toggleWishlistItem(product) {
     }
     return false;
   } else {
+    const synced = syncProductData(product) || product;
+    const inv = synced?.inventory || product.inventory;
+    const inStock = Boolean(
+      inv &&
+      inv.inStock !== false &&
+      inv.status !== "OUT_OF_STOCK" &&
+      (inv.availableQuantity === undefined || inv.availableQuantity > 0) &&
+      (synced?.stock === undefined || synced?.stock > 0)
+    );
+
     const newItem = {
       _id: productId,
       id: productId,
@@ -70,6 +81,9 @@ export function toggleWishlistItem(product) {
       images: product.images || [],
       image: product.image || product.media?.thumbnail?.url || "",
       slug: product.slug || productId,
+      inventory: inv,
+      inStock,
+      stock: synced?.stock,
     };
     updated = [newItem, ...currentItems];
     saveStoredWishlist(updated);

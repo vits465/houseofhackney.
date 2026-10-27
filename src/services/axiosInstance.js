@@ -8,7 +8,7 @@ import {
 
 const API_URL =
   import.meta.env.VITE_API_BASE_URL ||
-  "https://houseofhackney-backeend.vercel.app/api/v1";
+  "http://localhost:5000/api/v1";
 
 const axiosInstance = axios.create({
   baseURL: API_URL,

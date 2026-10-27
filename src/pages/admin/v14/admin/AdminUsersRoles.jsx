@@ -34,7 +34,7 @@ const SYSTEM_ROLES_DEFAULT = [
     name: "SUPER_ADMIN",
     displayName: "Super Admin (Master Atelier)",
     slug: "super-admin",
-    usersCount: 2,
+    usersCount: 0,
     description: "Complete unrestricted administrative control across all atelier domains, finances, and RBAC governance.",
     permissions: [
       "CATALOG_FULL",
@@ -50,7 +50,7 @@ const SYSTEM_ROLES_DEFAULT = [
     name: "ADMIN",
     displayName: "Admin Manager (Operations)",
     slug: "admin",
-    usersCount: 4,
+    usersCount: 0,
     description: "Operations and catalog manager with quote negotiation and fulfillment controls.",
     permissions: ["CATALOG_FULL", "TRADE_MANAGEMENT", "ORDERS_FULL", "ACTIVITY_VIEW"],
   },
@@ -59,7 +59,7 @@ const SYSTEM_ROLES_DEFAULT = [
     name: "TRADE_USER",
     displayName: "Trade Patron (B2B Partner)",
     slug: "trade",
-    usersCount: 128,
+    usersCount: 0,
     description: "Professional interior designer or architecture firm with wholesale pricing and credit line.",
     permissions: [
       "TRADE_CATALOG_VIEW",
@@ -73,7 +73,7 @@ const SYSTEM_ROLES_DEFAULT = [
     name: "CUSTOMER",
     displayName: "Verified Boutique Patron",
     slug: "customer",
-    usersCount: 842,
+    usersCount: 0,
     description: "Retail customer with storefront browsing, sample orders, and standard checkout privileges.",
     permissions: ["STORE_BROWSE", "ORDERS_OWN", "REVIEWS_SUBMIT"],
   },
@@ -178,21 +178,40 @@ export default function AdminUsersRoles() {
       }
 
       const rawRoles = Array.isArray(liveRoles) ? liveRoles : liveRoles?.data || [];
-      if (rawRoles.length > 0) {
-        const formattedRoles = rawRoles.map((r, i) => ({
+      const baseRoles = rawRoles.length > 0 ? rawRoles : SYSTEM_ROLES_DEFAULT;
+
+      const formattedRoles = baseRoles.map((r, i) => {
+        const assignedUsersCount = rawUsers.filter((u) => {
+          if (Array.isArray(u.roles)) {
+            return u.roles.some((ur) => {
+              const uSlug = typeof ur === "object" ? ur.slug || ur.name : ur;
+              return (
+                uSlug?.toLowerCase() === r.slug?.toLowerCase() ||
+                uSlug?.toLowerCase() === r.name?.toLowerCase()
+              );
+            });
+          }
+          const uRole = typeof u.role === "object" ? u.role?.name || u.role?.slug : u.role;
+          return (
+            uRole?.toLowerCase() === r.name?.toLowerCase() ||
+            uRole?.toLowerCase() === r.slug?.toLowerCase()
+          );
+        }).length;
+
+        return {
           id: r._id || r.id || `role_live_${i}`,
           name: r.name || "ROLE",
           displayName: r.displayName || (r.name ? `${r.name.replace(/_/g, " ")} Policy` : "Atelier Role"),
           slug: r.slug || (r.name || "").toLowerCase(),
-          usersCount: r.usersCount || Math.floor(2 + i * 5),
+          usersCount: assignedUsersCount,
           description: r.description || `Granted RBAC credentials and privileges for ${r.name || "role"}.`,
           permissions:
             Array.isArray(r.permissions) && r.permissions.length > 0
               ? r.permissions.map((p) => (typeof p === "object" ? p.name || p.code : p))
               : ["CATALOG_READ", "ORDERS_VIEW", "PROFILE_ACCESS"],
-        }));
-        setRolesList(formattedRoles);
-      }
+        };
+      });
+      setRolesList(formattedRoles);
     } catch (err) {
       console.warn("Live RBAC fetch error:", err.message);
     } finally {

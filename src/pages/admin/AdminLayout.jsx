@@ -119,7 +119,7 @@ function DashboardV14Main() {
         </div>
 
         {/* Main Dashboard Canvas with Smooth Page Transition */}
-        <main className="flex-1 p-6 sm:p-8 max-w-7xl w-full mx-auto">
+        <main className="flex-1 p-3 sm:p-6 md:p-8 max-w-7xl w-full mx-auto">
           <AnimatePresence mode="wait">
             <motion.div
               key={`${currentRole}-${activeTab}`}

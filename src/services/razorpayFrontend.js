@@ -98,6 +98,7 @@ export async function initiateRazorpayCheckout({
   amount,
   currency = "INR",
   user = null,
+  shippingAddress = null,
   onSuccess,
   onError,
   onDismiss,
@@ -137,6 +138,12 @@ export async function initiateRazorpayCheckout({
     closeAlert();
 
     // 3. Configure Razorpay modal options
+    const patronName =
+      shippingAddress?.fullName ||
+      (user?.firstName ? `${user.firstName} ${user.lastName || ""}`.trim() : user?.name || "House of Hackney Patron");
+    const patronEmail = shippingAddress?.email || user?.email || "patron@houseofhackney.com";
+    const patronPhone = shippingAddress?.phone || user?.phone || "9999999999";
+
     const options = {
       key: keyId,
       amount: order.amount,
@@ -180,12 +187,14 @@ export async function initiateRazorpayCheckout({
         }
       },
       prefill: {
-        name: user?.firstName ? `${user.firstName} ${user.lastName || ""}`.trim() : "House of Hackney Patron",
-        email: user?.email || "patron@houseofhackney.com",
-        contact: user?.phone || "9999999999",
+        name: patronName,
+        email: patronEmail,
+        contact: patronPhone,
       },
       notes: {
-        address: "House of Hackney London",
+        address: shippingAddress?.addressLine1
+          ? `${shippingAddress.addressLine1}, ${shippingAddress.city || ""} ${shippingAddress.postalCode || ""}`.trim()
+          : "House of Hackney London",
       },
       theme: {
         color: "#0c2340",

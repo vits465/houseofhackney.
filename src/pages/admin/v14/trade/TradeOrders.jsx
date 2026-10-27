@@ -1,54 +1,46 @@
-import { useState } from "react";
-import { Package, Search, Download, Clock, CheckCircle2, Truck, ExternalLink } from "lucide-react";
+import { useState, useMemo } from "react";
+import { Package, Search, Download, Clock, CheckCircle2, Truck, Eye } from "lucide-react";
 import { useAdmin } from "../../AdminContext";
 import { showToast } from "../../../../utils/sweetAlert";
 
-const TRADE_ORDERS_LIST = [
-  {
-    id: "TRD-ORD-49210",
-    date: "10 Oct 2026",
-    quoteRef: "QUO-660144-1290",
-    itemsSummary: "30m HOLLYHOCKS British Heritage Velvet",
-    total: 4725,
-    paymentTerm: "NET_30",
-    paymentStatus: "INVOICED",
-    fulfillmentStatus: "DISPATCHED",
-    trackingNumber: "DHL-GB-8839210",
-    invoicePdf: "#invoice-49210",
-  },
-  {
-    id: "TRD-ORD-38102",
-    date: "28 Sep 2026",
-    quoteRef: "QUO-551029-9941",
-    itemsSummary: "18 Rolls ARTEMIS Wild Flora Wallpaper + 8 Cushions",
-    total: 3960,
-    paymentTerm: "NET_30",
-    paymentStatus: "PAID",
-    fulfillmentStatus: "DELIVERED",
-    trackingNumber: "DHL-GB-7719240",
-    invoicePdf: "#invoice-38102",
-  },
-  {
-    id: "TRD-ORD-22901",
-    date: "14 Aug 2026",
-    quoteRef: "QUO-440192-3321",
-    itemsSummary: "50m BABYLON Velvet + Zellige Tile Suite",
-    total: 8240,
-    paymentTerm: "NET_30",
-    paymentStatus: "PAID",
-    fulfillmentStatus: "DELIVERED",
-    trackingNumber: "DHL-GB-6612049",
-    invoicePdf: "#invoice-22901",
-  },
-];
-
 export default function TradeOrders() {
-  const { theme, setSelectedOrder } = useAdmin();
+  const { theme, orders, setSelectedOrder } = useAdmin();
   const isDark = theme === "dark";
-
   const [searchQuery, setSearchQuery] = useState("");
 
-  const filteredOrders = TRADE_ORDERS_LIST.filter(
+  const dynamicTradeOrders = useMemo(() => {
+    return (orders || []).map((ord) => {
+      const id = ord.orderNumber || ord.code || (ord._id ? `TRD-ORD-${ord._id.slice(-5).toUpperCase()}` : "TRD-ORD-01");
+      const date = ord.createdAt
+        ? new Date(ord.createdAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })
+        : "Recent";
+      const quoteRef = ord.quotationRef || `QUO-${(ord._id || "123").slice(-6).toUpperCase()}`;
+      const itemsSummary = (ord.items || [])
+        .map((it) => `${it.product?.name || it.name || "Bespoke Creation"} (x${it.quantity || 1})`)
+        .join(", ") || "Atelier Furnishing Selection";
+      const total = Number(ord.totalAmount || ord.grandTotal || ord.totalPrice || ord.total) || 0;
+      const paymentTerm = ord.paymentTerm || "NET_30";
+      const paymentStatus = (ord.paymentStatus || ord.status || "CONFIRMED").toUpperCase();
+      const fulfillmentStatus = (ord.fulfillmentStatus || ord.status || "CONFIRMED").toUpperCase();
+      const trackingNumber = ord.trackingNumber || `DHL-GB-${(ord._id || "999").slice(-7).toUpperCase()}`;
+
+      return {
+        id,
+        date,
+        quoteRef,
+        itemsSummary,
+        total,
+        paymentTerm,
+        paymentStatus,
+        fulfillmentStatus,
+        trackingNumber,
+        invoicePdf: `#invoice-${id}`,
+        rawOrder: ord,
+      };
+    });
+  }, [orders]);
+
+  const filteredOrders = dynamicTradeOrders.filter(
     (ord) =>
       ord.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
       ord.itemsSummary.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -68,7 +60,7 @@ export default function TradeOrders() {
             My Trade B2B Orders & Invoices
           </h1>
           <p className="text-xs text-[#627766] mt-0.5">
-            Track atelier production, courier dispatch, and settle invoices under your NET_30 terms
+            Track live atelier production, courier dispatch, and settle invoices under your NET_30 terms
           </p>
         </div>
       </div>
@@ -104,97 +96,108 @@ export default function TradeOrders() {
         </div>
       </div>
 
-      {/* Orders Table */}
-      <div
-        className={`rounded-2xl border p-5 sm:p-6 transition-colors overflow-hidden ${
-          isDark
-            ? "bg-[#141a15] border-[#253327]"
-            : "bg-white border-[#e4ede5]"
-        }`}
-      >
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
-            <thead>
-              <tr
-                className={`border-b text-[11px] font-semibold uppercase tracking-wider text-[#627766] ${
-                  isDark ? "border-[#253327]" : "border-[#edf2ee]"
-                }`}
-              >
-                <th className="pb-3 pl-2">Order Ref</th>
-                <th className="pb-3">Date</th>
-                <th className="pb-3">Items Summary</th>
-                <th className="pb-3">Invoice Total</th>
-                <th className="pb-3">Terms & Payment</th>
-                <th className="pb-3">Fulfillment</th>
-                <th className="pb-3 pr-2 text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody
-              className={`divide-y ${
-                isDark ? "divide-[#202c22]" : "divide-[#edf2ee]"
+      {/* Orders List / Cards */}
+      <div className="space-y-4">
+        {filteredOrders.length === 0 ? (
+          <div
+            className={`p-12 text-center rounded-2xl border ${
+              isDark ? "bg-[#141a15] border-[#253327]" : "bg-white border-[#e4ede5]"
+            }`}
+          >
+            <Package size={32} className="mx-auto text-[#627766] mb-2 opacity-50" />
+            <p className="text-sm font-semibold">No trade orders found</p>
+            <p className="text-xs text-[#627766] mt-1">
+              Your trade orders and white-glove dispatches will appear here in real time.
+            </p>
+          </div>
+        ) : (
+          filteredOrders.map((ord) => (
+            <div
+              key={ord.id}
+              onClick={() => setSelectedOrder && setSelectedOrder(ord.rawOrder)}
+              className={`p-5 rounded-2xl border transition-all cursor-pointer hover:shadow-md ${
+                isDark
+                  ? "bg-[#141a15] border-[#253327] hover:border-[#3e7b52]"
+                  : "bg-white border-[#e4ede5] hover:border-[#3e7b52]"
               }`}
             >
-              {filteredOrders.map((ord) => (
-                <tr
-                  key={ord.id}
-                  className={`transition-colors ${
-                    isDark ? "hover:bg-[#1a231b]" : "hover:bg-[#f8fbf9]"
-                  }`}
-                >
-                  <td className="py-3.5 pl-2">
-                    <p className="font-mono font-bold text-[#3e7b52]">{ord.id}</p>
-                    <p className="text-[10px] text-[#627766]">Quote: {ord.quoteRef}</p>
-                  </td>
-                  <td className="py-3.5 font-medium">{ord.date}</td>
-                  <td className="py-3.5 max-w-xs truncate font-medium">
-                    {ord.itemsSummary}
-                  </td>
-                  <td className="py-3.5 font-bold text-sm">
-                    £{ord.total.toLocaleString()}
-                  </td>
-                  <td className="py-3.5">
-                    <div className="flex items-center gap-1.5">
-                      <span className="font-mono text-[11px] font-bold text-[#3e7b52]">
-                        {ord.paymentTerm}
-                      </span>
-                      <span
-                        className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                          ord.paymentStatus === "PAID"
-                            ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400"
-                            : "bg-amber-500/15 text-amber-600 dark:text-amber-400"
-                        }`}
-                      >
-                        {ord.paymentStatus}
-                      </span>
-                    </div>
-                  </td>
-                  <td className="py-3.5">
+              <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                <div className="space-y-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="font-mono font-bold text-sm text-[#3e7b52]">
+                      {ord.id}
+                    </span>
+                    <span className="text-xs text-[#627766]">• {ord.date}</span>
                     <span
-                      className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
-                        ord.fulfillmentStatus === "DELIVERED"
-                          ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400"
-                          : "bg-blue-500/15 text-blue-600"
+                      className={`text-[10px] font-mono uppercase px-2 py-0.5 rounded-md ${
+                        isDark ? "bg-[#1d271f] text-[#859b89]" : "bg-[#edf6f0] text-[#285735]"
                       }`}
                     >
-                      <Truck size={12} /> {ord.fulfillmentStatus}
+                      {ord.quoteRef}
                     </span>
-                    <p className="text-[10px] font-mono text-[#859b89] mt-0.5">
+                  </div>
+                  <h3 className="font-semibold text-sm">{ord.itemsSummary}</h3>
+                  <div className="flex items-center gap-3 text-xs text-[#627766]">
+                    <span className="flex items-center gap-1 font-mono">
+                      <Truck size={12} />
                       {ord.trackingNumber}
-                    </p>
-                  </td>
-                  <td className="py-3.5 pr-2 text-right">
-                    <button
-                      onClick={() => handleDownloadInvoice(ord.id)}
-                      className="px-3 py-1.5 rounded-full border border-[#3e7b52] text-[#3e7b52] hover:bg-[#3e7b52] hover:text-white text-[11px] font-bold transition-all inline-flex items-center gap-1 shadow-sm"
-                    >
-                      <Download size={12} /> VAT Invoice
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+                    </span>
+                    <span>• Terms: {ord.paymentTerm}</span>
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-3 lg:self-center">
+                  <div className="text-right mr-2">
+                    <span className="text-xs text-[#627766] block">Net Invoiced</span>
+                    <span className="font-bold text-base font-mono">
+                      £{ord.total.toLocaleString("en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </span>
+                  </div>
+
+                  <span
+                    className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold ${
+                      ord.paymentStatus === "PAID"
+                        ? "bg-[#eaf5ed] text-[#285735]"
+                        : "bg-amber-500/15 text-amber-600"
+                    }`}
+                  >
+                    <CheckCircle2 size={12} />
+                    {ord.paymentStatus}
+                  </span>
+
+                  <span
+                    className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold ${
+                      ord.fulfillmentStatus === "DELIVERED"
+                        ? "bg-[#eaf5ed] text-[#285735]"
+                        : ord.fulfillmentStatus === "DISPATCHED" || ord.fulfillmentStatus === "SHIPPED"
+                        ? "bg-blue-500/15 text-blue-600"
+                        : "bg-amber-500/15 text-amber-600"
+                    }`}
+                  >
+                    <Clock size={12} />
+                    {ord.fulfillmentStatus}
+                  </span>
+
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDownloadInvoice(ord.id);
+                    }}
+                    className={`p-2 rounded-xl border text-xs font-semibold flex items-center gap-1.5 transition-colors ${
+                      isDark
+                        ? "border-[#2e3f31] hover:bg-[#1d271f] text-[#859b89]"
+                        : "border-[#dce8df] hover:bg-[#f5f9f6] text-[#285735]"
+                    }`}
+                    title="Download Official VAT Invoice PDF"
+                  >
+                    <Download size={13} />
+                    <span className="hidden sm:inline">VAT Invoice</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))
+        )}
       </div>
     </div>
   );

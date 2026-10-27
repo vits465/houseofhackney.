@@ -25,6 +25,10 @@ export default function V14Account() {
     }
   };
 
+  const displayName = authUser?.name || [authUser?.firstName, authUser?.lastName].filter(Boolean).join(" ") || "Aditya Chauhan";
+  const email = authUser?.email || "adichauha465@gmail.com";
+  const roleDisplay = currentRole === "super-admin" ? "Super Admin (Master Atelier)" : currentRole === "trade" ? "B2B Trade Partner" : "Atelier Operations Manager";
+
   return (
     <div className="space-y-6 max-w-3xl">
       <div>
@@ -52,25 +56,23 @@ export default function V14Account() {
         }`}
       >
         <div className="flex items-center gap-4">
-          <img
-            src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=160&q=80"
-            alt="Profile"
-            className="w-16 h-16 rounded-full object-cover ring-2 ring-[#3e7b52]"
-          />
+          <div className="w-16 h-16 rounded-full bg-[#3e7b52] text-white flex items-center justify-center font-serif font-bold text-xl ring-2 ring-[#3e7b52]/30 shadow-sm">
+            {displayName.slice(0, 2).toUpperCase()}
+          </div>
           <div>
             <h3
               className={`font-sans font-bold text-lg ${
                 isDark ? "text-[#f2f7f3]" : "text-[#142617]"
               }`}
             >
-              Code XR Studio
+              {displayName}
             </h3>
             <p
               className={`text-xs ${
                 isDark ? "text-[#9db3a1]" : "text-[#526956]"
               }`}
             >
-              hello@codexr.studio • Executive Atelier Role
+              {email} • {roleDisplay}
             </p>
           </div>
         </div>
@@ -80,7 +82,7 @@ export default function V14Account() {
             <label className="block font-semibold mb-1">Display Name</label>
             <input
               type="text"
-              defaultValue="Code XR"
+              defaultValue={displayName}
               className={`w-full px-3.5 py-2.5 rounded-xl border focus:outline-none transition-colors ${
                 isDark
                   ? "bg-[#141a15] border-[#253327] text-[#f2f7f3] focus:border-[#4a8b5e]"
@@ -93,7 +95,7 @@ export default function V14Account() {
             <label className="block font-semibold mb-1">Curator Email</label>
             <input
               type="email"
-              defaultValue="hello@codexr.studio"
+              defaultValue={email}
               className={`w-full px-3.5 py-2.5 rounded-xl border focus:outline-none transition-colors ${
                 isDark
                   ? "bg-[#141a15] border-[#253327] text-[#f2f7f3] focus:border-[#4a8b5e]"

@@ -22,99 +22,6 @@ import { useAdmin } from "../../AdminContext";
 import adminApiService from "../../services/adminApiService";
 import { showToast, showConfirm } from "../../../../utils/sweetAlert";
 
-const FALLBACK_REVIEWS = [
-  {
-    _id: "rev_01",
-    customerName: "Eleanor Vance",
-    customerEmail: "eleanor.vance@chelseadesign.co.uk",
-    product: {
-      _id: "6a7dc66a29308231cb21bc89",
-      name: "Artemis Velvet Fringe Cushion",
-      thumbnail:
-        "https://res.cloudinary.com/tysd8i65/image/upload/c_scale,w_800,f_auto,q_auto/house_of_hackney/furnishings/artemis_cotton_linen_vesper_sofa___jadeite/artemis-cotton-linen-vesper-sofa-jadeite-0",
-    },
-    rating: 5,
-    title: "Unrivalled British Craftsmanship",
-    comment:
-      "The velvet pile is extraordinarily rich and the silk fringe has an opulent weight. Transformed our drawing room sofa instantly. Delivered in pristine archival packaging.",
-    status: "APPROVED",
-    adminReply: "Thank you Eleanor, delighted the Artemis cushion complements your drawing room so splendidly.",
-    createdAt: "2026-10-22T14:30:00.000Z",
-  },
-  {
-    _id: "rev_02",
-    customerName: "Julian Montgomery",
-    customerEmail: "j.montgomery@mayfair-estates.com",
-    product: {
-      _id: "6a7dc66a29308231cb21bc8d",
-      name: "Bambusa Botanical Wall Hanging",
-      thumbnail:
-        "https://res.cloudinary.com/tysd8i65/image/upload/c_scale,w_800,f_auto,q_auto/house_of_hackney/home_decor/bambusa_tapestry/bambusa-tapestry-0",
-    },
-    rating: 5,
-    title: "Museum-Quality Chinoiserie Motif",
-    comment:
-      "The precision of the botanical weave is breathtaking. The hues of jade and moss are even more subtle and lustrous in person than photographed.",
-    status: "APPROVED",
-    adminReply: null,
-    createdAt: "2026-10-21T09:15:00.000Z",
-  },
-  {
-    _id: "rev_03",
-    customerName: "Lady Beatrice Sterling",
-    customerEmail: "beatrice.sterling@heritage-interiors.uk",
-    product: {
-      _id: "6a7dc66929308231cb21bc81",
-      name: "Gothic Garden Silk Wall Hanging",
-      thumbnail:
-        "https://res.cloudinary.com/tysd8i65/image/upload/c_scale,w_800,f_auto,q_auto/house_of_hackney/home_decor/gothic_garden_tapestry/gothic-garden-tapestry-0",
-    },
-    rating: 4,
-    title: "Dramatic and deeply evocative",
-    comment:
-      "A stunning piece of dark romanticism. The silk texture is sublime. It arrived two days later than scheduled, but the atelier team handled the tracking with utter grace.",
-    status: "PENDING",
-    adminReply: null,
-    createdAt: "2026-10-24T18:00:00.000Z",
-  },
-  {
-    _id: "rev_04",
-    customerName: "Harrison Palmer",
-    customerEmail: "harrison@palmerarchitects.com",
-    product: {
-      _id: "6a7dc66a29308231cb21bc8b",
-      name: "Babylon Wallpaper - Dove & Willow",
-      thumbnail:
-        "https://res.cloudinary.com/tysd8i65/image/upload/c_scale,w_800,f_auto,q_auto/house_of_hackney/wallpaper/babylon_wallpaper_dove___willow/babylon-wallpaper-dove-willow-0",
-    },
-    rating: 5,
-    title: "Flawless roll matching and paste adhesion",
-    comment:
-      "Specified this for a Grade II listed townhouse in Bath. The paper hung seamlessly and the chalky matte finish diffuses afternoon sunlight magnificently.",
-    status: "APPROVED",
-    adminReply: "Wonderful to hear Harrison! Babylon remains one of our proudest heritage patterns.",
-    createdAt: "2026-10-20T11:45:00.000Z",
-  },
-  {
-    _id: "rev_05",
-    customerName: "Alistair Finch",
-    customerEmail: "afinch@kensington-loft.co.uk",
-    product: {
-      _id: "prod_004",
-      name: "Woad Mineral Velvet Paint",
-      thumbnail:
-        "https://res.cloudinary.com/tysd8i65/image/upload/c_scale,w_800,f_auto,q_auto/house_of_hackney/paint/woad_paint___21/woad-paint-21-1",
-    },
-    rating: 3,
-    title: "Needs two extra coats on raw plaster",
-    comment:
-      "The color depth is undeniably gorgeous once finished, but we needed three coats rather than two on fresh skim. Would appreciate a note in the technical data sheet.",
-    status: "PENDING",
-    adminReply: null,
-    createdAt: "2026-10-24T16:20:00.000Z",
-  },
-];
-
 export default function AdminReviews() {
   const { theme } = useAdmin();
   const isDark = theme === "dark";
@@ -138,14 +45,18 @@ export default function AdminReviews() {
         adminApiService.getReviewsSummary(),
       ]);
 
-      const reviewList =
-        Array.isArray(revRes?.data) ? revRes.data : Array.isArray(revRes) && revRes.length > 0 ? revRes : FALLBACK_REVIEWS;
+      const reviewList = Array.isArray(revRes?.data)
+        ? revRes.data
+        : Array.isArray(revRes)
+        ? revRes
+        : [];
+
       setReviews(reviewList);
-      setSummary(sumRes || { totalReviews: reviewList.length, averageRating: 4.8 });
+      setSummary(sumRes || { totalReviews: reviewList.length, averageRating: 5.0 });
     } catch (err) {
-      console.warn("Reviews load fallback:", err.message);
-      setReviews(FALLBACK_REVIEWS);
-      setSummary({ totalReviews: 5, averageRating: 4.8 });
+      console.warn("Reviews load warning:", err.message);
+      setReviews([]);
+      setSummary({ totalReviews: 0, averageRating: 5.0 });
     } finally {
       setLoading(false);
     }

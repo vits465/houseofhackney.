@@ -50,7 +50,7 @@ const getResponseData = (response) => {
   return body;
 };
 
-const normalizeProductsResponse = (body) => {
+const normalizeProductsResponse = (body, params = {}) => {
   if (!body) return { products: [], pagination: null };
 
   let products = [];
@@ -72,29 +72,96 @@ const normalizeProductsResponse = (body) => {
     products = body;
   }
 
-  // Prepend any custom products added via Admin and curated flagship creations
-  const customProds = getCustomProducts();
   const deletedIds = getDeletedProductIds();
+  const customProds = getCustomProducts();
 
-  // Combine custom products, curated creations, and backend products (preventing duplicates)
-  const curatedClean = CURATED_PRODUCTS.filter(
-    (c) => !deletedIds.has(String(c._id || c.id))
-  );
+  const searchQuery = (
+    params?.search ||
+    params?.q ||
+    params?.keyword ||
+    ""
+  )
+    .toString()
+    .trim()
+    .toLowerCase();
+  const isSearch = Boolean(searchQuery);
+
+  // During search queries, do NOT inject static curated creations.
+  // The user expects search results to strictly reflect the query / API response.
+  let curatedClean = [];
+  let matchingCustom = [];
+
+  if (isSearch) {
+    // Only include custom admin-created products if their title or description matches the search
+    matchingCustom = customProds.filter((p) => {
+      if (deletedIds.has(String(p._id || p.id))) return false;
+      const name = String(p.name || p.title || "").toLowerCase();
+      const desc = String(p.description || "").toLowerCase();
+      const cat = String(p.category?.name || p.category || "").toLowerCase();
+      return (
+        name.includes(searchQuery) ||
+        desc.includes(searchQuery) ||
+        cat.includes(searchQuery)
+      );
+    });
+  } else {
+    // Catalog browsing: only include curated flagship products on first page,
+    // and only if category matches or no category filter is applied.
+    matchingCustom = customProds.filter(
+      (p) => !deletedIds.has(String(p._id || p.id))
+    );
+
+    const isFirstPage = !params?.page || Number(params.page) === 1;
+    const categoryFilter = (params?.category || "").toString().trim().toLowerCase();
+    const productTypeFilter = (params?.productType || "").toString().trim().toLowerCase();
+
+    if (isFirstPage) {
+      curatedClean = CURATED_PRODUCTS.filter((c) => {
+        if (deletedIds.has(String(c._id || c.id))) return false;
+        if (categoryFilter && categoryFilter !== "all") {
+          const cCat = String(
+            c.category?.slug || c.category?.name || c.category || ""
+          ).toLowerCase();
+          if (!cCat.includes(categoryFilter) && !categoryFilter.includes(cCat)) {
+            return false;
+          }
+        }
+        if (productTypeFilter && productTypeFilter !== "all") {
+          const cType = String(c.productType || "").toLowerCase();
+          if (cType !== productTypeFilter) return false;
+        }
+        return true;
+      });
+    }
+  }
+
   const existingIds = new Set([
-    ...customProds.map((c) => String(c._id || c.id)),
+    ...matchingCustom.map((c) => String(c._id || c.id)),
     ...curatedClean.map((c) => String(c._id || c.id)),
   ]);
 
   const nonDuplicateBackend = products.filter(
     (p) => !existingIds.has(String(p._id || p.id))
   );
-  const combined = [...customProds, ...curatedClean, ...nonDuplicateBackend];
+
+  const combined = isSearch
+    ? [...nonDuplicateBackend, ...matchingCustom]
+    : [...matchingCustom, ...curatedClean, ...nonDuplicateBackend];
 
   // Apply synchronization, admin overrides, and smart stock
-  const synchronized = combined
+  let synchronized = combined
     .filter((p) => p && !deletedIds.has(String(p._id || p.id || "")))
     .map((p) => syncProductData(p))
     .filter(Boolean);
+
+  // If a specific limit was requested and we have more items, respect the requested limit
+  if (
+    params?.limit &&
+    Number(params.limit) > 0 &&
+    synchronized.length > Number(params.limit)
+  ) {
+    synchronized = synchronized.slice(0, Number(params.limit));
+  }
 
   return { products: synchronized, pagination };
 };
@@ -127,7 +194,7 @@ export const getProducts = (options = {}, maybeLimit) => {
   return cacheRequest(productsCache, cacheKey, async () => {
     const response = await axiosInstance.get("/products", { params });
     const body = getResponseData(response);
-    return normalizeProductsResponse(body);
+    return normalizeProductsResponse(body, params);
   });
 };
 

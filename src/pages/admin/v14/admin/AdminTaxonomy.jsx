@@ -61,18 +61,10 @@ export default function AdminTaxonomy() {
       setCategories(rawCat);
 
       const rawBrands = Array.isArray(brandRes) ? brandRes : brandRes?.data || [];
-      setBrands(rawBrands.length > 0 ? rawBrands : [
-        { _id: "b_01", name: "House of Hackney", origin: "London, England", foundedYear: 2011, activeCollections: 8 },
-        { _id: "b_02", name: "William Morris Heritage Guild", origin: "Walthamstow, England", foundedYear: 1861, activeCollections: 4 },
-        { _id: "b_03", name: "Gainsborough Silks", origin: "Sudbury, Suffolk", foundedYear: 1903, activeCollections: 2 },
-      ]);
+      setBrands(rawBrands);
 
       const rawAttr = Array.isArray(attrRes) ? attrRes : attrRes?.data || [];
-      setAttributes(rawAttr.length > 0 ? rawAttr : [
-        { _id: "attr_01", name: "Colour Shade", type: "COLOR_SWATCH", values: ["Midnight Black", "Blush Pink", "Moss Green", "Azure", "Petrol", "Off White"] },
-        { _id: "attr_02", name: "Material Composition", type: "SELECT", values: ["Luxury Velvet", "Cotton Linen", "Eco Non-Woven Paper", "Silk Jacquard"] },
-        { _id: "attr_03", name: "Roll Dimensions", type: "SELECT", values: ["180cm x 300cm Panel", "52cm x 10m Roll", "138cm Width Fabric"] },
-      ]);
+      setAttributes(rawAttr);
 
       const rawProds = Array.isArray(prodsRes) ? prodsRes : prodsRes?.data || [];
       setProducts(rawProds);

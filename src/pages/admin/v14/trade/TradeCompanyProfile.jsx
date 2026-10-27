@@ -13,17 +13,21 @@ import {
 import { useAdmin } from "../../AdminContext";
 
 export default function TradeCompanyProfile() {
-  const { theme, tradeProfile, tradeCredit } = useAdmin();
+  const { theme, tradeProfile, tradeCredit, authUser } = useAdmin();
   const isDark = theme === "dark";
 
+  const companyName = tradeProfile?.company?.name || authUser?.companyName || (authUser?.name ? `${authUser.name} Studio Ltd` : "Atelier Design Studio Ltd");
+  const email = tradeProfile?.company?.email || authUser?.email || "trade@houseofhackney.com";
+  const regNumber = tradeProfile?.company?.registrationNumber || `GB-${(authUser?._id || "9823145").slice(-7).toUpperCase()}`;
+
   const company = tradeProfile?.company || {
-    name: "Kensington Heritage Interiors Ltd",
-    registrationNumber: "GB-9823145",
-    taxId: "GB123456789",
-    businessType: "Interior Design Studio",
-    email: "procurement@kensingtonheritage.co.uk",
-    phone: "+44 20 7946 0912",
-    address: "14 Kensington Church Street, London W8 4EP, United Kingdom",
+    name: companyName,
+    registrationNumber: regNumber,
+    taxId: `GB${(authUser?._id || "123456789").slice(-9).toUpperCase()}`,
+    businessType: "Architectural & Interior Design Studio",
+    email,
+    phone: authUser?.phone || "+44 (0) 20 7739 3901",
+    address: "St. Michael's Church, Mark Street, Shoreditch, London EC2A 4ER, United Kingdom",
   };
 
   const tier = tradeProfile?.tier || {

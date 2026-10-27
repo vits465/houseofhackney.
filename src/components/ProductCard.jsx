@@ -1,5 +1,6 @@
 import { Heart } from "lucide-react";
 import { useWishlist } from "../utils/wishlist";
+import { syncProductData } from "../utils/productSync";
 
 // Product card with wishlist toggle
 const ProductCard = ({ product, media }) => {
@@ -13,6 +14,16 @@ const ProductCard = ({ product, media }) => {
 
   const productId = product?._id || product?.id;
   const wishlisted = isWishlisted(productId);
+
+  const synced = syncProductData(product) || product;
+  const inv = synced?.inventory || product?.inventory;
+  const inStock = Boolean(
+    inv &&
+    inv.inStock !== false &&
+    inv.status !== "OUT_OF_STOCK" &&
+    (inv.availableQuantity === undefined || inv.availableQuantity > 0) &&
+    (synced?.stock === undefined || synced?.stock > 0)
+  );
 
   return (
     <div className="group overflow-hidden rounded-xl border border-[#1a1a1a] bg-[#0f0f0f] text-white transition-transform duration-300 hover:-translate-y-1">
@@ -28,6 +39,12 @@ const ProductCard = ({ product, media }) => {
           <div className="flex h-full items-center justify-center text-sm text-gray-500">
             Image unavailable
           </div>
+        )}
+
+        {!inStock && (
+          <span className="absolute top-2.5 left-2.5 z-10 bg-[#171713]/90 text-white text-[9px] uppercase tracking-[1px] px-2 py-0.5 font-semibold rounded-sm border border-stone-700">
+            Out of Stock
+          </span>
         )}
 
         {/* Wishlist button */}

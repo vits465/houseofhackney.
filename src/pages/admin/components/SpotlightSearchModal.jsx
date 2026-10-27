@@ -9,7 +9,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import { useAdmin } from "../AdminContext";
-import { TOP_PRODUCTS, RECENT_ORDERS } from "../mockData";
+import { getCleanProductImage } from "../utils/productUtils";
 
 export default function SpotlightSearchModal() {
   const {
@@ -19,6 +19,8 @@ export default function SpotlightSearchModal() {
     setActiveTab,
     setSelectedOrder,
     setNewProductOpen,
+    products,
+    orders,
   } = useAdmin();
 
   const [query, setQuery] = useState("");
@@ -43,17 +45,33 @@ export default function SpotlightSearchModal() {
     { label: "Curator Account", tab: "account", icon: Settings },
   ];
 
-  // Matching creations
-  const matchingProducts = TOP_PRODUCTS.filter((p) =>
-    p.name.toLowerCase().includes(query.toLowerCase())
-  );
+  // Dynamic matching creations from live products
+  const matchingProducts = (products || [])
+    .filter((p) => {
+      const q = query.toLowerCase();
+      const cat = typeof p.category === "string" ? p.category : p.category?.name || "";
+      return (
+        p.name?.toLowerCase().includes(q) ||
+        p.sku?.toLowerCase().includes(q) ||
+        cat.toLowerCase().includes(q)
+      );
+    })
+    .slice(0, 6);
 
-  // Matching orders
-  const matchingOrders = RECENT_ORDERS.filter(
-    (o) =>
-      o.id.toLowerCase().includes(query.toLowerCase()) ||
-      o.client.name.toLowerCase().includes(query.toLowerCase())
-  );
+  // Dynamic matching orders from live orders
+  const matchingOrders = (orders || [])
+    .filter((o) => {
+      const q = query.toLowerCase();
+      const ordId = (o.orderNumber || o.code || o._id || "").toLowerCase();
+      const clientName = (
+        o.shippingAddress?.fullName ||
+        o.user?.name ||
+        o.customer?.name ||
+        ""
+      ).toLowerCase();
+      return ordId.includes(q) || clientName.includes(q);
+    })
+    .slice(0, 6);
 
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center pt-20 px-4 bg-black/50 backdrop-blur-sm animate-fadeIn">
@@ -104,8 +122,8 @@ export default function SpotlightSearchModal() {
           </button>
         </div>
 
-        {/* Results Area */}
-        <div className="max-h-[60vh] overflow-y-auto p-5 space-y-4 scrollbar-thin">
+        {/* Search Results / Quick Actions */}
+        <div className="p-4 max-h-[460px] overflow-y-auto scrollbar-thin space-y-4">
           {!query && (
             <div>
               <p
@@ -115,7 +133,7 @@ export default function SpotlightSearchModal() {
               >
                 QUICK NAVIGATION
               </p>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <div className="grid grid-cols-2 gap-2">
                 {quickNav.map((item, idx) => {
                   const Icon = item.icon;
                   return (
@@ -156,7 +174,7 @@ export default function SpotlightSearchModal() {
             </div>
           )}
 
-          {/* Filtered Creations */}
+          {/* Filtered Creations from Live Database */}
           {query && matchingProducts.length > 0 && (
             <div>
               <p
@@ -164,45 +182,51 @@ export default function SpotlightSearchModal() {
                   isDark ? "text-[#8a9d8e]" : "text-[#788c7e]"
                 }`}
               >
-                MATCHING CREATIONS
+                MATCHING CREATIONS ({matchingProducts.length})
               </p>
               <div className="space-y-1.5">
-                {matchingProducts.map((p) => (
-                  <div
-                    key={p.id}
-                    onClick={() => {
-                      setActiveTab("manage");
-                      setSpotlightOpen(false);
-                    }}
-                    className={`flex items-center justify-between p-2.5 rounded-2xl border cursor-pointer transition-colors ${
-                      isDark
-                        ? "bg-[#141a15] border-[#253327] hover:border-[#4a8b5e]"
-                        : "bg-[#fcfdfc] border-[#e7f0e9] hover:border-[#3e7b52]"
-                    }`}
-                  >
-                    <div className="flex items-center gap-3">
-                      <img
-                        src={p.image}
-                        alt={p.name}
-                        className="w-9 h-9 rounded-xl object-cover"
-                      />
-                      <div>
-                        <p className="text-xs font-sans font-bold">{p.name}</p>
-                        <span className="text-[10px] font-mono text-[#3e7b52] dark:text-[#74b886]">
-                          {p.category} • {p.price}
-                        </span>
+                {matchingProducts.map((p) => {
+                  const cat = typeof p.category === "string" ? p.category : p.category?.name || "Boutique Creation";
+                  const price = Number(p.pricing?.retailPrice || p.price || 0);
+                  const img = getCleanProductImage(p);
+
+                  return (
+                    <div
+                      key={p._id || p.id}
+                      onClick={() => {
+                        setActiveTab("manage");
+                        setSpotlightOpen(false);
+                      }}
+                      className={`flex items-center justify-between p-2.5 rounded-2xl border cursor-pointer transition-colors ${
+                        isDark
+                          ? "bg-[#141a15] border-[#253327] hover:border-[#4a8b5e]"
+                          : "bg-[#fcfdfc] border-[#e7f0e9] hover:border-[#3e7b52]"
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <img
+                          src={img}
+                          alt={p.name}
+                          className="w-9 h-9 rounded-xl object-cover bg-neutral-100"
+                        />
+                        <div>
+                          <p className="text-xs font-sans font-bold">{p.name}</p>
+                          <span className="text-[10px] font-mono text-[#3e7b52] dark:text-[#74b886]">
+                            {cat} • £{price.toFixed(2)}
+                          </span>
+                        </div>
                       </div>
+                      <span className="text-[11px] font-mono font-bold text-[#3e7b52] dark:text-[#74b886]">
+                        {p.stock !== undefined ? `${p.stock} units` : "In Stock"}
+                      </span>
                     </div>
-                    <span className="text-[11px] font-mono font-bold">
-                      {p.revenue}
-                    </span>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           )}
 
-          {/* Filtered Orders */}
+          {/* Filtered Orders from Live Database */}
           {query && matchingOrders.length > 0 && (
             <div>
               <p
@@ -210,48 +234,59 @@ export default function SpotlightSearchModal() {
                   isDark ? "text-[#8a9d8e]" : "text-[#788c7e]"
                 }`}
               >
-                PATRON COMMISSIONS
+                PATRON COMMISSIONS ({matchingOrders.length})
               </p>
               <div className="space-y-1.5">
-                {matchingOrders.map((ord) => (
-                  <div
-                    key={ord.id}
-                    onClick={() => {
-                      setSelectedOrder(ord);
-                      setSpotlightOpen(false);
-                    }}
-                    className={`flex items-center justify-between p-2.5 rounded-2xl border cursor-pointer transition-colors ${
-                      isDark
-                        ? "bg-[#141a15] border-[#253327] hover:border-[#4a8b5e]"
-                        : "bg-[#fcfdfc] border-[#e7f0e9] hover:border-[#3e7b52]"
-                    }`}
-                  >
-                    <div className="flex items-center gap-3">
-                      <img
-                        src={ord.client.avatar}
-                        alt={ord.client.name}
-                        className="w-8 h-8 rounded-full object-cover"
-                      />
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs font-mono font-bold text-[#3e7b52] dark:text-[#74b886]">
-                            {ord.id}
-                          </span>
-                          <span className="text-xs font-sans font-bold">
-                            {ord.client.name}
+                {matchingOrders.map((ord) => {
+                  const ordId = ord.orderNumber || ord.code || (ord._id ? `ORD-${ord._id.slice(-6).toUpperCase()}` : "ORD-0001");
+                  const clientName = ord.shippingAddress?.fullName || ord.user?.name || ord.customer?.name || "Atelier Patron";
+                  const amt = Number(ord.totalAmount || ord.grandTotal || ord.totalPrice || ord.total) || 0;
+                  const status = ord.status || "CONFIRMED";
+
+                  return (
+                    <div
+                      key={ord._id || ord.id}
+                      onClick={() => {
+                        setSelectedOrder(ord);
+                        setSpotlightOpen(false);
+                      }}
+                      className={`flex items-center justify-between p-2.5 rounded-2xl border cursor-pointer transition-colors ${
+                        isDark
+                          ? "bg-[#141a15] border-[#253327] hover:border-[#4a8b5e]"
+                          : "bg-[#fcfdfc] border-[#e7f0e9] hover:border-[#3e7b52]"
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-full bg-[#eaf5ed] text-[#2e6d3f] flex items-center justify-center font-bold text-xs">
+                          {clientName.slice(0, 2).toUpperCase()}
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs font-mono font-bold text-[#3e7b52] dark:text-[#74b886]">
+                              {ordId}
+                            </span>
+                            <span className="text-xs font-sans font-bold">
+                              {clientName}
+                            </span>
+                          </div>
+                          <span className="text-[10px] font-sans opacity-70">
+                            {status} • {ord.shippingAddress?.city || "United Kingdom"}
                           </span>
                         </div>
-                        <span className="text-[10px] font-sans opacity-70">
-                          {ord.fulfillmentStatus} • {ord.client.location}
-                        </span>
                       </div>
+                      <span className="text-xs font-mono font-bold">
+                        £{amt.toLocaleString("en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </span>
                     </div>
-                    <span className="text-xs font-mono font-bold">
-                      £{ord.total.toLocaleString()}
-                    </span>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
+            </div>
+          )}
+
+          {query && matchingProducts.length === 0 && matchingOrders.length === 0 && (
+            <div className="py-8 text-center text-xs text-[#627766]">
+              No creations or commissions match "{query}".
             </div>
           )}
         </div>
@@ -264,7 +299,7 @@ export default function SpotlightSearchModal() {
               : "bg-[#f5f9f6] border-[#e5ede6] text-[#788c7e]"
           }`}
         >
-          <span>Use &uarr; &darr; to navigate</span>
+          <span>Live catalog & orders search</span>
           <span>Press ESC to dismiss</span>
         </div>
       </div>
