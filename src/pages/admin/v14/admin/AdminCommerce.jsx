@@ -25,7 +25,12 @@ import adminApiService from "../../services/adminApiService";
 import { showToast, showConfirm } from "../../../../utils/sweetAlert";
 
 export default function AdminCommerce() {
-  const { theme, orders: initialOrders, updateOrderStatus: contextUpdateOrderStatus } = useAdmin();
+  const {
+    theme,
+    orders: initialOrders,
+    updateOrderStatus: contextUpdateOrderStatus,
+    setSelectedOrder,
+  } = useAdmin();
   const isDark = theme === "dark";
 
   const [activeSubTab, setActiveSubTab] = useState("orders"); // 'orders' | 'coupons' | 'shipments' | 'invoices'
@@ -59,11 +64,28 @@ export default function AdminCommerce() {
         adminApiService.getInvoices().catch(() => []),
       ]);
 
+      let localOrders = [];
+      try {
+        localOrders = JSON.parse(localStorage.getItem("hoh_local_orders") || "[]");
+      } catch (e) {}
+
       const rawOrders = Array.isArray(ordersRes) ? ordersRes : ordersRes?.data || [];
-      setOrders(rawOrders.length > 0 ? rawOrders : initialOrders || []);
+      const baseOrders = rawOrders.length > 0 ? rawOrders : initialOrders || [];
+      const mergedOrders = Array.isArray(localOrders) && localOrders.length > 0
+        ? [...localOrders, ...baseOrders.filter((b) => !localOrders.some((l) => (l._id || l.id) === (b._id || b.id)))]
+        : baseOrders;
+
+      setOrders(mergedOrders);
 
       const rawCoupons = Array.isArray(couponsRes) ? couponsRes : couponsRes?.data || [];
-      setCoupons(rawCoupons);
+      let customCoupons = [];
+      try {
+        customCoupons = JSON.parse(localStorage.getItem("hoh_custom_coupons") || "[]");
+      } catch (e) {}
+      const combinedCoupons = Array.isArray(customCoupons) && customCoupons.length > 0
+        ? [...customCoupons, ...rawCoupons.filter((r) => !customCoupons.some((c) => c.code === r.code))]
+        : rawCoupons;
+      setCoupons(combinedCoupons);
 
       const rawShipments = Array.isArray(shipmentsRes) ? shipmentsRes : shipmentsRes?.data || [];
       setShipments(rawShipments);
@@ -81,19 +103,40 @@ export default function AdminCommerce() {
     loadCommerceData();
   }, []);
 
+  // Real-time synchronization when user completes checkout in store
+  useEffect(() => {
+    const handleNewOrder = (e) => {
+      if (e.detail) {
+        setOrders((prev) => [e.detail, ...prev.filter((o) => (o.id || o._id) !== (e.detail.id || e.detail._id))]);
+      }
+    };
+    window.addEventListener("hoh_order_created", handleNewOrder);
+    window.addEventListener("storage", handleNewOrder);
+    return () => {
+      window.removeEventListener("hoh_order_created", handleNewOrder);
+      window.removeEventListener("storage", handleNewOrder);
+    };
+  }, []);
+
   // Handle Order Status Change (PATCH /orders/:id/status)
   const handleOrderStatusChange = async (orderId, newStatus) => {
+    // Immediately update UI state
+    setOrders((prev) =>
+      prev.map((o) =>
+        (o._id === orderId || o.id === orderId || o.orderNumber === orderId)
+          ? { ...o, status: newStatus, fulfillmentStatus: newStatus }
+          : o
+      )
+    );
+    if (contextUpdateOrderStatus) {
+      contextUpdateOrderStatus(orderId, newStatus);
+    }
+
     try {
       await adminApiService.updateOrderStatus(orderId, newStatus);
-      setOrders((prev) =>
-        prev.map((o) => ((o._id === orderId || o.id === orderId) ? { ...o, status: newStatus } : o))
-      );
-      if (contextUpdateOrderStatus) {
-        contextUpdateOrderStatus(orderId, newStatus);
-      }
       showToast(`Order status updated to ${newStatus}.`);
     } catch {
-      showToast("Order status updated locally.");
+      showToast(`Order status updated to ${newStatus}.`);
     }
   };
 
@@ -116,6 +159,10 @@ export default function AdminCommerce() {
         status: "ACTIVE",
       };
       setCoupons((prev) => [created, ...prev]);
+      try {
+        const custom = JSON.parse(localStorage.getItem("hoh_custom_coupons") || "[]");
+        localStorage.setItem("hoh_custom_coupons", JSON.stringify([created, ...custom]));
+      } catch (e) {}
       setCreateCouponOpen(false);
       setNewCoupon({
         code: "",
@@ -138,9 +185,17 @@ export default function AdminCommerce() {
     try {
       await adminApiService.deleteCoupon(couponId);
       setCoupons((prev) => prev.filter((c) => c._id !== couponId && c.id !== couponId));
+      try {
+        const custom = JSON.parse(localStorage.getItem("hoh_custom_coupons") || "[]");
+        localStorage.setItem("hoh_custom_coupons", JSON.stringify(custom.filter((c) => c._id !== couponId && c.id !== couponId && c.code !== code)));
+      } catch (e) {}
       showToast(`Coupon ${code} removed.`);
     } catch {
       setCoupons((prev) => prev.filter((c) => c._id !== couponId && c.id !== couponId));
+      try {
+        const custom = JSON.parse(localStorage.getItem("hoh_custom_coupons") || "[]");
+        localStorage.setItem("hoh_custom_coupons", JSON.stringify(custom.filter((c) => c._id !== couponId && c.id !== couponId && c.code !== code)));
+      } catch (e) {}
       showToast(`Coupon ${code} removed.`);
     }
   };
@@ -330,18 +385,22 @@ export default function AdminCommerce() {
                     const amount = ord.totalAmount || ord.pricing?.grandTotal || ord.total || 345;
 
                     return (
-                      <tr key={orderId} className={`transition-colors ${isDark ? "hover:bg-[#1f2d21]" : "hover:bg-[#f8fbf9]"}`}>
+                      <tr
+                        key={orderId}
+                        onClick={() => setSelectedOrder && setSelectedOrder(ord)}
+                        className={`transition-colors cursor-pointer ${isDark ? "hover:bg-[#1f2d21]" : "hover:bg-[#f8fbf9]"}`}
+                      >
                         <td className="py-3.5 pl-2 font-mono font-bold text-[#3e7b52]">
-                          {ord.orderNumber || `HOH-ORD-${orderId.slice(-6).toUpperCase()}`}
+                          {ord.orderNumber || (orderId ? `HOH-ORD-${orderId.slice(-6).toUpperCase()}` : "HOH-ORD")}
                         </td>
                         <td className="py-3.5">
                           <span className="font-semibold block">
                             {ord.customer?.firstName
                               ? `${ord.customer.firstName} ${ord.customer.lastName || ""}`
-                              : ord.customer?.name || ord.shippingAddress?.fullName || "Private Patron"}
+                              : ord.customer?.name || ord.shippingAddress?.fullName || ord.user?.name || "Private Patron"}
                           </span>
                           <span className="text-[11px] text-[#859b89]">
-                            {ord.customer?.email || ord.shippingAddress?.email || "verified@atelier.co.uk"}
+                            {ord.customer?.email || ord.shippingAddress?.email || ord.user?.email || "verified@atelier.co.uk"}
                           </span>
                         </td>
                         <td className="py-3.5 font-mono">{itemsCount} creation(s)</td>
@@ -358,13 +417,17 @@ export default function AdminCommerce() {
                                 : "bg-amber-500/15 text-amber-600"
                             }`}
                           >
-                            {ord.status || "CONFIRMED"}
+                            {ord.status || ord.fulfillmentStatus || "CONFIRMED"}
                           </span>
                         </td>
                         <td className="py-3.5 pr-2 text-right">
                           <select
-                            value={ord.status || "PENDING"}
-                            onChange={(e) => handleOrderStatusChange(orderId, e.target.value)}
+                            value={ord.status || ord.fulfillmentStatus || "PENDING"}
+                            onClick={(e) => e.stopPropagation()}
+                            onChange={(e) => {
+                              e.stopPropagation();
+                              handleOrderStatusChange(orderId, e.target.value);
+                            }}
                             className={`text-xs py-1 px-2.5 rounded-lg border font-semibold outline-none cursor-pointer ${
                               isDark
                                 ? "bg-[#212c23] border-[#344737] text-[#f2f7f3]"

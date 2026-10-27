@@ -58,8 +58,21 @@ export function AdminProvider({ children }) {
   const [newProductOpen, setNewProductOpen] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState(null);
 
+  // Helper to load and merge local orders with mock/backend orders
+  const getInitialOrders = () => {
+    try {
+      const local = JSON.parse(localStorage.getItem("hoh_local_orders") || "[]");
+      if (Array.isArray(local) && local.length > 0) {
+        return [...local, ...RECENT_ORDERS];
+      }
+    } catch (e) {
+      console.warn("Could not load local orders:", e);
+    }
+    return RECENT_ORDERS;
+  };
+
   // Dynamic state
-  const [orders, setOrders] = useState(RECENT_ORDERS);
+  const [orders, setOrders] = useState(getInitialOrders);
   const [notifications, setNotifications] = useState(NOTIFICATIONS);
   const [revenuePeriod, setRevenuePeriod] = useState("30D");
   const [chartMetric, setChartMetric] = useState("revenue");
@@ -361,15 +374,59 @@ export function AdminProvider({ children }) {
     );
   };
 
+  // Sync real-time when an order is created on frontend
+  useEffect(() => {
+    const handleSyncOrders = (e) => {
+      try {
+        const newOrd = e.detail;
+        if (newOrd) {
+          setOrders((prev) => [newOrd, ...prev.filter((o) => (o.id || o._id) !== (newOrd.id || newOrd._id))]);
+        } else {
+          const local = JSON.parse(localStorage.getItem("hoh_local_orders") || "[]");
+          if (Array.isArray(local)) {
+            setOrders((prev) => {
+              const localIds = new Set(local.map((o) => o.id || o._id));
+              return [...local, ...prev.filter((o) => !localIds.has(o.id || o._id))];
+            });
+          }
+        }
+      } catch (err) {
+        console.warn("Real-time order sync error:", err);
+      }
+    };
+
+    window.addEventListener("hoh_order_created", handleSyncOrders);
+    window.addEventListener("storage", handleSyncOrders);
+    return () => {
+      window.removeEventListener("hoh_order_created", handleSyncOrders);
+      window.removeEventListener("storage", handleSyncOrders);
+    };
+  }, []);
+
   const updateOrderStatus = (orderId, newStatus) => {
     setOrders((prev) =>
       prev.map((ord) =>
-        ord.id === orderId ? { ...ord, fulfillmentStatus: newStatus } : ord
+        (ord.id === orderId || ord._id === orderId || ord.orderNumber === orderId)
+          ? { ...ord, fulfillmentStatus: newStatus, status: newStatus }
+          : ord
       )
     );
-    if (selectedOrder && selectedOrder.id === orderId) {
-      setSelectedOrder((prev) => ({ ...prev, fulfillmentStatus: newStatus }));
+    if (
+      selectedOrder &&
+      (selectedOrder.id === orderId || selectedOrder._id === orderId || selectedOrder.orderNumber === orderId)
+    ) {
+      setSelectedOrder((prev) => ({ ...prev, fulfillmentStatus: newStatus, status: newStatus }));
     }
+    // Persist to local storage if it's a local order
+    try {
+      const local = JSON.parse(localStorage.getItem("hoh_local_orders") || "[]");
+      const updated = local.map((ord) =>
+        (ord.id === orderId || ord._id === orderId || ord.orderNumber === orderId)
+          ? { ...ord, fulfillmentStatus: newStatus, status: newStatus }
+          : ord
+      );
+      localStorage.setItem("hoh_local_orders", JSON.stringify(updated));
+    } catch (e) {}
   };
 
   const addNewOrder = (newOrder) => {

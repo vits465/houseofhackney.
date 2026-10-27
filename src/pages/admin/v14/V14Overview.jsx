@@ -141,13 +141,23 @@ export default function V14Overview() {
         adminApiService.getReviewsSummary().catch(() => null),
       ]);
 
-      // Normalize orders
+      // Normalize orders and merge local orders (e.g. from Razorpay test checkouts)
+      let localOrders = [];
+      try {
+        localOrders = JSON.parse(localStorage.getItem("hoh_local_orders") || "[]");
+      } catch (e) {}
+
       let liveOrders = Array.isArray(ordersRes?.data)
         ? ordersRes.data
         : Array.isArray(ordersRes) && ordersRes.length > 0
         ? ordersRes
         : FALLBACK_LIVE_ORDERS;
-      setOrders(liveOrders);
+
+      const combinedOrders = Array.isArray(localOrders) && localOrders.length > 0
+        ? [...localOrders, ...liveOrders.filter((b) => !localOrders.some((l) => (l.id || l._id) === (b.id || b._id)))]
+        : liveOrders;
+
+      setOrders(combinedOrders);
 
       // Normalize products count
       const prodsList = Array.isArray(prodsRes?.data?.products)
@@ -212,6 +222,21 @@ export default function V14Overview() {
 
   useEffect(() => {
     loadLiveTelemetry();
+  }, []);
+
+  // Real-time synchronization when user completes checkout in store
+  useEffect(() => {
+    const handleNewOrder = (e) => {
+      if (e.detail) {
+        setOrders((prev) => [e.detail, ...prev.filter((o) => (o.id || o._id) !== (e.detail.id || e.detail._id))]);
+      }
+    };
+    window.addEventListener("hoh_order_created", handleNewOrder);
+    window.addEventListener("storage", handleNewOrder);
+    return () => {
+      window.removeEventListener("hoh_order_created", handleNewOrder);
+      window.removeEventListener("storage", handleNewOrder);
+    };
   }, []);
 
   // Currency Converter Utility (£1 = $1.26 = €1.17)

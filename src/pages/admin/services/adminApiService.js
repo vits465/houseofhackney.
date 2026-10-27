@@ -829,8 +829,39 @@ export const adminApiService = {
   },
 
   async updateOrderStatus(id, status) {
-    const res = await axiosInstance.patch(`/orders/${id}/status`, { status });
-    return res.data;
+    const isMongoId = /^[0-9a-fA-F]{24}$/.test(id);
+    if (!isMongoId || (typeof id === "string" && (id.startsWith("ord_") || id.startsWith("HOH-")))) {
+      // Local or mock order - persist directly to localStorage
+      try {
+        const local = JSON.parse(localStorage.getItem("hoh_local_orders") || "[]");
+        const updated = local.map((o) =>
+          (o._id === id || o.id === id || o.orderNumber === id)
+            ? { ...o, status, fulfillmentStatus: status }
+            : o
+        );
+        localStorage.setItem("hoh_local_orders", JSON.stringify(updated));
+      } catch (e) {
+        console.warn("Local storage update warning:", e);
+      }
+      return { success: true, message: `Status updated locally to ${status}` };
+    }
+
+    try {
+      const res = await axiosInstance.patch(`/orders/${id}/status`, { status });
+      return res.data;
+    } catch (err) {
+      // Fallback for local order storage
+      try {
+        const local = JSON.parse(localStorage.getItem("hoh_local_orders") || "[]");
+        const updated = local.map((o) =>
+          (o._id === id || o.id === id || o.orderNumber === id)
+            ? { ...o, status, fulfillmentStatus: status }
+            : o
+        );
+        localStorage.setItem("hoh_local_orders", JSON.stringify(updated));
+      } catch (e) {}
+      throw err;
+    }
   },
 
   async cancelOrder(id) {
