@@ -578,11 +578,11 @@ export const adminApiService = {
   // ==========================================
 
   // Get products catalog (GET /products) - fetches full catalog across all pages
-  async getProducts(params = {}, fetchAll = false) {
+  async getProducts(params = {}, fetchAll = true) {
     const cacheKey = `admin_products_${JSON.stringify(params)}_${fetchAll}`;
     return getCachedOrFetch(cacheKey, async () => {
       try {
-        const queryLimit = params.limit || (fetchAll ? 50 : 50);
+        const queryLimit = params.limit || (fetchAll ? 250 : 250);
         const response = await axiosInstance.get("/products", {
           params: { limit: queryLimit, ...params },
         });

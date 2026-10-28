@@ -42,6 +42,13 @@ export default function V14Manage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(18); // 12, 18, 36, 72, 999 (All)
 
+  // Ensure full catalog (170+ items) is loaded immediately on mount
+  useEffect(() => {
+    if (products.length < 100 && !loadingProducts && refreshProducts) {
+      refreshProducts();
+    }
+  }, []);
+
   // Dynamic categories from all loaded products with standard presets (clean strings only)
   const dynamicCategories = [
     "all",

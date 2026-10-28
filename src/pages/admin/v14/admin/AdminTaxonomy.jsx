@@ -54,7 +54,7 @@ export default function AdminTaxonomy() {
         adminApiService.getCategories().catch(() => []),
         adminApiService.getBrands().catch(() => []),
         adminApiService.getAttributes().catch(() => []),
-        adminApiService.getProducts({}, false).catch(() => []),
+        adminApiService.getProducts({ limit: 250 }, true).catch(() => []),
       ]);
 
       const rawCat = Array.isArray(catRes) ? catRes : catRes?.data || [];

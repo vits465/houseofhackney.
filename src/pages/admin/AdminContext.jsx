@@ -221,7 +221,7 @@ export function AdminProvider({ children }) {
         adminApiService.getUserQuotes().catch(() => []),
         adminApiService.getPendingTradeApplications().catch(() => []),
         adminApiService.getTradeTiers().catch(() => []),
-        adminApiService.getProducts({}, false).catch(() => []),
+        adminApiService.getProducts({ limit: 250 }, true).catch(() => []),
         adminApiService.getOrders().catch(() => []),
         adminApiService.getUsers().catch(() => []),
         adminApiService.getCategories().catch(() => []),
@@ -460,7 +460,8 @@ export function AdminProvider({ children }) {
   const refreshProducts = async () => {
     setLoadingProducts(true);
     try {
-      const prodsData = await adminApiService.getProducts({}, true);
+      adminApiService.clearCache("admin_products");
+      const prodsData = await adminApiService.getProducts({ limit: 250 }, true);
       setProducts(prodsData || []);
       showToast(`Loaded ${prodsData?.length || 0} catalog products.`);
     } catch (err) {

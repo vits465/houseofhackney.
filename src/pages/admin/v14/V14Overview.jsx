@@ -70,7 +70,7 @@ export default function V14Overview() {
     try {
       const [ordersRes, prodsRes, usersRes, invoicesRes, revSummary] = await Promise.all([
         adminApiService.getOrders().catch(() => contextOrders || []),
-        adminApiService.getProducts({}, false).catch(() => contextProducts || []),
+        adminApiService.getProducts({ limit: 250 }, true).catch(() => contextProducts || []),
         adminApiService.getUsers().catch(() => contextUsers || []),
         adminApiService.getInvoices().catch(() => []),
         adminApiService.getReviewsSummary().catch(() => null),
