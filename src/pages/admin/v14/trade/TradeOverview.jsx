@@ -375,7 +375,7 @@ export default function TradeOverview() {
 
                       {quote.status === "CONVERTED" && (
                         <span className="text-[11px] font-mono text-[#627766]">
-                          {quote.convertedOrderNumber || "Order Dispatched"}
+                          {quote.convertedOrderNumber || (typeof quote.convertedOrder === "object" ? quote.convertedOrder?.orderNumber : quote.convertedOrder) || "Order Dispatched"}
                         </span>
                       )}
                     </td>

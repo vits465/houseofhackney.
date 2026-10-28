@@ -29,6 +29,7 @@ export default function AdminTradeReview() {
     products,
     tradeTiers,
     allTradeProfiles,
+    setSelectedOrder,
   } = useAdmin();
   const isDark = theme === "dark";
 
@@ -467,11 +468,45 @@ export default function AdminTradeReview() {
                         </span>
                       )}
 
-                      {quote.status === "CONVERTED" && (
-                        <span className="px-3.5 py-1.5 rounded-full bg-[#edf6f0] dark:bg-[#1d271f] font-mono text-xs font-bold text-[#3e7b52]">
-                          {quote.convertedOrderNumber || "Converted to Order"}
-                        </span>
-                      )}
+                      {quote.status === "CONVERTED" && (() => {
+                        const ordNum =
+                          quote.convertedOrderNumber ||
+                          (typeof quote.convertedOrder === "object" ? quote.convertedOrder?.orderNumber : quote.convertedOrder) ||
+                          "TRD-ORD-CONVERTED";
+
+                        return (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (setSelectedOrder) {
+                                const ordObj =
+                                  typeof quote.convertedOrder === "object" && quote.convertedOrder
+                                    ? quote.convertedOrder
+                                    : {
+                                        orderNumber: ordNum,
+                                        orderStatus: "CONFIRMED",
+                                        grandTotal: quote.grandTotal,
+                                        subtotal: quote.subtotal,
+                                        discount: quote.discount,
+                                        items: quote.items,
+                                        notes: `Converted from Quotation #${quote.quoteNumber}`,
+                                        user: quote.user,
+                                        customer: {
+                                          name: quote.companyName || quote.user?.displayName || "Trade Patron",
+                                          email: quote.user?.email || "trade@atelier.co.uk",
+                                        },
+                                      };
+                                setSelectedOrder(ordObj);
+                              }
+                            }}
+                            title="Click to view full workshop order details in Commerce"
+                            className="px-3.5 py-1.5 rounded-full bg-[#edf6f0] dark:bg-[#1d271f] font-mono text-xs font-bold text-[#3e7b52] hover:bg-[#d9ede0] dark:hover:bg-[#253628] transition-all flex items-center gap-1.5 cursor-pointer shadow-xs border border-[#3e7b52]/25"
+                          >
+                            <Check size={13} className="text-[#3e7b52]" />
+                            <span>{ordNum}</span>
+                          </button>
+                        );
+                      })()}
                     </div>
                   </div>
 

@@ -323,7 +323,7 @@ export default function TradeQuotations() {
 
                       {quote.status === "CONVERTED" && (
                         <span className="px-3 py-1.5 rounded-full bg-[#edf6f0] dark:bg-[#1d271f] font-mono text-xs font-bold text-[#3e7b52] flex items-center gap-1.5">
-                          <PackageCheck size={14} /> {quote.convertedOrderNumber || "Converted to Order"}
+                          <PackageCheck size={14} /> {quote.convertedOrderNumber || (typeof quote.convertedOrder === "object" ? quote.convertedOrder?.orderNumber : quote.convertedOrder) || "Converted to Order"}
                         </span>
                       )}
 

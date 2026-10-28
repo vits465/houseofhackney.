@@ -435,28 +435,42 @@ export default function AdminCommerce() {
                           </span>
                         </td>
                         <td className="py-3.5 pr-2 text-right">
-                          <select
-                            value={ord.status || ord.fulfillmentStatus || "PENDING"}
-                            onClick={(e) => e.stopPropagation()}
-                            onChange={(e) => {
-                              e.stopPropagation();
-                              handleOrderStatusChange(orderId, e.target.value);
-                            }}
-                            className={`text-xs py-1 px-2.5 rounded-lg border font-semibold outline-none cursor-pointer ${
-                              isDark
-                                ? "bg-[#212c23] border-[#344737] text-[#f2f7f3]"
-                                : "bg-[#f5f9f6] border-[#d8e6dc] text-[#142617]"
-                            }`}
-                          >
-                            <option value="PENDING">PENDING</option>
-                            <option value="CONFIRMED">CONFIRMED</option>
-                            <option value="PROCESSING">PROCESSING</option>
-                            <option value="IN_PRODUCTION">IN PRODUCTION</option>
-                            <option value="SHIPPED">SHIPPED</option>
-                            <option value="DISPATCHED">DISPATCHED</option>
-                            <option value="DELIVERED">DELIVERED</option>
-                            <option value="CANCELLED">CANCELLED</option>
-                          </select>
+                          <div className="flex items-center justify-end gap-2">
+                            <select
+                              value={ord.status || ord.fulfillmentStatus || "PENDING"}
+                              onClick={(e) => e.stopPropagation()}
+                              onChange={(e) => {
+                                e.stopPropagation();
+                                handleOrderStatusChange(orderId, e.target.value);
+                              }}
+                              className={`text-xs py-1 px-2.5 rounded-lg border font-semibold outline-none cursor-pointer ${
+                                isDark
+                                  ? "bg-[#212c23] border-[#344737] text-[#f2f7f3]"
+                                  : "bg-[#f5f9f6] border-[#d8e6dc] text-[#142617]"
+                              }`}
+                            >
+                              <option value="PENDING">PENDING</option>
+                              <option value="CONFIRMED">CONFIRMED</option>
+                              <option value="PROCESSING">PROCESSING</option>
+                              <option value="IN_PRODUCTION">IN PRODUCTION</option>
+                              <option value="SHIPPED">SHIPPED</option>
+                              <option value="DISPATCHED">DISPATCHED</option>
+                              <option value="DELIVERED">DELIVERED</option>
+                              <option value="CANCELLED">CANCELLED</option>
+                            </select>
+
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleGenerateInvoice(orderId);
+                              }}
+                              title="Generate / Ensure Fiscal Invoice"
+                              className="p-1.5 rounded-lg border border-[#3e7b52]/30 text-[#3e7b52] hover:bg-[#3e7b52] hover:text-white transition cursor-pointer text-[11px] font-bold"
+                            >
+                              <FileText size={13} />
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     );
@@ -635,35 +649,98 @@ export default function AdminCommerce() {
                   <th className="pb-3">Date Issued</th>
                   <th className="pb-3">Gross Total</th>
                   <th className="pb-3">Status</th>
-                  <th className="pb-3 text-right pr-2">Fiscal State</th>
+                  <th className="pb-3 text-right pr-2">Fiscal State / Actions</th>
                 </tr>
               </thead>
               <tbody className={`divide-y ${isDark ? "divide-[#202c22]" : "divide-[#edf2ee]"}`}>
-                {invoices.map((inv, idx) => {
-                  const invId = inv._id || inv.id || `inv_${idx}`;
-                  const num = inv.invoiceNumber || `HOH-INV-${invId.slice(-6).toUpperCase()}`;
+                {invoices.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="py-8 text-center text-[#627766]">
+                      No fiscal invoices found. Invoices are automatically generated upon customer checkout or when a Trade Patron converts an approved quotation.
+                    </td>
+                  </tr>
+                ) : (
+                  invoices.map((inv, idx) => {
+                    const invId = inv._id || inv.id || `inv_${idx}`;
+                    const num = inv.invoiceNumber || `HOH-INV-${invId.slice(-6).toUpperCase()}`;
+                    const ordRef =
+                      inv.order?.orderNumber ||
+                      (typeof inv.order === "string"
+                        ? inv.order.startsWith("ORD-") || inv.order.startsWith("TRD-")
+                          ? inv.order
+                          : `ORD-${inv.order.slice(-6)}`
+                        : "ORD-MASTER");
 
-                  return (
-                    <tr key={invId} className={`transition-colors ${isDark ? "hover:bg-[#1f2d21]" : "hover:bg-[#f8fbf9]"}`}>
-                      <td className="py-3.5 pl-2 font-mono font-bold text-[#3e7b52]">{num}</td>
-                      <td className="py-3.5 font-mono text-[#859b89]">
-                        {inv.order?.orderNumber || (typeof inv.order === "string" ? `ORD-${inv.order.slice(-6)}` : "ORD-MASTER")}
-                      </td>
-                      <td className="py-3.5 text-[#627766]">
-                        {inv.createdAt ? new Date(inv.createdAt).toLocaleDateString("en-GB") : "Current Cycle"}
-                      </td>
-                      <td className="py-3.5 font-bold">£{Number(inv.grandTotal || inv.amount || 295).toFixed(2)}</td>
-                      <td className="py-3.5">
-                        <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/15 text-emerald-600">
-                          {inv.status || "PAID"}
-                        </span>
-                      </td>
-                      <td className="py-3.5 pr-2 text-right">
-                        <span className="text-[11px] font-mono text-[#859b89]">VAT Registered (GB)</span>
-                      </td>
-                    </tr>
-                  );
-                })}
+                    return (
+                      <tr key={invId} className={`transition-colors ${isDark ? "hover:bg-[#1f2d21]" : "hover:bg-[#f8fbf9]"}`}>
+                        <td className="py-3.5 pl-2 font-mono font-bold text-[#3e7b52]">{num}</td>
+                        <td className="py-3.5 font-mono text-[#859b89]">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (setSelectedOrder) {
+                                const relatedOrder =
+                                  typeof inv.order === "object" && inv.order
+                                    ? inv.order
+                                    : orders.find((o) => (o._id || o.id) === inv.order || o.orderNumber === ordRef) || {
+                                        orderNumber: ordRef,
+                                        grandTotal: inv.grandTotal,
+                                        status: inv.status || "CONFIRMED",
+                                        items: inv.items || [],
+                                        customer: {
+                                          name: inv.user?.displayName || inv.billingAddress?.fullName || "Patron",
+                                          email: inv.user?.email || "patron@houseofhackney.com",
+                                        },
+                                      };
+                                setSelectedOrder(relatedOrder);
+                              }
+                            }}
+                            className="hover:underline hover:text-[#3e7b52] cursor-pointer text-left font-bold"
+                            title="Click to view full order sheet"
+                          >
+                            {ordRef}
+                          </button>
+                        </td>
+                        <td className="py-3.5 text-[#627766]">
+                          {inv.createdAt ? new Date(inv.createdAt).toLocaleDateString("en-GB") : "Current Cycle"}
+                        </td>
+                        <td className="py-3.5 font-bold">£{Number(inv.grandTotal || inv.amount || 295).toFixed(2)}</td>
+                        <td className="py-3.5">
+                          <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/15 text-emerald-600">
+                            {inv.status || "PAID"}
+                          </span>
+                        </td>
+                        <td className="py-3.5 pr-2 text-right">
+                          <div className="flex items-center justify-end gap-2">
+                            <span className="text-[11px] font-mono text-[#859b89] hidden sm:inline">VAT Registered (GB)</span>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (setSelectedOrder) {
+                                  const relatedOrder =
+                                    typeof inv.order === "object" && inv.order
+                                      ? inv.order
+                                      : orders.find((o) => (o._id || o.id) === inv.order || o.orderNumber === ordRef) || {
+                                          orderNumber: ordRef,
+                                          grandTotal: inv.grandTotal,
+                                          status: inv.status || "CONFIRMED",
+                                          items: inv.items || [],
+                                        };
+                                  setSelectedOrder(relatedOrder);
+                                }
+                              }}
+                              className="px-2.5 py-1 rounded-lg border border-[#3e7b52]/30 text-[#3e7b52] hover:bg-[#3e7b52] hover:text-white text-[11px] font-bold transition flex items-center gap-1 cursor-pointer"
+                              title="Inspect Order Sheet"
+                            >
+                              <ExternalLink size={12} />
+                              <span>View Sheet</span>
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
               </tbody>
             </table>
           </div>
