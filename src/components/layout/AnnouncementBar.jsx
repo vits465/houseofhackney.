@@ -4,7 +4,7 @@ import { Globe } from "lucide-react";
 
 function AnnouncementBar() {
   return (
-    <div className="flex min-h-8 items-center justify-between bg-[#3b3d2f] px-4 py-1 text-xs text-white md:px-8">
+    <div className="flex min-h-8 items-center justify-between bg-[#3b3d2f] px-3 sm:px-6 md:px-8 py-1 text-xs text-white w-full max-w-full overflow-hidden">
       {/* Primary announcement banner */}
       <div className="w-full text-center sm:w-auto sm:text-left truncate font-medium text-[11px] sm:text-xs">
         <Link

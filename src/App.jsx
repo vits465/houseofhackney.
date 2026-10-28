@@ -20,6 +20,8 @@ import Inspiration from "./pages/Inspiration";
 import OurHouse from "./pages/OurHouse";
 import DesignServices from "./pages/DesignServices";
 import Trade from "./pages/Trade";
+import TradeLogin from "./pages/TradeLogin";
+import TradeRegister from "./pages/TradeRegister";
 import Profile from "./pages/Profile";
 import HelpFaq from "./pages/HelpFaq";
 import Legal from "./pages/Legal";
@@ -95,6 +97,11 @@ function AppContent() {
         <Route path="/" element={<Home />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
+        <Route path="/trade/login" element={<TradeLogin />} />
+        <Route path="/trade-login" element={<TradeLogin />} />
+        <Route path="/trade/register" element={<TradeRegister />} />
+        <Route path="/trade-register" element={<TradeRegister />} />
+        <Route path="/trade/signup" element={<TradeRegister />} />
         <Route path="/verify-email" element={<VerifyEmail />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/verify-reset-otp" element={<VerifyResetOtp />} />

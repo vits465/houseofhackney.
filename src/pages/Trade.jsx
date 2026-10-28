@@ -21,13 +21,13 @@ function Trade() {
 
         <div className="flex flex-wrap items-center justify-center gap-4">
           <Link
-            to="/register?type=trade"
+            to="/trade/register"
             className="rounded-xl bg-[#394132] px-7 py-3 text-xs tracking-[1.5px] uppercase font-medium text-white shadow-sm hover:opacity-90"
           >
             Apply For A Trade Account
           </Link>
           <Link
-            to="/login"
+            to="/trade/login"
             className="rounded-xl border border-[#394132] px-7 py-3 text-xs tracking-[1.5px] uppercase font-medium text-[#394132] hover:bg-[#394132] hover:text-white transition-colors"
           >
             Already A Member? Log In

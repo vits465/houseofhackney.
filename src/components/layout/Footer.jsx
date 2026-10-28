@@ -88,10 +88,13 @@ function Footer() {
                   Our Stockists & Showrooms
                 </Link>
                 <Link to="/trade" className="hover:text-white transition w-fit">
-                  Set Up a Trade Account
+                  Trade Programme Overview
                 </Link>
-                <Link to="/help" className="hover:text-white transition w-fit">
-                  Client Concierge & FAQs
+                <Link to="/trade/register" className="hover:text-white transition w-fit">
+                  Apply for a Trade Account
+                </Link>
+                <Link to="/trade/login" className="hover:text-white transition w-fit">
+                  Trade Partner Login
                 </Link>
               </nav>
             </div>

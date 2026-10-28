@@ -229,8 +229,34 @@ export const userService = {
   },
 
   async applyTrade(tradeData) {
-    const res = await axiosInstance.post("/trade/profiles/apply", tradeData);
+    const contactPhone = (tradeData.phone || tradeData.companyPhone || "").toString().trim();
+    const payload = {
+      ...tradeData,
+      phone: contactPhone,
+      companyPhone: contactPhone,
+      businessType: tradeData.businessType === "HOSPITALITY" ? "HOTEL_HOSPITALITY" : tradeData.businessType,
+      companyData: tradeData.companyData || {
+        name: tradeData.companyName || "Trade Design Studio",
+        phone: contactPhone,
+        website: tradeData.website || "",
+        taxNumber: tradeData.taxId || tradeData.gstNumber || tradeData.vatNumber || "",
+        country: tradeData.country || "India",
+      },
+    };
+    const res = await axiosInstance.post("/trade/profiles/apply", payload);
     return res.data?.data;
+  },
+
+  async tradeRegister(tradeData) {
+    const contactPhone = (tradeData.phone || tradeData.companyPhone || "").toString().trim();
+    const payload = {
+      ...tradeData,
+      phone: contactPhone,
+      companyPhone: contactPhone,
+      businessType: tradeData.businessType === "HOSPITALITY" ? "HOTEL_HOSPITALITY" : tradeData.businessType,
+    };
+    const res = await axiosInstance.post("/auth/trade-register", payload);
+    return res.data;
   },
 };
 

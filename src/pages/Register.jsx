@@ -1,6 +1,6 @@
 
-import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import axiosInstance from "../services/axiosInstance";
 import { Eye, EyeOff, LoaderCircle } from "lucide-react";
 
@@ -21,6 +21,14 @@ const initialForm = {
 
 const Register = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+
+  useEffect(() => {
+    const searchParams = new URLSearchParams(location.search);
+    if (searchParams.get("type") === "trade") {
+      navigate("/trade/register", { replace: true });
+    }
+  }, [location.search, navigate]);
 
   const [formData, setFormData] = useState(initialForm);
   const [showPassword, setShowPassword] = useState(false);
@@ -83,6 +91,11 @@ const Register = () => {
         "pendingVerificationEmail",
         normalizedEmail
       );
+
+      try {
+        localStorage.removeItem("hoh_wishlist_items");
+        window.dispatchEvent(new Event("hoh-wishlist-change"));
+      } catch {}
 
       // Briefly show success before navigating to email verification.
       showToast("Account created successfully");
@@ -292,6 +305,30 @@ const Register = () => {
               Sign in
             </Link>
           </p>
+        </div>
+
+        {/* Trade Partner Portal banner */}
+        <div className="mt-8 rounded-2xl border border-[#ede9e1] bg-white p-5 text-center shadow-xs">
+          <span className="text-[10px] uppercase font-bold tracking-[2px] text-[#4a5240]">
+            Interior Designers & Design Studios
+          </span>
+          <p className="mt-1 text-xs text-[#68675f]">
+            Are you an interior designer, architect, or hospitality partner? Apply for exclusive trade privileges.
+          </p>
+          <div className="mt-3 flex items-center justify-center gap-3">
+            <Link
+              to="/trade/register"
+              className="rounded-xl bg-[#394132] px-4 py-2 text-xs font-medium uppercase tracking-[1px] text-white hover:bg-[#252c20] transition"
+            >
+              Apply For Trade Account →
+            </Link>
+            <Link
+              to="/trade/login"
+              className="rounded-xl border border-[#394132] px-4 py-2 text-xs font-medium uppercase tracking-[1px] text-[#394132] hover:bg-[#394132] hover:text-white transition"
+            >
+              Trade Login
+            </Link>
+          </div>
         </div>
       </div>
     </main>

@@ -7,6 +7,7 @@ import {
   ShoppingBag,
   Menu,
   UserRound,
+  Heart,
 } from "lucide-react";
 
 import {
@@ -19,6 +20,8 @@ import AnnouncementBar from "./AnnouncementBar";
 import Navbar from "./Navbar";
 import BrandLogo from "../common/BrandLogo";
 import MobileMenu from "./MobileMenu";
+import SearchModal from "./SearchModal";
+import { useWishlist } from "../../utils/wishlist";
 
 function calculateTargetLogo(scrollY) {
   // When near the top, always show the monogram crest
@@ -52,10 +55,10 @@ function calculateTargetLogo(scrollY) {
 function Header() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
   const [activeNavTab, setActiveNavTab] = useState("SHOP");
   const [activeCategory, setActiveCategory] = useState(null);
-  const [isHeaderHovered, setIsHeaderHovered] = useState(false);
 
   // Logo state for smooth down-to-up transition every 2 sections
   const [logoState, setLogoState] = useState({
@@ -74,28 +77,33 @@ function Header() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const { isAuthenticated, initialized } = useSelector(
+  const { user, isAuthenticated, initialized } = useSelector(
     (state) => state.auth || {}
   );
   const cartItems = useSelector(
     (state) => state.cart?.items || []
   );
 
+  const { count: wishlistCount } = useWishlist();
+
   const cartCount = cartItems.reduce(
     (sum, item) => sum + (Number(item.quantity) || 1),
     0
   );
 
-  // Sync activeNavTab with current route if visiting inspiration or our-house directly
+  // Sync activeNavTab with current route
   useEffect(() => {
     if (location.pathname.startsWith("/inspiration")) {
       startTransition(() => setActiveNavTab("INSPIRATION"));
     } else if (location.pathname.startsWith("/our-house")) {
       startTransition(() => setActiveNavTab("OUR HOUSE"));
+    } else {
+      startTransition(() => setActiveNavTab("SHOP"));
     }
+    setActiveCategory(null);
   }, [location.pathname]);
 
-  // Robust window scroll listener for sticky header and 2-section alternating logo
+  // Robust window scroll listener for sticky header shadow and 2-section alternating logo
   useEffect(() => {
     let ticking = false;
 
@@ -103,7 +111,7 @@ function Header() {
       if (!ticking) {
         window.requestAnimationFrame(() => {
           const currentScrollY = window.scrollY;
-          const scrolled = currentScrollY > 45;
+          const scrolled = currentScrollY > 15;
           setIsScrolled(scrolled);
 
           // Determine scroll direction
@@ -186,13 +194,7 @@ function Header() {
 
   const handleTabChange = (tab) => {
     setActiveNavTab(tab);
-    if (tab === "INSPIRATION") {
-      setActiveCategory("Gallery");
-    } else if (tab === "OUR HOUSE") {
-      setActiveCategory("About");
-    } else {
-      setActiveCategory(null);
-    }
+    setActiveCategory(null);
   };
 
   const getLogoClass = (type) => {
@@ -221,88 +223,86 @@ function Header() {
   const renderAuthLink = () =>
     initialized ? (
       isAuthenticated ? (
-        <button
-          type="button"
-          onClick={handleLogout}
-          disabled={loggingOut}
-          className="text-xs tracking-[1px] hover:underline disabled:opacity-50 font-medium"
-        >
-          {loggingOut ? "SIGNING OUT..." : "LOGOUT"}
-        </button>
+        <div className="hidden lg:flex items-center gap-2 sm:gap-3">
+          <Link
+            to="/account"
+            className="text-xs tracking-[1px] hover:underline font-semibold text-[#171713] uppercase flex items-center gap-1.5"
+          >
+            <span>{user?.firstName ? user.firstName : "ACCOUNT"}</span>
+          </Link>
+          <span className="text-[#dedbd4]">|</span>
+          <button
+            type="button"
+            onClick={handleLogout}
+            disabled={loggingOut}
+            className="text-xs tracking-[1px] hover:underline disabled:opacity-50 font-medium text-[#77746c] hover:text-[#171713] cursor-pointer"
+          >
+            {loggingOut ? "..." : "LOGOUT"}
+          </button>
+        </div>
       ) : (
         <Link
           to="/login"
           aria-label="Login"
-          className="text-xs tracking-[1px] hover:underline font-medium"
+          className="hidden lg:block text-xs tracking-[1px] hover:underline font-medium"
         >
           LOGIN
         </Link>
       )
     ) : null;
 
-  // Show sub-navbar if not scrolled OR if user is hovering header / has open category
-  const showSubNavbar = !isScrolled || isHeaderHovered || activeCategory !== null;
-
   return (
     <>
-      {/* Spacer to prevent layout jump when header becomes sticky fixed */}
-      {isScrolled && (
-        <div className="hidden lg:block h-[132px]" aria-hidden="true" />
-      )}
+      {/* Top Announcement Bar (scrolls naturally with page) */}
+      <div className="w-full bg-[#2d3326] text-white">
+        <AnnouncementBar />
+      </div>
 
+      {/* Sticky Header: Pins cleanly to the top without jumping or spacers */}
       <header
-        className={`z-50 bg-[#f6f3ec] text-[#111] transition-all duration-300 ease-in-out ${
-          isScrolled
-            ? "fixed inset-x-0 top-0 shadow-[0_4px_20px_rgba(0,0,0,0.06)] border-b border-[#dedbd4]"
-            : "relative border-b border-[#dedbd4]"
+        className={`sticky top-0 z-50 bg-[#f6f3ec] text-[#111] border-b border-[#dedbd4] transition-shadow duration-300 ${
+          isScrolled ? "shadow-[0_4px_20px_rgba(0,0,0,0.06)]" : ""
         }`}
-        onMouseEnter={() => setIsHeaderHovered(true)}
         onMouseLeave={() => {
-          setIsHeaderHovered(false);
           setActiveCategory(null);
         }}
       >
-        {/* Top Announcement Bar: slides up smoothly when scrolling */}
-        <div
-          className={`overflow-hidden transition-all duration-300 ease-in-out ${
-            isScrolled ? "max-h-0 opacity-0 py-0" : "max-h-12 opacity-100"
-          }`}
-        >
-          <AnnouncementBar />
-        </div>
-
         {/* Main Header Row */}
-        <div className="grid min-h-[64px] md:min-h-[74px] grid-cols-3 items-center px-4 md:px-9 transition-all duration-300">
-          {/* Left Mode Switcher */}
-          <div className="flex items-center">
+        <div className="flex min-h-[58px] sm:min-h-[64px] md:min-h-[72px] items-center justify-between px-3 sm:px-6 md:px-9 max-w-full overflow-hidden">
+          {/* Left Zone: Hamburger and search on mobile, category tabs on desktop */}
+          <div className="flex items-center flex-1 justify-start gap-1 sm:gap-2">
             {/* Mobile Hamburger Button */}
             <button
               type="button"
               onClick={openMobileMenu}
               aria-label="Open menu"
               aria-expanded={isMobileOpen}
-              className="grid h-10 w-10 place-items-center md:hidden"
+              className="grid h-10 w-10 place-items-center lg:hidden text-[#171713] hover:opacity-75"
             >
-              <Menu size={28} strokeWidth={1.5} />
+              <Menu size={24} strokeWidth={1.5} />
+            </button>
+
+            {/* Mobile Quick Search Button */}
+            <button
+              type="button"
+              onClick={() => setIsSearchOpen(true)}
+              aria-label="Search products and stores"
+              className="grid h-9 w-9 place-items-center lg:hidden text-[#171713] hover:opacity-75 cursor-pointer"
+            >
+              <Search size={20} strokeWidth={1.5} />
             </button>
 
             {/* Desktop Tabs: SHOP, INSPIRATION, OUR HOUSE */}
-            <div className="hidden items-center gap-2 lg:gap-4 md:flex">
+            <div className="hidden items-center gap-2 xl:gap-3 lg:flex">
               {/* SHOP TAB */}
               <button
                 type="button"
                 onClick={() => handleTabChange("SHOP")}
                 onMouseEnter={() => handleTabChange("SHOP")}
-                className={`text-xs tracking-[1.2px] uppercase transition-all duration-300 cursor-pointer ${
-                  !isScrolled && activeNavTab === "SHOP"
-                    ? "rounded-xl bg-[#394132] px-5 py-2.5 font-medium text-white shadow-sm"
-                    : isScrolled
-                    ? `px-3 py-2 font-medium hover:underline ${
-                        activeNavTab === "SHOP"
-                          ? "text-[#171713] font-semibold underline underline-offset-4"
-                          : "text-[#3e4237]"
-                      }`
-                    : "px-3 py-2.5 font-medium text-[#171713] hover:underline"
+                className={`text-xs tracking-[1.2px] uppercase transition-all duration-200 cursor-pointer ${
+                  activeNavTab === "SHOP"
+                    ? "rounded-xl bg-[#394132] px-4 py-2 font-medium text-white shadow-sm"
+                    : "px-3.5 py-2 font-medium text-[#171713] hover:text-[#394132] hover:underline"
                 }`}
               >
                 SHOP
@@ -313,16 +313,10 @@ function Header() {
                 type="button"
                 onClick={() => handleTabChange("INSPIRATION")}
                 onMouseEnter={() => handleTabChange("INSPIRATION")}
-                className={`text-xs tracking-[1.2px] uppercase transition-all duration-300 cursor-pointer ${
-                  !isScrolled && activeNavTab === "INSPIRATION"
-                    ? "rounded-xl bg-[#394132] px-5 py-2.5 font-medium text-white shadow-sm"
-                    : isScrolled
-                    ? `px-3 py-2 font-medium hover:underline ${
-                        activeNavTab === "INSPIRATION"
-                          ? "text-[#171713] font-semibold underline underline-offset-4"
-                          : "text-[#3e4237]"
-                      }`
-                    : "px-3 py-2.5 font-medium text-[#171713] hover:underline"
+                className={`text-xs tracking-[1.2px] uppercase transition-all duration-200 cursor-pointer ${
+                  activeNavTab === "INSPIRATION"
+                    ? "rounded-xl bg-[#394132] px-4 py-2 font-medium text-white shadow-sm"
+                    : "px-3.5 py-2 font-medium text-[#171713] hover:text-[#394132] hover:underline"
                 }`}
               >
                 INSPIRATION
@@ -333,16 +327,10 @@ function Header() {
                 type="button"
                 onClick={() => handleTabChange("OUR HOUSE")}
                 onMouseEnter={() => handleTabChange("OUR HOUSE")}
-                className={`text-xs tracking-[1.2px] uppercase transition-all duration-300 cursor-pointer ${
-                  !isScrolled && activeNavTab === "OUR HOUSE"
-                    ? "rounded-xl bg-[#394132] px-5 py-2.5 font-medium text-white shadow-sm"
-                    : isScrolled
-                    ? `px-3 py-2 font-medium hover:underline ${
-                        activeNavTab === "OUR HOUSE"
-                          ? "text-[#171713] font-semibold underline underline-offset-4"
-                          : "text-[#3e4237]"
-                      }`
-                    : "px-3 py-2.5 font-medium text-[#171713] hover:underline"
+                className={`text-xs tracking-[1.2px] uppercase transition-all duration-200 cursor-pointer ${
+                  activeNavTab === "OUR HOUSE"
+                    ? "rounded-xl bg-[#394132] px-4 py-2 font-medium text-white shadow-sm"
+                    : "px-3.5 py-2 font-medium text-[#171713] hover:text-[#394132] hover:underline"
                 }`}
               >
                 OUR HOUSE
@@ -351,26 +339,28 @@ function Header() {
           </div>
 
           {/* Center Logo with Smooth Down-to-Up 2-Section Reel Transition */}
-          <Link
-            to="/"
-            aria-label="House of Hackney home"
-            className="justify-self-center relative flex items-center justify-center min-w-[140px] md:min-w-[220px] h-12 text-[#171713] overflow-hidden group select-none"
-          >
-            {/* Logo 1: Monogram Crest Logo */}
-            <div className={getLogoClass("monogram")}>
-              <BrandLogo className="h-[36px] w-[72px] md:h-[44px] md:w-[88px] transition-transform duration-300 group-hover:scale-105" />
-            </div>
+          <div className="flex items-center justify-center shrink-0 px-2">
+            <Link
+              to="/"
+              aria-label="House of Hackney home"
+              className="relative flex items-center justify-center min-w-[90px] sm:min-w-[120px] md:min-w-[200px] h-11 md:h-12 text-[#171713] overflow-hidden group select-none"
+            >
+              {/* Logo 1: Monogram Crest Logo */}
+              <div className={getLogoClass("monogram")}>
+                <BrandLogo className="h-[28px] w-[56px] sm:h-[34px] sm:w-[68px] md:h-[44px] md:w-[88px] transition-transform duration-300 group-hover:scale-105" />
+              </div>
 
-            {/* Logo 2: Wordmark Logo HOUSE OF HACKNEY */}
-            <div className={getLogoClass("wordmark")}>
-              <span className="font-serif text-[13px] sm:text-[15px] md:text-[17px] font-semibold tracking-[0.26em] md:tracking-[0.3em] text-[#171713] uppercase whitespace-nowrap transition-colors duration-300 group-hover:opacity-75">
-                HOUSE OF HACKNEY
-              </span>
-            </div>
-          </Link>
+              {/* Logo 2: Wordmark Logo HOUSE OF HACKNEY */}
+              <div className={getLogoClass("wordmark")}>
+                <span className="font-serif text-[11px] sm:text-[13px] md:text-[16px] lg:text-[17px] font-semibold tracking-[0.18em] sm:tracking-[0.24em] md:tracking-[0.3em] text-[#171713] uppercase whitespace-nowrap transition-colors duration-300 group-hover:opacity-75">
+                  HOUSE OF HACKNEY
+                </span>
+              </div>
+            </Link>
+          </div>
 
           {/* Right Action Icons & Links */}
-          <div className="flex items-center justify-end gap-3 md:gap-5">
+          <div className="flex items-center flex-1 justify-end gap-1.5 sm:gap-3 md:gap-5">
             <Link
               to="/design-services"
               className="hidden text-xs tracking-[1px] hover:underline xl:block font-medium"
@@ -380,37 +370,54 @@ function Header() {
 
             <Link
               to="/trade"
-              className="hidden text-xs tracking-[1px] hover:underline md:block font-medium"
+              className="hidden text-xs tracking-[1px] hover:underline lg:block font-medium"
             >
               TRADE
             </Link>
 
-            <Link
-              to="/search"
-              aria-label="Search"
-              className="grid h-9 w-9 md:h-10 md:w-10 place-items-center rounded-xl border border-[#d8d5ce] hover:bg-white transition-colors"
+            <button
+              type="button"
+              onClick={() => setIsSearchOpen(true)}
+              aria-label="Search products and stores"
+              className="hidden lg:grid h-9 w-9 md:h-10 md:w-10 place-items-center rounded-xl border border-[#d8d5ce] hover:bg-white text-[#171713] transition-colors cursor-pointer"
             >
               <Search size={20} strokeWidth={1.5} />
-            </Link>
+            </button>
 
             {renderAuthLink()}
 
+            {/* Mobile Patron Profile Icon */}
             <Link
-              to="/account"
+              to={isAuthenticated ? "/account" : "/login"}
               aria-label="Account"
-              className="hidden md:block hover:opacity-75 transition-opacity"
+              className="lg:hidden grid h-9 w-9 place-items-center hover:opacity-75 transition-opacity text-[#171713]"
             >
               <UserRound size={21} strokeWidth={1.5} />
             </Link>
 
+            {/* Wishlist Link with dynamic badge */}
+            <Link
+              to="/wishlist"
+              aria-label="Wishlist"
+              className="relative grid h-9 w-9 place-items-center hover:opacity-75 transition-opacity text-[#171713]"
+            >
+              <Heart size={21} strokeWidth={1.5} />
+              {wishlistCount > 0 && (
+                <span className="absolute top-0.5 right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#b83232] px-1 text-[10px] font-bold text-white shadow-sm">
+                  {wishlistCount}
+                </span>
+              )}
+            </Link>
+
+            {/* Shopping Cart Bag with badge */}
             <Link
               to="/cart"
               aria-label="Shopping bag"
-              className="relative hover:opacity-75 transition-opacity p-1"
+              className="relative grid h-9 w-9 place-items-center hover:opacity-75 transition-opacity text-[#171713]"
             >
               <ShoppingBag size={21} strokeWidth={1.5} />
               {cartCount > 0 && (
-                <span className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#394132] px-1 text-[10px] font-bold text-white shadow-sm">
+                <span className="absolute top-0.5 right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#394132] px-1 text-[10px] font-bold text-white shadow-sm">
                   {cartCount}
                 </span>
               )}
@@ -419,19 +426,11 @@ function Header() {
         </div>
 
         {/* Sub-navbar Row: categories and megamenu */}
-        <div
-          className={`transition-all duration-300 ease-in-out ${
-            showSubNavbar
-              ? "max-h-[500px] opacity-100"
-              : "max-h-0 opacity-0 overflow-hidden"
-          }`}
-        >
-          <Navbar
-            activeNavTab={activeNavTab}
-            activeCategory={activeCategory}
-            setActiveCategory={setActiveCategory}
-          />
-        </div>
+        <Navbar
+          activeNavTab={activeNavTab}
+          activeCategory={activeCategory}
+          setActiveCategory={setActiveCategory}
+        />
       </header>
 
       {/* Mobile Drawer Menu */}
@@ -440,6 +439,12 @@ function Header() {
         onClose={closeMobileMenu}
         activeTab={activeNavTab}
         setActiveTab={handleTabChange}
+      />
+
+      {/* Interactive House of Hackney Search Modal Overlay */}
+      <SearchModal
+        isOpen={isSearchOpen}
+        onClose={() => setIsSearchOpen(false)}
       />
     </>
   );

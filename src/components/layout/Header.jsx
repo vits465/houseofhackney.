@@ -59,7 +59,6 @@ function Header() {
   const [loggingOut, setLoggingOut] = useState(false);
   const [activeNavTab, setActiveNavTab] = useState("SHOP");
   const [activeCategory, setActiveCategory] = useState(null);
-  const [isHeaderHovered, setIsHeaderHovered] = useState(false);
 
   // Logo state for smooth down-to-up transition every 2 sections
   const [logoState, setLogoState] = useState({
@@ -92,16 +91,19 @@ function Header() {
     0
   );
 
-  // Sync activeNavTab with current route if visiting inspiration or our-house directly
+  // Sync activeNavTab with current route
   useEffect(() => {
     if (location.pathname.startsWith("/inspiration")) {
       startTransition(() => setActiveNavTab("INSPIRATION"));
     } else if (location.pathname.startsWith("/our-house")) {
       startTransition(() => setActiveNavTab("OUR HOUSE"));
+    } else {
+      startTransition(() => setActiveNavTab("SHOP"));
     }
+    setActiveCategory(null);
   }, [location.pathname]);
 
-  // Robust window scroll listener for sticky header and 2-section alternating logo
+  // Robust window scroll listener for sticky header shadow and 2-section alternating logo
   useEffect(() => {
     let ticking = false;
 
@@ -109,7 +111,7 @@ function Header() {
       if (!ticking) {
         window.requestAnimationFrame(() => {
           const currentScrollY = window.scrollY;
-          const scrolled = currentScrollY > 45;
+          const scrolled = currentScrollY > 15;
           setIsScrolled(scrolled);
 
           // Determine scroll direction
@@ -192,13 +194,7 @@ function Header() {
 
   const handleTabChange = (tab) => {
     setActiveNavTab(tab);
-    if (tab === "INSPIRATION") {
-      setActiveCategory("Gallery");
-    } else if (tab === "OUR HOUSE") {
-      setActiveCategory("About");
-    } else {
-      setActiveCategory(null);
-    }
+    setActiveCategory(null);
   };
 
   const getLogoClass = (type) => {
@@ -227,7 +223,7 @@ function Header() {
   const renderAuthLink = () =>
     initialized ? (
       isAuthenticated ? (
-        <div className="hidden md:flex items-center gap-2 sm:gap-3">
+        <div className="hidden lg:flex items-center gap-2 sm:gap-3">
           <Link
             to="/account"
             className="text-xs tracking-[1px] hover:underline font-semibold text-[#171713] uppercase flex items-center gap-1.5"
@@ -248,46 +244,31 @@ function Header() {
         <Link
           to="/login"
           aria-label="Login"
-          className="hidden md:block text-xs tracking-[1px] hover:underline font-medium"
+          className="hidden lg:block text-xs tracking-[1px] hover:underline font-medium"
         >
           LOGIN
         </Link>
       )
     ) : null;
 
-  // Show sub-navbar if not scrolled OR if user is hovering header / has open category
-  const showSubNavbar = !isScrolled || isHeaderHovered || activeCategory !== null;
-
   return (
     <>
-      {/* Spacer to prevent layout jump when header becomes sticky fixed */}
-      {isScrolled && (
-        <div className="hidden lg:block h-[132px]" aria-hidden="true" />
-      )}
+      {/* Top Announcement Bar (scrolls naturally with page) */}
+      <div className="w-full bg-[#2d3326] text-white">
+        <AnnouncementBar />
+      </div>
 
+      {/* Sticky Header: Pins cleanly to the top without jumping or spacers */}
       <header
-        className={`z-50 bg-[#f6f3ec] text-[#111] transition-all duration-300 ease-in-out ${
-          isScrolled
-            ? "fixed inset-x-0 top-0 shadow-[0_4px_20px_rgba(0,0,0,0.06)] border-b border-[#dedbd4]"
-            : "relative border-b border-[#dedbd4]"
+        className={`sticky top-0 z-50 bg-[#f6f3ec] text-[#111] border-b border-[#dedbd4] transition-shadow duration-300 ${
+          isScrolled ? "shadow-[0_4px_20px_rgba(0,0,0,0.06)]" : ""
         }`}
-        onMouseEnter={() => setIsHeaderHovered(true)}
         onMouseLeave={() => {
-          setIsHeaderHovered(false);
           setActiveCategory(null);
         }}
       >
-        {/* Top Announcement Bar: slides up smoothly when scrolling */}
-        <div
-          className={`overflow-hidden transition-all duration-300 ease-in-out ${
-            isScrolled ? "max-h-0 opacity-0 py-0" : "max-h-12 opacity-100"
-          }`}
-        >
-          <AnnouncementBar />
-        </div>
-
         {/* Main Header Row */}
-        <div className="flex min-h-[58px] sm:min-h-[64px] md:min-h-[74px] items-center justify-between px-3 sm:px-6 md:px-9 transition-all duration-300">
+        <div className="flex min-h-[58px] sm:min-h-[64px] md:min-h-[72px] items-center justify-between px-3 sm:px-6 md:px-9 max-w-full overflow-hidden">
           {/* Left Zone: Hamburger and search on mobile, category tabs on desktop */}
           <div className="flex items-center flex-1 justify-start gap-1 sm:gap-2">
             {/* Mobile Hamburger Button */}
@@ -296,7 +277,7 @@ function Header() {
               onClick={openMobileMenu}
               aria-label="Open menu"
               aria-expanded={isMobileOpen}
-              className="grid h-10 w-10 place-items-center md:hidden text-[#171713] hover:opacity-75"
+              className="grid h-10 w-10 place-items-center lg:hidden text-[#171713] hover:opacity-75"
             >
               <Menu size={24} strokeWidth={1.5} />
             </button>
@@ -306,28 +287,22 @@ function Header() {
               type="button"
               onClick={() => setIsSearchOpen(true)}
               aria-label="Search products and stores"
-              className="grid h-9 w-9 place-items-center md:hidden text-[#171713] hover:opacity-75 cursor-pointer"
+              className="grid h-9 w-9 place-items-center lg:hidden text-[#171713] hover:opacity-75 cursor-pointer"
             >
               <Search size={20} strokeWidth={1.5} />
             </button>
 
             {/* Desktop Tabs: SHOP, INSPIRATION, OUR HOUSE */}
-            <div className="hidden items-center gap-2 lg:gap-4 md:flex">
+            <div className="hidden items-center gap-2 xl:gap-3 lg:flex">
               {/* SHOP TAB */}
               <button
                 type="button"
                 onClick={() => handleTabChange("SHOP")}
                 onMouseEnter={() => handleTabChange("SHOP")}
-                className={`text-xs tracking-[1.2px] uppercase transition-all duration-300 cursor-pointer ${
-                  !isScrolled && activeNavTab === "SHOP"
-                    ? "rounded-xl bg-[#394132] px-5 py-2.5 font-medium text-white shadow-sm"
-                    : isScrolled
-                    ? `px-3 py-2 font-medium hover:underline ${
-                        activeNavTab === "SHOP"
-                          ? "text-[#171713] font-semibold underline underline-offset-4"
-                          : "text-[#3e4237]"
-                      }`
-                    : "px-3 py-2.5 font-medium text-[#171713] hover:underline"
+                className={`text-xs tracking-[1.2px] uppercase transition-all duration-200 cursor-pointer ${
+                  activeNavTab === "SHOP"
+                    ? "rounded-xl bg-[#394132] px-4 py-2 font-medium text-white shadow-sm"
+                    : "px-3.5 py-2 font-medium text-[#171713] hover:text-[#394132] hover:underline"
                 }`}
               >
                 SHOP
@@ -338,16 +313,10 @@ function Header() {
                 type="button"
                 onClick={() => handleTabChange("INSPIRATION")}
                 onMouseEnter={() => handleTabChange("INSPIRATION")}
-                className={`text-xs tracking-[1.2px] uppercase transition-all duration-300 cursor-pointer ${
-                  !isScrolled && activeNavTab === "INSPIRATION"
-                    ? "rounded-xl bg-[#394132] px-5 py-2.5 font-medium text-white shadow-sm"
-                    : isScrolled
-                    ? `px-3 py-2 font-medium hover:underline ${
-                        activeNavTab === "INSPIRATION"
-                          ? "text-[#171713] font-semibold underline underline-offset-4"
-                          : "text-[#3e4237]"
-                      }`
-                    : "px-3 py-2.5 font-medium text-[#171713] hover:underline"
+                className={`text-xs tracking-[1.2px] uppercase transition-all duration-200 cursor-pointer ${
+                  activeNavTab === "INSPIRATION"
+                    ? "rounded-xl bg-[#394132] px-4 py-2 font-medium text-white shadow-sm"
+                    : "px-3.5 py-2 font-medium text-[#171713] hover:text-[#394132] hover:underline"
                 }`}
               >
                 INSPIRATION
@@ -358,16 +327,10 @@ function Header() {
                 type="button"
                 onClick={() => handleTabChange("OUR HOUSE")}
                 onMouseEnter={() => handleTabChange("OUR HOUSE")}
-                className={`text-xs tracking-[1.2px] uppercase transition-all duration-300 cursor-pointer ${
-                  !isScrolled && activeNavTab === "OUR HOUSE"
-                    ? "rounded-xl bg-[#394132] px-5 py-2.5 font-medium text-white shadow-sm"
-                    : isScrolled
-                    ? `px-3 py-2 font-medium hover:underline ${
-                        activeNavTab === "OUR HOUSE"
-                          ? "text-[#171713] font-semibold underline underline-offset-4"
-                          : "text-[#3e4237]"
-                      }`
-                    : "px-3 py-2.5 font-medium text-[#171713] hover:underline"
+                className={`text-xs tracking-[1.2px] uppercase transition-all duration-200 cursor-pointer ${
+                  activeNavTab === "OUR HOUSE"
+                    ? "rounded-xl bg-[#394132] px-4 py-2 font-medium text-white shadow-sm"
+                    : "px-3.5 py-2 font-medium text-[#171713] hover:text-[#394132] hover:underline"
                 }`}
               >
                 OUR HOUSE
@@ -407,7 +370,7 @@ function Header() {
 
             <Link
               to="/trade"
-              className="hidden text-xs tracking-[1px] hover:underline md:block font-medium"
+              className="hidden text-xs tracking-[1px] hover:underline lg:block font-medium"
             >
               TRADE
             </Link>
@@ -416,7 +379,7 @@ function Header() {
               type="button"
               onClick={() => setIsSearchOpen(true)}
               aria-label="Search products and stores"
-              className="hidden md:grid h-9 w-9 md:h-10 md:w-10 place-items-center rounded-xl border border-[#d8d5ce] hover:bg-white text-[#171713] transition-colors cursor-pointer"
+              className="hidden lg:grid h-9 w-9 md:h-10 md:w-10 place-items-center rounded-xl border border-[#d8d5ce] hover:bg-white text-[#171713] transition-colors cursor-pointer"
             >
               <Search size={20} strokeWidth={1.5} />
             </button>
@@ -427,7 +390,7 @@ function Header() {
             <Link
               to={isAuthenticated ? "/account" : "/login"}
               aria-label="Account"
-              className="md:hidden grid h-9 w-9 place-items-center hover:opacity-75 transition-opacity text-[#171713]"
+              className="lg:hidden grid h-9 w-9 place-items-center hover:opacity-75 transition-opacity text-[#171713]"
             >
               <UserRound size={21} strokeWidth={1.5} />
             </Link>
@@ -463,19 +426,11 @@ function Header() {
         </div>
 
         {/* Sub-navbar Row: categories and megamenu */}
-        <div
-          className={`transition-all duration-300 ease-in-out ${
-            showSubNavbar
-              ? "max-h-[500px] opacity-100"
-              : "max-h-0 opacity-0 overflow-hidden"
-          }`}
-        >
-          <Navbar
-            activeNavTab={activeNavTab}
-            activeCategory={activeCategory}
-            setActiveCategory={setActiveCategory}
-          />
-        </div>
+        <Navbar
+          activeNavTab={activeNavTab}
+          activeCategory={activeCategory}
+          setActiveCategory={setActiveCategory}
+        />
       </header>
 
       {/* Mobile Drawer Menu */}

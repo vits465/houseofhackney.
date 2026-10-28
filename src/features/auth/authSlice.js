@@ -52,6 +52,10 @@ const authSlice = createSlice({
       state.loading = false;
       state.error = null;
       state.initialized = true;
+      try {
+        localStorage.removeItem("hoh_wishlist_items");
+        window.dispatchEvent(new Event("hoh-wishlist-change"));
+      } catch {}
     },
 
     setAuthLoading: (state, action) => {

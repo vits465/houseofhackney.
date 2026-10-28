@@ -87,11 +87,14 @@ function Footer() {
                 <Link to="/products" className="hover:text-white transition w-fit">
                   Our Stockists
                 </Link>
-                <Link to="/login" className="hover:text-white transition w-fit">
-                  Set Up a Trade Account
+                <Link to="/trade" className="hover:text-white transition w-fit">
+                  Trade Programme Overview
                 </Link>
-                <Link to="/login" className="hover:text-white transition w-fit">
-                  Contact your Trade Representative
+                <Link to="/trade/register" className="hover:text-white transition w-fit">
+                  Apply for a Trade Account
+                </Link>
+                <Link to="/trade/login" className="hover:text-white transition w-fit">
+                  Trade Partner Login
                 </Link>
               </nav>
             </div>

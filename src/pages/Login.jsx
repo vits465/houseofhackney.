@@ -268,6 +268,29 @@ const Login = () => {
           </Link>
         </div>
 
+        <div className="mt-8 rounded-2xl border border-[#ede9e1] bg-white p-5 text-center shadow-xs">
+          <span className="text-[10px] uppercase font-bold tracking-[2px] text-[#4a5240]">
+            Interior Designers & Architects
+          </span>
+          <p className="mt-1 text-xs text-[#68675f]">
+            Access your B2B trade account with commercial pricing and complimentary samples.
+          </p>
+          <div className="mt-3 flex items-center justify-center gap-3">
+            <Link
+              to="/trade/login"
+              className="rounded-xl bg-[#394132] px-4 py-2 text-xs font-medium uppercase tracking-[1px] text-white hover:bg-[#252c20] transition"
+            >
+              Trade Login →
+            </Link>
+            <Link
+              to="/trade/register"
+              className="rounded-xl border border-[#394132] px-4 py-2 text-xs font-medium uppercase tracking-[1px] text-[#394132] hover:bg-[#394132] hover:text-white transition"
+            >
+              Apply for Trade
+            </Link>
+          </div>
+        </div>
+
         <p className="mt-10 text-center text-xs leading-5 text-[#68675f]">
           By continuing, you agree to our applicable terms and privacy policy.
         </p>
