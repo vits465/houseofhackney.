@@ -247,21 +247,23 @@ export function AdminProvider({ children }) {
 
       setTradeProfile(resolvedProfile);
 
-      const effectiveCredit = creditData
-        ? {
-            ...creditData,
-            totalCredit: savedTier?.creditLimit || creditData.totalCredit || 50000,
-            availableCredit: savedTier?.creditLimit
-              ? Math.max(0, savedTier.creditLimit - (creditData.usedCredit || 0))
-              : creditData.availableCredit || 50000,
-            paymentTerm: savedTier?.paymentTerm || creditData.paymentTerm || "NET_30",
-          }
-        : {
-            totalCredit: savedTier?.creditLimit || 50000,
-            usedCredit: 13580,
-            availableCredit: Math.max(0, (savedTier?.creditLimit || 50000) - 13580),
-            paymentTerm: savedTier?.paymentTerm || "NET_30",
-          };
+      let localCredit = null;
+      try {
+        localCredit = JSON.parse(localStorage.getItem("hoh_trade_credit") || "null");
+      } catch {}
+
+      const effectiveCredit = {
+        totalCredit: savedTier?.creditLimit || localCredit?.totalCredit || creditData?.totalCredit || 50000,
+        usedCredit: localCredit?.usedCredit !== undefined ? localCredit.usedCredit : (creditData?.usedCredit ?? 13580),
+        availableCredit: localCredit?.availableCredit !== undefined ? localCredit.availableCredit : (
+          savedTier?.creditLimit
+            ? Math.max(0, savedTier.creditLimit - (creditData?.usedCredit ?? 13580))
+            : (creditData?.availableCredit ?? 36420)
+        ),
+        paymentTerm: savedTier?.paymentTerm || localCredit?.paymentTerm || creditData?.paymentTerm || "NET_30",
+        currency: "GBP",
+        status: "ACTIVE",
+      };
 
       setTradeCredit(effectiveCredit);
 
@@ -548,13 +550,21 @@ export function AdminProvider({ children }) {
       });
 
       // Deduct available credit if credit available
-      if (tradeCredit) {
-        setTradeCredit((prev) => ({
+      setTradeCredit((prev) => {
+        const currentTotal = prev?.totalCredit || 50000;
+        const currentUsed = (prev?.usedCredit || 0) + amount;
+        const currentAvail = Math.max(0, currentTotal - currentUsed);
+        const updated = {
           ...prev,
-          usedCredit: (prev?.usedCredit || 0) + amount,
-          availableCredit: Math.max(0, (prev?.availableCredit || 0) - amount),
-        }));
-      }
+          totalCredit: currentTotal,
+          usedCredit: currentUsed,
+          availableCredit: currentAvail,
+        };
+        try {
+          localStorage.setItem("hoh_trade_credit", JSON.stringify(updated));
+        } catch {}
+        return updated;
+      });
 
       // Add to active orders list so it reflects immediately in My Trade Orders
       const newTradeOrder = {
@@ -578,6 +588,62 @@ export function AdminProvider({ children }) {
       return orderNumber;
     } catch (err) {
       showToast("Conversion failed: " + err.message);
+    }
+  };
+
+  // Trade Admin: Settle partner credit line / mark invoice paid
+  const settlePartnerCredit = async (companyId, amountToSettle) => {
+    try {
+      await adminApiService.settleCredit(companyId, amountToSettle);
+
+      // Update patron active credit
+      setTradeCredit((prev) => {
+        const settleAmt = amountToSettle !== undefined ? Number(amountToSettle) : (prev?.usedCredit || 0);
+        const newUsed = Math.max(0, (prev?.usedCredit || 0) - settleAmt);
+        const newAvail = (prev?.totalCredit || 50000) - newUsed;
+        const updated = {
+          ...prev,
+          usedCredit: newUsed,
+          availableCredit: newAvail,
+          status: "ACTIVE",
+        };
+        try {
+          localStorage.setItem("hoh_trade_credit", JSON.stringify(updated));
+        } catch {}
+        return updated;
+      });
+
+      // Update partner in allTradeProfiles
+      setAllTradeProfiles((prev) => {
+        const updated = (prev || []).map((p) => {
+          const match =
+            p._id === companyId ||
+            p.company?._id === companyId ||
+            p.company?.name === companyId ||
+            p.company === companyId;
+          if (match) {
+            const currentUsed = p.usedCredit || 0;
+            const settleAmt = amountToSettle !== undefined ? Number(amountToSettle) : currentUsed;
+            const newUsed = Math.max(0, currentUsed - settleAmt);
+            return {
+              ...p,
+              usedCredit: newUsed,
+              availableCredit: (p.creditLimit || 50000) - newUsed,
+            };
+          }
+          return p;
+        });
+        try {
+          localStorage.setItem("hoh_all_trade_profiles", JSON.stringify(updated));
+        } catch {}
+        return updated;
+      });
+
+      showToast("Trade credit settlement recorded successfully.");
+      return true;
+    } catch (err) {
+      showToast("Settlement failed: " + err.message);
+      return false;
     }
   };
 
@@ -961,6 +1027,7 @@ export function AdminProvider({ children }) {
         requestQuote,
         approveQuote,
         convertQuoteToOrder,
+        settlePartnerCredit,
         reviewApplication,
         negotiateQuote,
         isActualAdmin,

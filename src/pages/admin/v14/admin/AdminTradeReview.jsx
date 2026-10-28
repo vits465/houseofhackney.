@@ -25,6 +25,7 @@ export default function AdminTradeReview() {
     reviewApplication,
     negotiateQuote,
     approveQuote,
+    settlePartnerCredit,
     products,
     tradeTiers,
     allTradeProfiles,
@@ -118,6 +119,7 @@ export default function AdminTradeReview() {
         p.tier?.paymentTerm ||
         (p.tier?.maxCreditPeriod ? `NET_${p.tier.maxCreditPeriod}` : "NET_30");
       return {
+        companyId: p.company?._id || p._id || firmName,
         name: firmName,
         applicant,
         tierName,
@@ -134,6 +136,7 @@ export default function AdminTradeReview() {
       ? approvedPartners
       : [
           {
+            companyId: "crd_sterling",
             name: "Sterling Architectural Studio",
             applicant: "Alistair Sterling (sterling_atelier@example.com)",
             tierName: "GOLD",
@@ -144,6 +147,7 @@ export default function AdminTradeReview() {
             status: "APPROVED",
           },
           {
+            companyId: "crd_kensington",
             name: "Kensington Heritage Interiors Ltd",
             applicant: "Eleanor Vane (procurement@kensingtonheritage.co.uk)",
             tierName: "GOLD",
@@ -546,6 +550,7 @@ export default function AdminTradeReview() {
                   <th className="pb-3">Available Line</th>
                   <th className="pb-3">Payment Term</th>
                   <th className="pb-3">Status</th>
+                  <th className="pb-3 text-right pr-2">Action</th>
                 </tr>
               </thead>
               <tbody
@@ -576,6 +581,19 @@ export default function AdminTradeReview() {
                       <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/15 text-emerald-600">
                         {crd.status}
                       </span>
+                    </td>
+                    <td className="py-3.5 text-right pr-2">
+                      {crd.used > 0 ? (
+                        <button
+                          onClick={() => settlePartnerCredit(crd.companyId, crd.used)}
+                          className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-[#3e7b52] hover:bg-[#346744] text-white transition-colors shadow-sm"
+                          title="Settle full balance"
+                        >
+                          Settle Balance (£{crd.used.toLocaleString()})
+                        </button>
+                      ) : (
+                        <span className="text-[11px] text-[#859b89] font-medium">Invoices Settled</span>
+                      )}
                     </td>
                   </tr>
                 ))}

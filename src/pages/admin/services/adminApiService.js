@@ -455,6 +455,17 @@ export const adminApiService = {
     return res.data;
   },
 
+  // Settle credit balance (Admin / Super Admin)
+  async settleCredit(companyId, amount) {
+    const res = await safeApiCall(
+      axiosInstance.post("/trade/credits/settle", { companyId, amount }),
+      { success: true }
+    );
+    adminApiService.clearCache("admin_credit");
+    adminApiService.clearCache("admin_all_credits");
+    return res;
+  },
+
   // ==========================================
   // TRADE TIERS
   // ==========================================
