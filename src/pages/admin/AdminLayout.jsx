@@ -38,6 +38,7 @@ function DashboardV14Main() {
   const {
     theme,
     currentRole,
+    isActualSuperAdmin,
     activeTab,
     setActiveTab,
     productModalOpen,
@@ -90,7 +91,8 @@ function DashboardV14Main() {
       case "reports":
         return <V14Reports key="reports" />;
       case "users-roles":
-        return currentRole === "super-admin" ? (
+      case "users":
+        return currentRole === "super-admin" || isActualSuperAdmin ? (
           <AdminUsersRoles key="users-roles" />
         ) : (
           <V14Overview key="overview-restricted" />
