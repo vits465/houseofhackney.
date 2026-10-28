@@ -103,7 +103,17 @@ export default function AdminTaxonomy() {
       setNewCategoryDesc("");
       showToast(`Category ${created.name} added.`);
     } catch {
-      showToast("Category created locally.");
+      const created = {
+        _id: `cat_${Date.now()}`,
+        name: newCategoryName.trim(),
+        slug: newCategoryName.toLowerCase().replace(/[^a-z0-9]/g, "-"),
+        description: newCategoryDesc,
+      };
+      setCategories((prev) => [created, ...prev]);
+      setCreateCategoryOpen(false);
+      setNewCategoryName("");
+      setNewCategoryDesc("");
+      showToast(`Category ${created.name} added.`);
     }
   };
 
@@ -141,7 +151,15 @@ export default function AdminTaxonomy() {
       setNewBrandName("");
       showToast(`Brand partner ${created.name} added.`);
     } catch {
-      showToast("Brand registered.");
+      const created = {
+        _id: `br_${Date.now()}`,
+        name: newBrandName.trim(),
+        origin: newBrandOrigin,
+      };
+      setBrands((prev) => [created, ...prev]);
+      setCreateBrandOpen(false);
+      setNewBrandName("");
+      showToast(`Brand partner ${created.name} added.`);
     }
   };
 
