@@ -437,7 +437,9 @@ export default function AdminCommerce() {
                             <option value="PENDING">PENDING</option>
                             <option value="CONFIRMED">CONFIRMED</option>
                             <option value="PROCESSING">PROCESSING</option>
+                            <option value="IN_PRODUCTION">IN PRODUCTION</option>
                             <option value="SHIPPED">SHIPPED</option>
+                            <option value="DISPATCHED">DISPATCHED</option>
                             <option value="DELIVERED">DELIVERED</option>
                             <option value="CANCELLED">CANCELLED</option>
                           </select>
