@@ -26,6 +26,8 @@ export default function AdminTradeReview() {
     negotiateQuote,
     approveQuote,
     products,
+    tradeTiers,
+    allTradeProfiles,
   } = useAdmin();
   const isDark = theme === "dark";
 
@@ -99,6 +101,59 @@ export default function AdminTradeReview() {
   const [negotiatedDiscount, setNegotiatedDiscount] = useState(500);
   const [adminNotes, setAdminNotes] = useState("");
   const [negotiatingAction, setNegotiatingAction] = useState(false);
+
+  // Sub-tab 3: Approved Partners List
+  const approvedPartners = (allTradeProfiles || [])
+    .filter((p) => p.status === "APPROVED")
+    .map((p) => {
+      const firmName = p.company?.name || "Bespoke Design Firm";
+      const applicant = p.user
+        ? `${p.user.firstName || ""} ${p.user.lastName || ""} (${p.user.email || ""})`.trim()
+        : "";
+      const tierName = p.tier?.displayName || p.tier?.name || "GOLD";
+      const discount = p.tier?.discountPercentage || 25;
+      const limit = Number(p.creditLimit || 50000);
+      const used = Number(p.usedCredit || 0);
+      const term =
+        p.tier?.paymentTerm ||
+        (p.tier?.maxCreditPeriod ? `NET_${p.tier.maxCreditPeriod}` : "NET_30");
+      return {
+        name: firmName,
+        applicant,
+        tierName,
+        discount,
+        limit,
+        used,
+        term,
+        status: "APPROVED",
+      };
+    });
+
+  const displayApprovedPartners =
+    approvedPartners.length > 0
+      ? approvedPartners
+      : [
+          {
+            name: "Sterling Architectural Studio",
+            applicant: "Alistair Sterling (sterling_atelier@example.com)",
+            tierName: "GOLD",
+            discount: 25,
+            limit: 50000,
+            used: 0,
+            term: "NET_30",
+            status: "APPROVED",
+          },
+          {
+            name: "Kensington Heritage Interiors Ltd",
+            applicant: "Eleanor Vane (procurement@kensingtonheritage.co.uk)",
+            tierName: "GOLD",
+            discount: 25,
+            limit: 50000,
+            used: 13580,
+            term: "NET_30",
+            status: "APPROVED",
+          },
+        ];
 
   const handleReviewSubmit = async (status) => {
     if (!selectedAppForReview) return;
@@ -196,7 +251,7 @@ export default function AdminTradeReview() {
               : "text-[#526956] hover:text-[#142617]"
           }`}
         >
-          B2B Credit Limits
+          Approved Partners & Credit ({displayApprovedPartners.length})
         </button>
       </div>
 
@@ -216,55 +271,80 @@ export default function AdminTradeReview() {
               </p>
             </div>
           ) : (
-            pendingApplications.map((app) => (
-              <div
-                key={app._id}
-                className={`p-6 rounded-2xl border transition-all ${
-                  isDark
-                    ? "bg-[#141a15] border-[#253327]"
-                    : "bg-white border-[#e4ede5] shadow-sm"
-                }`}
-              >
-                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-                  <div className="flex items-start gap-4">
-                    <div className="w-11 h-11 rounded-2xl bg-[#3e7b52]/10 text-[#3e7b52] flex items-center justify-center shrink-0">
-                      <Building2 size={22} />
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <h3 className="text-base font-bold tracking-tight">
-                          {app.company?.name}
-                        </h3>
-                        <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/15 text-amber-600 dark:text-amber-400">
-                          {app.status}
-                        </span>
-                      </div>
-                      <p className="text-xs text-[#627766] mt-0.5">
-                        Applicant: {app.user?.firstName} {app.user?.lastName} ({app.user?.email}) · {app.company?.phone}
-                      </p>
-                      <p className="text-xs text-[#627766] mt-0.5">
-                        Business: {app.company?.businessType} · Reg: {app.company?.registrationNumber} · VAT: {app.company?.taxId}
-                      </p>
-                      <p className="text-xs font-semibold text-[#3e7b52] mt-1.5">
-                        Estimated Annual Spend: {app.annualSpendEstimate}
-                      </p>
-                    </div>
-                  </div>
+            pendingApplications.map((app) => {
+              const companyName = app.company?.name || "Bespoke Design Firm";
+              const applicantName = app.user
+                ? `${app.user.firstName || ""} ${app.user.lastName || ""}`.trim() || "Design Firm Principal"
+                : "Registered Principal";
+              const applicantEmail = app.user?.email || "studio@designfirm.com";
+              const phone = app.company?.phone || app.phone || app.user?.phone || "Direct line provided";
+              const bType = app.company?.businessType || app.businessType || "INTERIOR_DESIGNER";
+              const regNumber = app.company?.registrationNumber || app.company?.taxNumber || app.gstNumber || app.vatNumber || "CRN-ON-FILE";
+              const website = app.company?.website || app.website;
+              const notes = app.rejectionReason || app.notes || app.annualSpendEstimate;
 
-                  <div className="flex items-center gap-2 self-end lg:self-center">
-                    <button
-                      onClick={() => {
-                        setSelectedAppForReview(app);
-                        setAssignedCredit(50000);
-                      }}
-                      className="px-4 py-2 rounded-full bg-[#3e7b52] text-white text-xs font-bold hover:bg-[#346a45] transition-all flex items-center gap-1.5 shadow-sm"
-                    >
-                      <ShieldCheck size={14} /> Review & Assign Tier
-                    </button>
+              return (
+                <div
+                  key={app._id}
+                  className={`p-6 rounded-2xl border transition-all ${
+                    isDark
+                      ? "bg-[#141a15] border-[#253327]"
+                      : "bg-white border-[#e4ede5] shadow-sm"
+                  }`}
+                >
+                  <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                    <div className="flex items-start gap-4">
+                      <div className="w-11 h-11 rounded-2xl bg-[#3e7b52]/10 text-[#3e7b52] flex items-center justify-center shrink-0">
+                        <Building2 size={22} />
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <h3 className="text-base font-bold tracking-tight">
+                            {companyName}
+                          </h3>
+                          <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/15 text-amber-600 dark:text-amber-400">
+                            {app.status}
+                          </span>
+                        </div>
+                        <p className="text-xs text-[#627766] mt-0.5">
+                          Applicant: {applicantName} ({applicantEmail}) · {phone}
+                        </p>
+                        <p className="text-xs text-[#627766] mt-0.5">
+                          Business: {bType} · Reg/Tax: {regNumber}
+                          {website && (
+                            <> · <a href={website.startsWith("http") ? website : `https://${website}`} target="_blank" rel="noreferrer" className="text-[#3e7b52] underline font-medium">{website}</a></>
+                          )}
+                        </p>
+                        {notes && (
+                          <p className="text-xs font-semibold text-[#3e7b52] mt-1.5 italic">
+                            Scope Notes: &quot;{notes}&quot;
+                          </p>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2 self-end lg:self-center">
+                      <button
+                        onClick={() => {
+                          setSelectedAppForReview(app);
+                          const defaultTier = tradeTiers?.find((t) => t.name === "GOLD") || tradeTiers?.[0];
+                          if (defaultTier) {
+                            setAssignedTier(defaultTier._id);
+                            setAssignedCredit(defaultTier.creditLimit || 50000);
+                          } else {
+                            setAssignedTier("tier_gold");
+                            setAssignedCredit(50000);
+                          }
+                        }}
+                        className="px-4 py-2 rounded-full bg-[#3e7b52] text-white text-xs font-bold hover:bg-[#346a45] transition-all flex items-center gap-1.5 shadow-sm"
+                      >
+                        <ShieldCheck size={14} /> Review & Assign Tier
+                      </button>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))
+              );
+            })
           )}
         </div>
       )}
@@ -444,55 +524,64 @@ export default function AdminTradeReview() {
         </div>
       )}
 
-      {/* TAB 3: B2B CREDIT LIMITS */}
+      {/* TAB 3: APPROVED B2B PARTNERS & CREDIT LIMITS */}
       {activeSubTab === "credits" && (
         <div
           className={`rounded-2xl border p-6 overflow-hidden ${
             isDark ? "bg-[#141a15] border-[#253327]" : "bg-white border-[#e4ede5]"
           }`}
         >
-          <table className="w-full text-left text-xs">
-            <thead>
-              <tr
-                className={`border-b text-[11px] font-semibold uppercase tracking-wider text-[#627766] ${
-                  isDark ? "border-[#253327]" : "border-[#edf2ee]"
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs">
+              <thead>
+                <tr
+                  className={`border-b text-[11px] font-semibold uppercase tracking-wider text-[#627766] ${
+                    isDark ? "border-[#253327]" : "border-[#edf2ee]"
+                  }`}
+                >
+                  <th className="pb-3 pl-2">Design Firm & Principal</th>
+                  <th className="pb-3">Assigned Tier</th>
+                  <th className="pb-3">Credit Limit</th>
+                  <th className="pb-3">Used Balance</th>
+                  <th className="pb-3">Available Line</th>
+                  <th className="pb-3">Payment Term</th>
+                  <th className="pb-3">Status</th>
+                </tr>
+              </thead>
+              <tbody
+                className={`divide-y ${
+                  isDark ? "divide-[#202c22]" : "divide-[#edf2ee]"
                 }`}
               >
-                <th className="pb-3 pl-2">Design Firm</th>
-                <th className="pb-3">Credit Limit</th>
-                <th className="pb-3">Used Balance</th>
-                <th className="pb-3">Available Line</th>
-                <th className="pb-3">Payment Term</th>
-                <th className="pb-3">Status</th>
-              </tr>
-            </thead>
-            <tbody
-              className={`divide-y ${
-                isDark ? "divide-[#202c22]" : "divide-[#edf2ee]"
-              }`}
-            >
-              {[
-                { name: "Kensington Heritage Interiors Ltd", limit: 50000, used: 13580, term: "NET_30", status: "ACTIVE" },
-                { name: "Belgravia Design Guild", limit: 100000, used: 62400, term: "NET_60", status: "ACTIVE" },
-                { name: "Soho House & Co Studio", limit: 150000, used: 88900, term: "NET_60", status: "ACTIVE" },
-              ].map((crd, idx) => (
-                <tr key={idx} className="hover:bg-[#f8fbf9] dark:hover:bg-[#1a231b]">
-                  <td className="py-3.5 pl-2 font-bold">{crd.name}</td>
-                  <td className="py-3.5 font-bold">£{crd.limit.toLocaleString()}</td>
-                  <td className="py-3.5 text-[#859b89]">£{crd.used.toLocaleString()}</td>
-                  <td className="py-3.5 font-bold text-[#3e7b52]">
-                    £{(crd.limit - crd.used).toLocaleString()}
-                  </td>
-                  <td className="py-3.5 font-mono text-xs">{crd.term}</td>
-                  <td className="py-3.5">
-                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/15 text-emerald-600">
-                      {crd.status}
-                    </span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                {displayApprovedPartners.map((crd, idx) => (
+                  <tr key={idx} className="hover:bg-[#f8fbf9] dark:hover:bg-[#1a231b] transition-colors">
+                    <td className="py-3.5 pl-2">
+                      <p className="font-bold text-[#142617] dark:text-[#f2f7f3]">{crd.name}</p>
+                      {crd.applicant && (
+                        <p className="text-[10px] text-[#627766] font-normal">{crd.applicant}</p>
+                      )}
+                    </td>
+                    <td className="py-3.5">
+                      <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-[#3e7b52]/10 text-[#3e7b52]">
+                        {crd.tierName} ({crd.discount}% Wholesale Margin)
+                      </span>
+                    </td>
+                    <td className="py-3.5 font-bold">£{crd.limit.toLocaleString()}</td>
+                    <td className="py-3.5 text-[#859b89]">£{crd.used.toLocaleString()}</td>
+                    <td className="py-3.5 font-bold text-[#3e7b52]">
+                      £{(crd.limit - crd.used).toLocaleString()}
+                    </td>
+                    <td className="py-3.5 font-mono text-xs">{crd.term}</td>
+                    <td className="py-3.5">
+                      <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/15 text-emerald-600">
+                        {crd.status}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
 
@@ -508,7 +597,7 @@ export default function AdminTradeReview() {
           >
             <div className="flex items-center justify-between pb-3 border-b border-inherit">
               <h3 className="text-base font-bold">
-                Review: {selectedAppForReview.company?.name}
+                Review: {selectedAppForReview.company?.name || "Trade Design Application"}
               </h3>
               <button
                 onClick={() => setSelectedAppForReview(null)}
@@ -518,6 +607,51 @@ export default function AdminTradeReview() {
               </button>
             </div>
 
+            {/* Applicant credentials card */}
+            <div
+              className={`p-3 rounded-xl border text-xs space-y-1 ${
+                isDark ? "bg-[#1c291f] border-[#2c4030]" : "bg-[#f5f9f6] border-[#dce8df]"
+              }`}
+            >
+              <div className="flex justify-between items-center">
+                <span className="font-semibold text-[#627766]">Applicant:</span>
+                <span className="font-bold">
+                  {selectedAppForReview.user?.firstName} {selectedAppForReview.user?.lastName} ({selectedAppForReview.user?.email || "studio@design.com"})
+                </span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="font-semibold text-[#627766]">Studio / Business:</span>
+                <span>{selectedAppForReview.company?.businessType || selectedAppForReview.businessType || "INTERIOR_DESIGNER"}</span>
+              </div>
+              {(selectedAppForReview.company?.taxNumber || selectedAppForReview.gstNumber || selectedAppForReview.vatNumber) && (
+                <div className="flex justify-between items-center">
+                  <span className="font-semibold text-[#627766]">Registration / Tax ID:</span>
+                  <span className="font-mono">{selectedAppForReview.company?.taxNumber || selectedAppForReview.gstNumber || selectedAppForReview.vatNumber}</span>
+                </div>
+              )}
+              {(selectedAppForReview.company?.website || selectedAppForReview.website) && (
+                <div className="flex justify-between items-center">
+                  <span className="font-semibold text-[#627766]">Website:</span>
+                  <a
+                    href={(selectedAppForReview.company?.website || selectedAppForReview.website).startsWith("http") ? (selectedAppForReview.company?.website || selectedAppForReview.website) : `https://${selectedAppForReview.company?.website || selectedAppForReview.website}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-[#3e7b52] underline font-medium"
+                  >
+                    {selectedAppForReview.company?.website || selectedAppForReview.website}
+                  </a>
+                </div>
+              )}
+              {(selectedAppForReview.rejectionReason || selectedAppForReview.notes || selectedAppForReview.annualSpendEstimate) && (
+                <div className="pt-1 mt-1 border-t border-inherit">
+                  <span className="font-semibold text-[#627766] block">Scope / Notes:</span>
+                  <p className="italic text-[#859b89]">
+                    {selectedAppForReview.rejectionReason || selectedAppForReview.notes || selectedAppForReview.annualSpendEstimate}
+                  </p>
+                </div>
+              )}
+            </div>
+
             <div className="space-y-3 text-xs">
               <div>
                 <label className="block text-[11px] font-semibold uppercase text-[#627766] mb-1">
@@ -525,16 +659,35 @@ export default function AdminTradeReview() {
                 </label>
                 <select
                   value={assignedTier}
-                  onChange={(e) => setAssignedTier(e.target.value)}
+                  onChange={(e) => {
+                    setAssignedTier(e.target.value);
+                    const selected = tradeTiers?.find(
+                      (t) => t._id === e.target.value || t.name === e.target.value
+                    );
+                    if (selected?.creditLimit) {
+                      setAssignedCredit(selected.creditLimit);
+                    }
+                  }}
                   className={`w-full p-2.5 rounded-lg border outline-none font-medium ${
                     isDark
                       ? "bg-[#1f2c21] border-[#314633] text-white"
                       : "bg-[#f9fbf9] border-[#d8e6dc] text-[#142617]"
                   }`}
                 >
-                  <option value="tier_bronze">Tier 1: Trade Standard (15% OFF - £10,000 Credit)</option>
-                  <option value="tier_silver">Tier 2: Trade Silver (20% OFF - £25,000 Credit)</option>
-                  <option value="tier_gold">Tier 3: Trade Gold (25% OFF - £50,000 Credit)</option>
+                  {tradeTiers && tradeTiers.length > 0 ? (
+                    tradeTiers.map((t) => (
+                      <option key={t._id} value={t._id}>
+                        {t.displayName || t.name} ({t.discountPercentage}% Wholesale Margin &mdash; £{Number(t.creditLimit || 50000).toLocaleString()} Credit Line)
+                      </option>
+                    ))
+                  ) : (
+                    <>
+                      <option value="tier_bronze">Tier 1: Trade Bronze (15% OFF &mdash; £10,000 Credit)</option>
+                      <option value="tier_silver">Tier 2: Trade Silver (20% OFF &mdash; £25,000 Credit)</option>
+                      <option value="tier_gold">Tier 3: Trade Gold (25% OFF &mdash; £50,000 Credit)</option>
+                      <option value="tier_platinum">Tier 4: Trade Platinum (30% OFF &mdash; £100,000 Credit)</option>
+                    </>
+                  )}
                 </select>
               </div>
 

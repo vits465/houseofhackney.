@@ -137,6 +137,7 @@ export function AdminProvider({ children }) {
   const [tradeQuotations, setTradeQuotations] = useState([]);
   const [pendingApplications, setPendingApplications] = useState([]);
   const [tradeTiers, setTradeTiers] = useState([]);
+  const [allTradeProfiles, setAllTradeProfiles] = useState([]);
   const [loadingTradeData, setLoadingTradeData] = useState(false);
 
   // Products & Catalog State
@@ -202,6 +203,7 @@ export function AdminProvider({ children }) {
         liveUsersRes,
         catsData,
         brandsData,
+        allProfilesRes,
       ] = await Promise.all([
         adminApiService.getMyTradeProfile().catch(() => null),
         adminApiService.getMyCredit().catch(() => null),
@@ -213,6 +215,7 @@ export function AdminProvider({ children }) {
         adminApiService.getUsers().catch(() => []),
         adminApiService.getCategories().catch(() => []),
         adminApiService.getBrands().catch(() => []),
+        adminApiService.getAllTradeProfiles().catch(() => []),
       ]);
 
       // Merge saved tier override if exists in localStorage
@@ -301,6 +304,8 @@ export function AdminProvider({ children }) {
       setTradeQuotations(finalQuotations.length > 0 ? finalQuotations : rawQuotes);
       setPendingApplications(pendingApps || []);
       setTradeTiers(tiersData || []);
+      const validProfiles = Array.isArray(allProfilesRes) ? allProfilesRes : allProfilesRes?.data || [];
+      setAllTradeProfiles(validProfiles);
 
       const validProds = Array.isArray(prodsData) ? prodsData : prodsData?.data || [];
       setProducts(validProds);
@@ -694,6 +699,7 @@ export function AdminProvider({ children }) {
       });
 
       setPendingApplications((prev) => prev.filter((a) => a._id !== appId));
+      loadBackendData(false);
       showToast(`Trade application ${status.toLowerCase()} successfully.`);
     } catch (err) {
       showToast("Error reviewing application: " + err.message);
@@ -949,6 +955,7 @@ export function AdminProvider({ children }) {
         tradeQuotations,
         pendingApplications,
         tradeTiers,
+        allTradeProfiles,
         loadingTradeData,
         upgradeTier,
         requestQuote,
