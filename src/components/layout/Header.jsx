@@ -222,10 +222,44 @@ function Header() {
     return "opacity-0 pointer-events-none absolute inset-0 flex items-center justify-center";
   };
 
+  const isTradePartner = Boolean(
+    user?.isTradeAccount ||
+    user?.accountType === "BUSINESS" ||
+    user?.tradeProfile ||
+    user?.roles?.some((r) => {
+      const s = typeof r === "string" ? r.toLowerCase() : r.slug?.toLowerCase() || "";
+      return s.includes("trade");
+    })
+  );
+
+  const isAdminStaff = Boolean(
+    user?.roles?.some((r) => {
+      const s = typeof r === "string" ? r.toLowerCase() : r.slug?.toLowerCase() || "";
+      return s.includes("admin") || s.includes("manager");
+    })
+  );
+
   const renderAuthLink = () =>
     initialized ? (
       isAuthenticated ? (
         <div className="hidden lg:flex items-center gap-2 sm:gap-3">
+          {isTradePartner ? (
+            <Link
+              to="/admin"
+              title="Launch B2B Trade Portal"
+              className="px-2.5 py-1 rounded-full text-[10px] font-mono tracking-wider font-bold bg-[#2d3326] text-white hover:bg-[#3e7b52] transition-colors shadow-xs"
+            >
+              TRADE PORTAL
+            </Link>
+          ) : isAdminStaff ? (
+            <Link
+              to="/admin"
+              title="Launch Atelier Admin"
+              className="px-2.5 py-1 rounded-full text-[10px] font-mono tracking-wider font-bold bg-[#171713] text-white hover:bg-[#3e7b52] transition-colors shadow-xs"
+            >
+              ADMIN
+            </Link>
+          ) : null}
           <Link
             to="/account"
             className="text-xs tracking-[1px] hover:underline font-semibold text-[#171713] uppercase flex items-center gap-1.5"

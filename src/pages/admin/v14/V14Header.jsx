@@ -33,6 +33,7 @@ export default function V14Header({ activeTab, setActiveTab }) {
     isInitialLoading,
     isRefreshing,
     refreshData,
+    isActualAdmin,
   } = useAdmin();
   const isDark = theme === "dark";
   const dispatch = useDispatch();
@@ -125,6 +126,7 @@ export default function V14Header({ activeTab, setActiveTab }) {
   const RoleIcon = currentRoleConfig.icon;
 
   const handleSelectRole = (newRole) => {
+    if (!isActualAdmin) return;
     setCurrentRole(newRole);
     setRoleDropdownOpen(false);
   };
@@ -205,144 +207,157 @@ export default function V14Header({ activeTab, setActiveTab }) {
 
         {/* Right: Role Switcher Capsule, Search, Notifications, Profile */}
         <div className="flex items-center gap-1.5 sm:gap-2.5">
-          {/* Role Switcher Pill */}
-          <div className="relative">
-            <button
-              onClick={() => setRoleDropdownOpen((prev) => !prev)}
-              title="Switch Access View (Super Admin / Admin / Trade Patron)"
-              className={`flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 rounded-full border transition-all text-xs font-semibold shadow-sm ${
+          {/* Role Display: Switcher Pill for Genuine Admins ONLY, Static Secure Badge for Trade Patrons */}
+          {isActualAdmin ? (
+            <div className="relative">
+              <button
+                onClick={() => setRoleDropdownOpen((prev) => !prev)}
+                title="Switch Access View (Super Admin / Admin / Trade Patron Preview)"
+                className={`flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 rounded-full border transition-all text-xs font-semibold shadow-sm ${
+                  isDark
+                    ? "bg-[#1d271f] border-[#2e3f31] hover:bg-[#253528] text-white"
+                    : "bg-[#edf6f0] border-[#d4e6d7] hover:bg-[#e4f1e8] text-[#1c4026]"
+                }`}
+              >
+                <RoleIcon size={13} className="text-[#3e7b52]" />
+                <span className="truncate max-w-[90px] sm:max-w-none">
+                  {currentRoleConfig.label}
+                </span>
+                <ChevronDown
+                  size={12}
+                  className={`transition-transform duration-200 ${
+                    roleDropdownOpen ? "rotate-180" : ""
+                  }`}
+                />
+              </button>
+
+              {/* Role Dropdown */}
+              <AnimatePresence>
+                {roleDropdownOpen && (
+                  <>
+                    <div
+                      className="fixed inset-0 z-40"
+                      onClick={() => setRoleDropdownOpen(false)}
+                    />
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.95, y: 8 }}
+                      animate={{ opacity: 1, scale: 1, y: 0 }}
+                      exit={{ opacity: 0, scale: 0.95, y: 8 }}
+                      transition={{ duration: 0.15 }}
+                      className={`absolute right-0 mt-2 w-64 rounded-2xl border shadow-xl p-2 z-50 text-xs ${
+                        isDark
+                          ? "bg-[#162017] border-[#293d2c] text-white"
+                          : "bg-white border-[#dce8df] text-[#142617]"
+                      }`}
+                    >
+                      <div className="px-3 py-1.5 border-b border-inherit mb-1">
+                        <span className="text-[10px] uppercase font-bold text-[#627766] tracking-wider block">
+                          Switch Role View
+                        </span>
+                        <span className="text-[10px] text-[#859b89]">
+                          Preview endpoints and access control
+                        </span>
+                      </div>
+
+                      {/* Super Admin Option */}
+                      <button
+                        onClick={() => handleSelectRole("super-admin")}
+                        className={`w-full flex items-center justify-between p-2.5 rounded-xl transition-colors text-left ${
+                          currentRole === "super-admin"
+                            ? "bg-[#3e7b52]/15 text-[#3e7b52] font-bold"
+                            : isDark
+                            ? "hover:bg-[#1f2d21]"
+                            : "hover:bg-[#f2f7f3]"
+                        }`}
+                      >
+                        <div className="flex items-center gap-2.5">
+                          <Crown size={15} className="text-[#3e7b52]" />
+                          <div>
+                            <p className="font-bold">Super Admin</p>
+                            <p className="text-[10px] text-[#627766]">
+                              Master Atelier · Full system access
+                            </p>
+                          </div>
+                        </div>
+                        {currentRole === "super-admin" && <Check size={14} />}
+                      </button>
+
+                      {/* Admin Manager Option */}
+                      <button
+                        onClick={() => handleSelectRole("admin")}
+                        className={`w-full flex items-center justify-between p-2.5 rounded-xl transition-colors text-left ${
+                          currentRole === "admin"
+                            ? "bg-[#3e7b52]/15 text-[#3e7b52] font-bold"
+                            : isDark
+                            ? "hover:bg-[#1f2d21]"
+                            : "hover:bg-[#f2f7f3]"
+                        }`}
+                      >
+                        <div className="flex items-center gap-2.5">
+                          <Shield size={15} className="text-[#3e7b52]" />
+                          <div>
+                            <p className="font-bold">Admin Manager</p>
+                            <p className="text-[10px] text-[#627766]">
+                              Catalog, Orders & Trade Review
+                            </p>
+                          </div>
+                        </div>
+                        {currentRole === "admin" && <Check size={14} />}
+                      </button>
+
+                      {/* Trade Patron Option */}
+                      <button
+                        onClick={() => handleSelectRole("trade")}
+                        className={`w-full flex items-center justify-between p-2.5 rounded-xl transition-colors text-left ${
+                          currentRole === "trade"
+                            ? "bg-[#3e7b52]/15 text-[#3e7b52] font-bold"
+                            : isDark
+                            ? "hover:bg-[#1f2d21]"
+                            : "hover:bg-[#f2f7f3]"
+                        }`}
+                      >
+                        <div className="flex items-center gap-2.5">
+                          <Award size={15} className="text-[#3e7b52]" />
+                          <div>
+                            <p className="font-bold">Trade Patron (B2B)</p>
+                            <p className="text-[10px] text-[#627766]">
+                              Limited access · Quotes & Credit
+                            </p>
+                          </div>
+                        </div>
+                        {currentRole === "trade" && <Check size={14} />}
+                      </button>
+
+                      {/* Sign Out Option */}
+                      <div className="pt-2 mt-2 border-t border-inherit">
+                        <button
+                          onClick={handleLogout}
+                          className="w-full flex items-center gap-2.5 p-2 rounded-xl transition-colors text-left text-rose-500 hover:bg-rose-500/10 font-bold"
+                        >
+                          <LogOut size={15} />
+                          <div>
+                            <p className="font-bold">Log Out</p>
+                            <p className="text-[10px] text-[#859b89]">End current session</p>
+                          </div>
+                        </button>
+                      </div>
+                    </motion.div>
+                  </>
+                )}
+              </AnimatePresence>
+            </div>
+          ) : (
+            <div
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-semibold shadow-xs select-none ${
                 isDark
-                  ? "bg-[#1d271f] border-[#2e3f31] hover:bg-[#253528] text-white"
-                  : "bg-[#edf6f0] border-[#d4e6d7] hover:bg-[#e4f1e8] text-[#1c4026]"
+                  ? "bg-[#1d271f] border-[#2e3f31] text-[#7ec792]"
+                  : "bg-[#edf6f0] border-[#d4e6d7] text-[#1c4026]"
               }`}
             >
-              <RoleIcon size={13} className="text-[#3e7b52]" />
-              <span className="truncate max-w-[90px] sm:max-w-none">
-                {currentRoleConfig.label}
-              </span>
-              <ChevronDown
-                size={12}
-                className={`transition-transform duration-200 ${
-                  roleDropdownOpen ? "rotate-180" : ""
-                }`}
-              />
-            </button>
-
-            {/* Role Dropdown */}
-            <AnimatePresence>
-              {roleDropdownOpen && (
-                <>
-                  <div
-                    className="fixed inset-0 z-40"
-                    onClick={() => setRoleDropdownOpen(false)}
-                  />
-                  <motion.div
-                    initial={{ opacity: 0, scale: 0.95, y: 8 }}
-                    animate={{ opacity: 1, scale: 1, y: 0 }}
-                    exit={{ opacity: 0, scale: 0.95, y: 8 }}
-                    transition={{ duration: 0.15 }}
-                    className={`absolute right-0 mt-2 w-64 rounded-2xl border shadow-xl p-2 z-50 text-xs ${
-                      isDark
-                        ? "bg-[#162017] border-[#293d2c] text-white"
-                        : "bg-white border-[#dce8df] text-[#142617]"
-                    }`}
-                  >
-                    <div className="px-3 py-1.5 border-b border-inherit mb-1">
-                      <span className="text-[10px] uppercase font-bold text-[#627766] tracking-wider block">
-                        Switch Role View
-                      </span>
-                      <span className="text-[10px] text-[#859b89]">
-                        Preview endpoints and access control
-                      </span>
-                    </div>
-
-                    {/* Super Admin Option */}
-                    <button
-                      onClick={() => handleSelectRole("super-admin")}
-                      className={`w-full flex items-center justify-between p-2.5 rounded-xl transition-colors text-left ${
-                        currentRole === "super-admin"
-                          ? "bg-[#3e7b52]/15 text-[#3e7b52] font-bold"
-                          : isDark
-                          ? "hover:bg-[#1f2d21]"
-                          : "hover:bg-[#f2f7f3]"
-                      }`}
-                    >
-                      <div className="flex items-center gap-2.5">
-                        <Crown size={15} className="text-[#3e7b52]" />
-                        <div>
-                          <p className="font-bold">Super Admin</p>
-                          <p className="text-[10px] text-[#627766]">
-                            Master Atelier · Full system access
-                          </p>
-                        </div>
-                      </div>
-                      {currentRole === "super-admin" && <Check size={14} />}
-                    </button>
-
-                    {/* Admin Manager Option */}
-                    <button
-                      onClick={() => handleSelectRole("admin")}
-                      className={`w-full flex items-center justify-between p-2.5 rounded-xl transition-colors text-left ${
-                        currentRole === "admin"
-                          ? "bg-[#3e7b52]/15 text-[#3e7b52] font-bold"
-                          : isDark
-                          ? "hover:bg-[#1f2d21]"
-                          : "hover:bg-[#f2f7f3]"
-                      }`}
-                    >
-                      <div className="flex items-center gap-2.5">
-                        <Shield size={15} className="text-[#3e7b52]" />
-                        <div>
-                          <p className="font-bold">Admin Manager</p>
-                          <p className="text-[10px] text-[#627766]">
-                            Catalog, Orders & Trade Review
-                          </p>
-                        </div>
-                      </div>
-                      {currentRole === "admin" && <Check size={14} />}
-                    </button>
-
-                    {/* Trade Patron Option */}
-                    <button
-                      onClick={() => handleSelectRole("trade")}
-                      className={`w-full flex items-center justify-between p-2.5 rounded-xl transition-colors text-left ${
-                        currentRole === "trade"
-                          ? "bg-[#3e7b52]/15 text-[#3e7b52] font-bold"
-                          : isDark
-                          ? "hover:bg-[#1f2d21]"
-                          : "hover:bg-[#f2f7f3]"
-                      }`}
-                    >
-                      <div className="flex items-center gap-2.5">
-                        <Award size={15} className="text-[#3e7b52]" />
-                        <div>
-                          <p className="font-bold">Trade Patron (B2B)</p>
-                          <p className="text-[10px] text-[#627766]">
-                            Limited access · Quotes & Credit
-                          </p>
-                        </div>
-                      </div>
-                      {currentRole === "trade" && <Check size={14} />}
-                    </button>
-
-                    {/* Sign Out Option */}
-                    <div className="pt-2 mt-2 border-t border-inherit">
-                      <button
-                        onClick={handleLogout}
-                        className="w-full flex items-center gap-2.5 p-2 rounded-xl transition-colors text-left text-rose-500 hover:bg-rose-500/10 font-bold"
-                      >
-                        <LogOut size={15} />
-                        <div>
-                          <p className="font-bold">Log Out</p>
-                          <p className="text-[10px] text-[#859b89]">End current session</p>
-                        </div>
-                      </button>
-                    </div>
-                  </motion.div>
-                </>
-              )}
-            </AnimatePresence>
-          </div>
+              <Award size={13} className="text-[#3e7b52]" />
+              <span className="truncate">Trade Patron (B2B)</span>
+            </div>
+          )}
 
           {/* Live Sync / API Telemetry Status & Manual Refresh Button */}
           <button

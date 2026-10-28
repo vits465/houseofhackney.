@@ -2106,12 +2106,31 @@ function TradeSection({ tradeProfile, user, onRefresh }) {
                 ? "Active Trade Partner"
                 : tradeProfile?.status === "PENDING"
                 ? "Application Under Review"
+                : user?.isTradeAccount || user?.accountType === "BUSINESS"
+                ? "Active Trade Partner"
                 : "Retail Patron Account"}
             </div>
-            {tradeProfile?.tier && (
+            {tradeProfile?.tier ? (
               <span className="mt-1 inline-block rounded-full bg-[#c29b38]/15 px-3 py-0.5 text-[11px] font-semibold text-[#8a681c] border border-[#c29b38]/30">
-                {tradeProfile.tier.name || "Silver Tier - 20% Off"}
+                {tradeProfile.tier.displayName || tradeProfile.tier.name || "Trade Tier"} • {tradeProfile.tier.discountPercentage || 20}% Off
               </span>
+            ) : (tradeProfile?.status === "APPROVED" || user?.isTradeAccount || user?.accountType === "BUSINESS") ? (
+              <span className="mt-1 inline-block rounded-full bg-[#c29b38]/15 px-3 py-0.5 text-[11px] font-semibold text-[#8a681c] border border-[#c29b38]/30">
+                Trade Patron • 20% Wholesale
+              </span>
+            ) : null}
+
+            {/* Launch B2B Trade Portal Button */}
+            {(tradeProfile?.status === "APPROVED" || user?.isTradeAccount || user?.accountType === "BUSINESS") && (
+              <div className="mt-3.5">
+                <Link
+                  to="/admin"
+                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#2d3326] hover:bg-[#3e7b52] text-white text-xs font-semibold tracking-wider uppercase transition-colors shadow-xs"
+                >
+                  <span>Open Trade Portal</span>
+                  <ArrowRight size={13} />
+                </Link>
+              </div>
             )}
           </div>
         </div>

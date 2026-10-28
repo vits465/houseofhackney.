@@ -55,12 +55,23 @@ export default function V14Overview() {
 
   // Fetch real backend data
   const loadLiveTelemetry = async () => {
+    // Populate immediately from context if available for 0ms visual rendering
+    if (contextOrders && contextOrders.length > 0) {
+      setOrders(contextOrders);
+    }
+    if (contextProducts && contextProducts.length > 0) {
+      setProductsCount(contextProducts.length);
+    }
+    if (contextUsers && contextUsers.length > 0) {
+      setUsersCount(contextUsers.length);
+    }
+
     setLoading(true);
     try {
       const [ordersRes, prodsRes, usersRes, invoicesRes, revSummary] = await Promise.all([
-        adminApiService.getOrders().catch(() => []),
-        adminApiService.getProducts({}, false).catch(() => []),
-        adminApiService.getUsers().catch(() => []),
+        adminApiService.getOrders().catch(() => contextOrders || []),
+        adminApiService.getProducts({}, false).catch(() => contextProducts || []),
+        adminApiService.getUsers().catch(() => contextUsers || []),
         adminApiService.getInvoices().catch(() => []),
         adminApiService.getReviewsSummary().catch(() => null),
       ]);
@@ -364,13 +375,22 @@ export default function V14Overview() {
             </div>
 
             {/* Big Balance Number */}
-            <h2
-              className={`text-3xl sm:text-4xl font-serif font-bold tracking-tight ${
-                isDark ? "text-[#f2f7f3]" : "text-[#142617]"
-              }`}
-            >
-              {formatMoney(liveMetrics.totalGrossGBP)}
-            </h2>
+            {loading ? (
+              <div className="flex items-center gap-2.5 h-10 my-1">
+                <RefreshCw size={22} className="animate-spin text-[#3e7b52]" />
+                <span className="text-sm font-sans font-medium text-[#627766] animate-pulse">
+                  Syncing revenue ledger...
+                </span>
+              </div>
+            ) : (
+              <h2
+                className={`text-3xl sm:text-4xl font-serif font-bold tracking-tight ${
+                  isDark ? "text-[#f2f7f3]" : "text-[#142617]"
+                }`}
+              >
+                {formatMoney(liveMetrics.totalGrossGBP)}
+              </h2>
+            )}
 
             {/* Percentage Growth Badge */}
             <div className="flex items-center gap-2 mt-2">
@@ -474,9 +494,16 @@ export default function V14Overview() {
             </div>
 
             <div className="my-2">
-              <h3 className="text-2xl sm:text-3xl font-serif font-bold tracking-tight">
-                {formatMoney(liveMetrics.totalProfitGBP)}
-              </h3>
+              {loading ? (
+                <div className="flex items-center gap-2 h-9">
+                  <RefreshCw size={16} className="animate-spin text-white/80" />
+                  <span className="text-xs text-white/80 animate-pulse">Computing...</span>
+                </div>
+              ) : (
+                <h3 className="text-2xl sm:text-3xl font-serif font-bold tracking-tight">
+                  {formatMoney(liveMetrics.totalProfitGBP)}
+                </h3>
+              )}
             </div>
 
             <div>
@@ -513,9 +540,16 @@ export default function V14Overview() {
             </div>
 
             <div className="my-2">
-              <h3 className="text-2xl sm:text-3xl font-serif font-bold tracking-tight">
-                {formatMoney(liveMetrics.totalFulfillmentGBP)}
-              </h3>
+              {loading ? (
+                <div className="flex items-center gap-2 h-9">
+                  <RefreshCw size={16} className="animate-spin text-[#3e7b52]" />
+                  <span className="text-xs text-[#627766] animate-pulse">Calculating...</span>
+                </div>
+              ) : (
+                <h3 className="text-2xl sm:text-3xl font-serif font-bold tracking-tight">
+                  {formatMoney(liveMetrics.totalFulfillmentGBP)}
+                </h3>
+              )}
             </div>
 
             <div>
@@ -552,9 +586,16 @@ export default function V14Overview() {
             </div>
 
             <div className="my-2">
-              <h3 className="text-2xl sm:text-3xl font-serif font-bold tracking-tight">
-                {productsCount} SKUs
-              </h3>
+              {loading ? (
+                <div className="flex items-center gap-2 h-9">
+                  <RefreshCw size={16} className="animate-spin text-[#3e7b52]" />
+                  <span className="text-xs text-[#627766] animate-pulse">Cataloging...</span>
+                </div>
+              ) : (
+                <h3 className="text-2xl sm:text-3xl font-serif font-bold tracking-tight">
+                  {productsCount} SKUs
+                </h3>
+              )}
             </div>
 
             <div>
@@ -591,9 +632,16 @@ export default function V14Overview() {
             </div>
 
             <div className="my-2">
-              <h3 className="text-2xl sm:text-3xl font-serif font-bold tracking-tight">
-                {usersCount} Accounts
-              </h3>
+              {loading ? (
+                <div className="flex items-center gap-2 h-9">
+                  <RefreshCw size={16} className="animate-spin text-amber-500" />
+                  <span className="text-xs text-[#627766] animate-pulse">Verifying...</span>
+                </div>
+              ) : (
+                <h3 className="text-2xl sm:text-3xl font-serif font-bold tracking-tight">
+                  {usersCount} Accounts
+                </h3>
+              )}
             </div>
 
             <div>
@@ -921,7 +969,16 @@ export default function V14Overview() {
                   isDark ? "divide-[#212c23]" : "divide-[#edf4ee]"
                 }`}
               >
-                {filteredOrders.length === 0 ? (
+                {loading ? (
+                  <tr>
+                    <td colSpan={6} className="py-8 text-center text-[#627766]">
+                      <div className="flex items-center justify-center gap-2">
+                        <RefreshCw size={15} className="animate-spin text-[#3e7b52]" />
+                        <span className="text-xs font-sans">Synchronizing live orders pipeline...</span>
+                      </div>
+                    </td>
+                  </tr>
+                ) : filteredOrders.length === 0 ? (
                   <tr>
                     <td colSpan={6} className="py-8 text-center text-[#627766]">
                       No orders found matching your search.

@@ -107,6 +107,23 @@ function MobileMenu({ isOpen, onClose, activeTab = "SHOP", setActiveTab = () => 
   const [activeCategory, setActiveCategory] = useState(null);
   const { user, isAuthenticated } = useSelector((state) => state.auth || {});
 
+  const isTradePartner = Boolean(
+    user?.isTradeAccount ||
+    user?.accountType === "BUSINESS" ||
+    user?.tradeProfile ||
+    user?.roles?.some((r) => {
+      const s = typeof r === "string" ? r.toLowerCase() : r.slug?.toLowerCase() || "";
+      return s.includes("trade");
+    })
+  );
+
+  const isAdminStaff = Boolean(
+    user?.roles?.some((r) => {
+      const s = typeof r === "string" ? r.toLowerCase() : r.slug?.toLowerCase() || "";
+      return s.includes("admin") || s.includes("manager");
+    })
+  );
+
   const closeMenu = () => {
     setActiveCategory(null);
     onClose?.();
@@ -407,6 +424,26 @@ function MobileMenu({ isOpen, onClose, activeTab = "SHOP", setActiveTab = () => 
                 >
                   Trade Concierge
                 </Link>
+                {isTradePartner && (
+                  <Link
+                    to="/admin"
+                    onClick={closeMenu}
+                    className="rounded-lg bg-[#2d3326] px-2.5 py-1.5 text-white font-semibold hover:bg-[#3e7b52] transition flex items-center justify-between"
+                  >
+                    <span>B2B Trade Portal</span>
+                    <span>→</span>
+                  </Link>
+                )}
+                {!isTradePartner && isAdminStaff && (
+                  <Link
+                    to="/admin"
+                    onClick={closeMenu}
+                    className="rounded-lg bg-[#171713] px-2.5 py-1.5 text-white font-semibold hover:bg-[#3e7b52] transition flex items-center justify-between"
+                  >
+                    <span>Admin Dashboard</span>
+                    <span>→</span>
+                  </Link>
+                )}
               </div>
             </div>
           ) : (

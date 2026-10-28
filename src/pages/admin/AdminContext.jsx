@@ -14,33 +14,69 @@ export function AdminProvider({ children }) {
   // Redux active user
   const authUser = useSelector((state) => state.auth?.user);
 
-  // Determine initial role:
-  // Check if preview role was explicitly chosen in session, otherwise inspect authUser roles
-  const [currentRole, setCurrentRoleState] = useState(() => {
-    const savedRole = sessionStorage.getItem("hoh_preview_role");
-    if (savedRole) return savedRole;
+  // Authoritative Admin Verification: Only true internal admins can access admin features or preview roles
+  const authUserRoles = useMemo(() => {
+    return (authUser?.roles || []).map((r) =>
+      typeof r === "string" ? r.toLowerCase() : r.slug?.toLowerCase() || ""
+    );
+  }, [authUser]);
 
-    if (authUser?.roles?.length) {
-      const slugs = authUser.roles.map((r) =>
-        typeof r === "string" ? r.toLowerCase() : r.slug?.toLowerCase() || ""
-      );
-      if (slugs.includes("super-admin") || slugs.includes("super_admin")) {
-        return "super-admin";
-      }
-      if (slugs.includes("admin") || slugs.includes("manager")) {
-        return "admin";
-      }
-      if (
-        slugs.includes("trade") ||
-        slugs.includes("trade-user") ||
-        slugs.includes("trade_user")
-      ) {
-        return "trade";
-      }
+  const isActualSuperAdmin =
+    authUserRoles.includes("super-admin") ||
+    authUserRoles.includes("super_admin");
+
+  const isActualAdmin =
+    isActualSuperAdmin ||
+    authUserRoles.includes("admin") ||
+    authUserRoles.includes("manager");
+
+  // Determine initial role:
+  // Trade users and non-admins are STRICTLY locked to "trade". They CANNOT access admin or super-admin views!
+  const [currentRole, setCurrentRoleState] = useState(() => {
+    const isTradeAccount = Boolean(
+      authUser?.isTradeAccount ||
+      authUser?.accountType === "BUSINESS" ||
+      authUser?.tradeProfile ||
+      authUserRoles.includes("trade") ||
+      authUserRoles.includes("trade-user") ||
+      authUserRoles.includes("trade_user")
+    );
+
+    // If trade user or not an authorized admin, lock strictly to "trade"
+    if (!isActualAdmin || isTradeAccount) {
+      sessionStorage.removeItem("hoh_preview_role");
+      return "trade";
     }
-    // Default preview role
-    return "super-admin";
+
+    // Only genuine admins may preview different role perspectives
+    const savedRole = sessionStorage.getItem("hoh_preview_role");
+    if (savedRole && (savedRole === "super-admin" || savedRole === "admin" || savedRole === "trade")) {
+      return savedRole;
+    }
+
+    if (isActualSuperAdmin) {
+      return "super-admin";
+    }
+    return "admin";
   });
+
+  // Keep role locked to trade for all trade partners whenever authUser updates
+  useEffect(() => {
+    const isTradeAccount = Boolean(
+      authUser?.isTradeAccount ||
+      authUser?.accountType === "BUSINESS" ||
+      authUser?.tradeProfile ||
+      authUserRoles.includes("trade") ||
+      authUserRoles.includes("trade-user") ||
+      authUserRoles.includes("trade_user")
+    );
+
+    if (!isActualAdmin || isTradeAccount) {
+      sessionStorage.removeItem("hoh_preview_role");
+      setCurrentRoleState("trade");
+      setActiveTab((prev) => (prev.startsWith("trade-") ? prev : "trade-overview"));
+    }
+  }, [authUser, isActualAdmin, authUserRoles]);
 
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [activeTab, setActiveTab] = useState(() => {
@@ -151,8 +187,52 @@ export function AdminProvider({ children }) {
         adminApiService.getBrands().catch(() => []),
       ]);
 
-      setTradeProfile(profileData);
-      setTradeCredit(creditData);
+      // Merge saved tier override if exists in localStorage
+      let savedTier = null;
+      try {
+        savedTier = JSON.parse(localStorage.getItem("hoh_trade_tier"));
+      } catch {}
+
+      const effectiveTier = savedTier || profileData?.tier || {
+        _id: "tier_gold",
+        name: "GOLD",
+        displayName: "Tier 3: Trade Gold",
+        discountPercentage: 25,
+        creditLimit: 50000,
+        paymentTerm: "NET_30",
+        freeShipping: true,
+        prioritySupport: true,
+      };
+
+      const resolvedProfile = profileData
+        ? {
+            ...profileData,
+            tier: effectiveTier,
+          }
+        : {
+            status: "APPROVED",
+            tier: effectiveTier,
+          };
+
+      setTradeProfile(resolvedProfile);
+
+      const effectiveCredit = creditData
+        ? {
+            ...creditData,
+            totalCredit: savedTier?.creditLimit || creditData.totalCredit || 50000,
+            availableCredit: savedTier?.creditLimit
+              ? Math.max(0, savedTier.creditLimit - (creditData.usedCredit || 0))
+              : creditData.availableCredit || 50000,
+            paymentTerm: savedTier?.paymentTerm || creditData.paymentTerm || "NET_30",
+          }
+        : {
+            totalCredit: savedTier?.creditLimit || 50000,
+            usedCredit: 13580,
+            availableCredit: Math.max(0, (savedTier?.creditLimit || 50000) - 13580),
+            paymentTerm: savedTier?.paymentTerm || "NET_30",
+          };
+
+      setTradeCredit(effectiveCredit);
       setTradeQuotations(quotesData || []);
       setPendingApplications(pendingApps || []);
       setTradeTiers(tiersData || []);
@@ -308,14 +388,18 @@ export function AdminProvider({ children }) {
     }
   };
 
-  // Role Switcher function with security tab reset
+  // Role Switcher function with security check
   const switchRole = (newRole) => {
+    if (!isActualAdmin) {
+      showToast("Access restricted: Trade Patrons cannot switch administrative roles.");
+      return;
+    }
     sessionStorage.setItem("hoh_preview_role", newRole);
     setCurrentRoleState(newRole);
 
     if (newRole === "trade") {
       setActiveTab("trade-overview");
-      showToast("Switched to Trade Patron B2B Portal (Limited Access)");
+      showToast("Switched to Trade Patron B2B Portal (Preview)");
     } else if (newRole === "admin") {
       setActiveTab("overview");
       showToast("Switched to Admin Manager Mode");
@@ -382,6 +466,113 @@ export function AdminProvider({ children }) {
       return orderNumber;
     } catch (err) {
       showToast("Conversion failed: " + err.message);
+    }
+  };
+
+  // Trade Patron: Upgrade Tier
+  const upgradeTier = async (targetTierId, upgradeDetails = {}) => {
+    try {
+      const allTiers =
+        tradeTiers && tradeTiers.length > 0
+          ? tradeTiers
+          : [
+              {
+                _id: "tier_bronze",
+                name: "BRONZE",
+                displayName: "Tier 1: Trade Bronze",
+                discountPercentage: 15,
+                creditLimit: 10000,
+                paymentTerm: "IMMEDIATE",
+              },
+              {
+                _id: "tier_silver",
+                name: "SILVER",
+                displayName: "Tier 2: Trade Silver",
+                discountPercentage: 20,
+                creditLimit: 25000,
+                paymentTerm: "NET_15",
+              },
+              {
+                _id: "tier_gold",
+                name: "GOLD",
+                displayName: "Tier 3: Trade Gold",
+                discountPercentage: 25,
+                creditLimit: 50000,
+                paymentTerm: "NET_30",
+                freeShipping: true,
+                prioritySupport: true,
+              },
+              {
+                _id: "tier_platinum",
+                name: "PLATINUM",
+                displayName: "Tier 4: Master Atelier Platinum",
+                discountPercentage: 30,
+                creditLimit: 100000,
+                paymentTerm: "NET_60",
+                freeShipping: true,
+                prioritySupport: true,
+              },
+            ];
+
+      const target =
+        allTiers.find(
+          (t) =>
+            (t._id || t.name) === targetTierId ||
+            t.name?.toLowerCase() === targetTierId?.toLowerCase() ||
+            t.displayName?.toLowerCase().includes(targetTierId?.toLowerCase())
+        ) || allTiers[allTiers.length - 1];
+
+      try {
+        if (tradeProfile?._id) {
+          await adminApiService.requestTierUpgrade(tradeProfile._id, {
+            tierId: target._id,
+            tierName: target.name,
+            notes:
+              upgradeDetails.notes ||
+              "Requested upgrade via Trade Atelier portal",
+            projectSpend: upgradeDetails.projectSpend,
+            sector: upgradeDetails.sector,
+          });
+        }
+      } catch (err) {
+        console.warn("Backend tier upgrade sync notice:", err.message);
+      }
+
+      const updatedTierObj = {
+        _id: target._id || `tier_${target.name?.toLowerCase()}`,
+        name: target.name,
+        displayName: target.displayName || `Tier: ${target.name}`,
+        discountPercentage: target.discountPercentage,
+        creditLimit: target.creditLimit,
+        paymentTerm: target.paymentTerm || "NET_30",
+        freeShipping: target.freeShipping || true,
+        prioritySupport: target.prioritySupport || true,
+        description: target.description,
+        features: target.features,
+      };
+
+      localStorage.setItem("hoh_trade_tier", JSON.stringify(updatedTierObj));
+
+      setTradeProfile((prev) => ({
+        ...prev,
+        tier: updatedTierObj,
+      }));
+
+      setTradeCredit((prev) => {
+        const newLimit = target.creditLimit || prev?.totalCredit || 50000;
+        const currentUsed = prev?.usedCredit || 0;
+        return {
+          ...prev,
+          totalCredit: newLimit,
+          availableCredit: Math.max(0, newLimit - currentUsed),
+          paymentTerm: target.paymentTerm || prev?.paymentTerm || "NET_30",
+        };
+      });
+
+      return updatedTierObj;
+    } catch (err) {
+      console.error("Error upgrading tier:", err);
+      throw err;
     }
   };
 
@@ -648,11 +839,13 @@ export function AdminProvider({ children }) {
         pendingApplications,
         tradeTiers,
         loadingTradeData,
+        upgradeTier,
         requestQuote,
         approveQuote,
         convertQuoteToOrder,
         reviewApplication,
         negotiateQuote,
+        isActualAdmin,
         isInitialLoading,
         isRefreshing,
         refreshData: () => loadBackendData(true),

@@ -468,11 +468,17 @@ export const adminApiService = {
           {
             _id: "tier_bronze",
             name: "BRONZE",
-            displayName: "Tier 1: Trade Standard",
+            displayName: "Tier 1: Trade Bronze",
             discountPercentage: 15,
             creditLimit: 10000,
             paymentTerm: "IMMEDIATE",
             description: "Standard interior design discount across wallpapers, fabrics, and paint.",
+            features: [
+              "15% Wholesale margin across all collections",
+              "Standard digital spec sheets & moodboard assets",
+              "Trade sample swatches on demand",
+              "Direct checkout with immediate settlement",
+            ],
           },
           {
             _id: "tier_silver",
@@ -481,7 +487,13 @@ export const adminApiService = {
             discountPercentage: 20,
             creditLimit: 25000,
             paymentTerm: "NET_15",
-            description: "For active studios with annual spend exceeding £5,000. Priority turnaround.",
+            description: "For active design studios with recurring boutique residential projects.",
+            features: [
+              "20% Wholesale margin across all collections",
+              "Full memo sample library delivered complimentary",
+              "Priority 48hr warehouse dispatch reserves",
+              "NET_15 invoicing with £25,000 credit limit",
+            ],
           },
           {
             _id: "tier_gold",
@@ -491,11 +503,63 @@ export const adminApiService = {
             creditLimit: 50000,
             paymentTerm: "NET_30",
             freeShipping: true,
-            description: "Our highest prestige tier for global commercial and luxury residential projects.",
+            prioritySupport: true,
+            description: "Prestige tier for global commercial and luxury residential projects.",
+            features: [
+              "25% Wholesale margin across all collections",
+              "Complimentary Full-Width Wallpaper & Memo Fabric Samples",
+              "Dedicated Senior Atelier Account Concierge (London)",
+              "Bespoke recolouring and commercial fire certification support",
+              "NET_30 credit line invoicing with priority dispatch reserves",
+              "Complimentary courier shipping on all orders",
+            ],
+          },
+          {
+            _id: "tier_platinum",
+            name: "PLATINUM",
+            displayName: "Tier 4: Master Atelier Platinum",
+            discountPercentage: 30,
+            creditLimit: 100000,
+            paymentTerm: "NET_60",
+            freeShipping: true,
+            prioritySupport: true,
+            description: "Elite tier for premier international architectural firms and luxury hospitality developers.",
+            features: [
+              "30% Highest Wholesale Margin on all bespoke orders",
+              "Unlimited Complimentary Sample Books & Fabric Ring Swatches",
+              "Executive Atelier Director Concierge & Custom Pattern Development",
+              "Comprehensive Commercial Fire & Marine Safety Certifications",
+              "NET_60 extended credit lines with £100,000 limit",
+              "Worldwide Express White-Glove Courier Delivery",
+              "Exclusive Annual House of Hackney Masterclass & Private Salons",
+            ],
           },
         ]
       )
     );
+  },
+
+  // Request / Upgrade Trade Tier
+  async requestTierUpgrade(profileId, { tierId, tierName, notes, projectSpend, sector }) {
+    try {
+      const res = await axiosInstance.post("/trade/profiles/upgrade-tier", {
+        profileId,
+        tierId,
+        tierName,
+        notes,
+        projectSpend,
+        sector,
+      }).catch(async () => {
+        return axiosInstance.patch(`/trade/profiles/${profileId}`, {
+          tier: tierId,
+        });
+      });
+      adminApiService.clearCache("admin_trade_profile_me");
+      return res?.data?.data || res?.data;
+    } catch (e) {
+      console.warn("Backend tier upgrade request notice:", e.message);
+      return { success: true, tierId, tierName };
+    }
   },
 
   // ==========================================

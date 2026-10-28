@@ -1,3 +1,4 @@
+import { useState } from "react";
 import {
   Building2,
   Award,
@@ -9,16 +10,27 @@ import {
   CheckCircle2,
   FileCheck,
   UserCheck,
+  Sparkles,
 } from "lucide-react";
 import { useAdmin } from "../../AdminContext";
+import UpgradeTierModal from "./UpgradeTierModal";
 
 export default function TradeCompanyProfile() {
   const { theme, tradeProfile, tradeCredit, authUser } = useAdmin();
   const isDark = theme === "dark";
+  const [upgradeModalOpen, setUpgradeModalOpen] = useState(false);
 
-  const companyName = tradeProfile?.company?.name || authUser?.companyName || (authUser?.name ? `${authUser.name} Studio Ltd` : "Atelier Design Studio Ltd");
-  const email = tradeProfile?.company?.email || authUser?.email || "trade@houseofhackney.com";
-  const regNumber = tradeProfile?.company?.registrationNumber || `GB-${(authUser?._id || "9823145").slice(-7).toUpperCase()}`;
+  const companyName =
+    tradeProfile?.company?.name ||
+    authUser?.companyName ||
+    (authUser?.name ? `${authUser.name} Studio Ltd` : "Atelier Design Studio Ltd");
+  const email =
+    tradeProfile?.company?.email ||
+    authUser?.email ||
+    "trade@houseofhackney.com";
+  const regNumber =
+    tradeProfile?.company?.registrationNumber ||
+    `GB-${(authUser?._id || "9823145").slice(-7).toUpperCase()}`;
 
   const company = tradeProfile?.company || {
     name: companyName,
@@ -27,8 +39,58 @@ export default function TradeCompanyProfile() {
     businessType: "Architectural & Interior Design Studio",
     email,
     phone: authUser?.phone || "+44 (0) 20 7739 3901",
-    address: "St. Michael's Church, Mark Street, Shoreditch, London EC2A 4ER, United Kingdom",
+    address:
+      "St. Michael's Church, Mark Street, Shoreditch, London EC2A 4ER, United Kingdom",
   };
+
+  const formatAddress = (addr) => {
+    if (!addr) {
+      return "St. Michael's Church, Mark Street, Shoreditch, London EC2A 4ER, United Kingdom";
+    }
+    if (typeof addr === "string") {
+      return (
+        addr.trim() ||
+        "St. Michael's Church, Mark Street, Shoreditch, London EC2A 4ER, United Kingdom"
+      );
+    }
+    if (typeof addr === "object") {
+      const parts = [
+        addr.street,
+        addr.city,
+        addr.state,
+        addr.postalCode,
+        addr.country,
+      ].filter((part) => typeof part === "string" && part.trim().length > 0);
+      return parts.length > 0
+        ? parts.join(", ")
+        : "St. Michael's Church, Mark Street, Shoreditch, London EC2A 4ER, United Kingdom";
+    }
+    return String(addr);
+  };
+
+  const formatBusinessType = (val) => {
+    if (!val) return "Architectural & Interior Design Studio";
+    return val
+      .split("_")
+      .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+      .join(" ");
+  };
+
+  const displayName = company.name || companyName;
+  const businessType = formatBusinessType(
+    tradeProfile?.businessType || company.businessType
+  );
+  const registrationNumber = company.registrationNumber || regNumber;
+  const taxId =
+    company.taxId ||
+    company.taxNumber ||
+    tradeProfile?.gstNumber ||
+    tradeProfile?.vatNumber ||
+    `GB${(authUser?._id || "123456789").slice(-9).toUpperCase()}`;
+  const contactEmail = company.email || email;
+  const contactPhone =
+    company.phone || authUser?.phone || "+44 (0) 20 7739 3901";
+  const displayAddress = formatAddress(company.address);
 
   const tier = tradeProfile?.tier || {
     displayName: "Trade Gold Patron",
@@ -37,12 +99,18 @@ export default function TradeCompanyProfile() {
     paymentTerm: "NET_30",
   };
 
+  const tierDisplayName =
+    tier?.displayName || tier?.name || "Trade Gold Patron";
+  const discountPercentage = tier?.discountPercentage ?? tier?.discount ?? 25;
+  const paymentTerm =
+    tier?.paymentTerm || tradeCredit?.paymentTerm || "NET_30";
+
   const perks = [
-    "25% Wholesale Margin across all collections",
+    `${discountPercentage}% Wholesale Margin across all collections`,
     "Complimentary Full-Width Wallpaper & Memo Fabric Samples",
     "Dedicated Senior Atelier Account Concierge (London)",
     "Bespoke recolouring and commercial fire certification support",
-    "NET_30 credit line invoicing with priority dispatch reserves",
+    `${paymentTerm} credit line invoicing with priority dispatch reserves`,
   ];
 
   return (
@@ -72,12 +140,12 @@ export default function TradeCompanyProfile() {
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h2 className="text-lg font-bold tracking-tight">{company.name}</h2>
+                <h2 className="text-lg font-bold tracking-tight">{displayName}</h2>
                 <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-[#3e7b52] text-white">
                   <ShieldCheck size={11} /> Verified
                 </span>
               </div>
-              <p className="text-xs text-[#627766] mt-0.5">{company.businessType}</p>
+              <p className="text-xs text-[#627766] mt-0.5">{businessType}</p>
             </div>
           </div>
 
@@ -91,7 +159,7 @@ export default function TradeCompanyProfile() {
                 Company Registration No.
               </span>
               <span className="font-mono font-bold text-sm text-[#3e7b52]">
-                {company.registrationNumber}
+                {registrationNumber}
               </span>
             </div>
 
@@ -103,7 +171,7 @@ export default function TradeCompanyProfile() {
               <span className="text-[10px] uppercase font-bold text-[#627766] block mb-1">
                 VAT / Tax Identification
               </span>
-              <span className="font-mono font-bold text-sm">{company.taxId}</span>
+              <span className="font-mono font-bold text-sm">{taxId}</span>
             </div>
 
             <div
@@ -114,7 +182,7 @@ export default function TradeCompanyProfile() {
               <span className="text-[10px] uppercase font-bold text-[#627766] block mb-1 flex items-center gap-1.5">
                 <Mail size={12} /> Billing Email
               </span>
-              <span className="font-medium">{company.email}</span>
+              <span className="font-medium">{contactEmail}</span>
             </div>
 
             <div
@@ -125,7 +193,7 @@ export default function TradeCompanyProfile() {
               <span className="text-[10px] uppercase font-bold text-[#627766] block mb-1 flex items-center gap-1.5">
                 <Phone size={12} /> Contact Telephone
               </span>
-              <span className="font-medium">{company.phone}</span>
+              <span className="font-medium">{contactPhone}</span>
             </div>
 
             <div
@@ -136,7 +204,7 @@ export default function TradeCompanyProfile() {
               <span className="text-[10px] uppercase font-bold text-[#627766] block mb-1 flex items-center gap-1.5">
                 <MapPin size={12} /> Registered Studio & Billing Address
               </span>
-              <span className="font-medium leading-relaxed">{company.address}</span>
+              <span className="font-medium leading-relaxed">{displayAddress}</span>
             </div>
           </div>
         </div>
@@ -155,9 +223,9 @@ export default function TradeCompanyProfile() {
                 <Award size={16} />
               </div>
               <div>
-                <h3 className="font-bold text-sm tracking-tight">{tier.displayName}</h3>
+                <h3 className="font-bold text-sm tracking-tight">{tierDisplayName}</h3>
                 <span className="text-[10px] text-[#3e7b52] font-bold">
-                  {tier.discountPercentage}% Wholesale Margin
+                  {discountPercentage}% Wholesale Margin
                 </span>
               </div>
             </div>
@@ -175,6 +243,14 @@ export default function TradeCompanyProfile() {
                 </div>
               ))}
             </div>
+
+            <button
+              onClick={() => setUpgradeModalOpen(true)}
+              className="w-full mt-5 flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-gradient-to-r from-[#2a5b36] via-[#3e7b52] to-[#4e8d64] hover:opacity-95 text-white font-semibold text-xs shadow-md shadow-[#3e7b52]/20 transition-all hover:scale-[1.01] cursor-pointer"
+            >
+              <Sparkles size={14} />
+              Upgrade Membership Tier
+            </button>
           </div>
 
           <div
@@ -185,7 +261,7 @@ export default function TradeCompanyProfile() {
             }`}
           >
             <div className="flex items-center gap-2 mb-1">
-              <UserCheck size={14} className="text-[#3e7b52]" />
+              <UserCheck size={14} />
               <strong className="text-[#3e7b52]">Dedicated Concierge</strong>
             </div>
             <p className="text-[11px] text-[#627766] leading-relaxed">
@@ -198,6 +274,12 @@ export default function TradeCompanyProfile() {
           </div>
         </div>
       </div>
+
+      {/* Upgrade Tier Modal */}
+      <UpgradeTierModal
+        isOpen={upgradeModalOpen}
+        onClose={() => setUpgradeModalOpen(false)}
+      />
     </div>
   );
 }

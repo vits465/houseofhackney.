@@ -13,10 +13,12 @@ import {
   ExternalLink,
   ChevronRight,
   ShieldCheck,
+  Sparkles,
 } from "lucide-react";
 import { useAdmin } from "../../AdminContext";
 import RequestQuoteModal from "./RequestQuoteModal";
 import ConvertQuoteModal from "./ConvertQuoteModal";
+import UpgradeTierModal from "./UpgradeTierModal";
 
 export default function TradeOverview() {
   const {
@@ -32,6 +34,7 @@ export default function TradeOverview() {
 
   const [requestModalOpen, setRequestModalOpen] = useState(false);
   const [selectedQuoteForConvert, setSelectedQuoteForConvert] = useState(null);
+  const [upgradeModalOpen, setUpgradeModalOpen] = useState(false);
 
   const companyName = tradeProfile?.company?.name || authUser?.companyName || (authUser?.name ? `${authUser.name} Studio Ltd` : "Atelier Design Studio Ltd");
   const company = tradeProfile?.company || {
@@ -109,6 +112,13 @@ export default function TradeOverview() {
 
           <div className="flex flex-wrap items-center gap-3">
             <button
+              onClick={() => setUpgradeModalOpen(true)}
+              className="px-4 py-2.5 rounded-full border border-[#3e7b52]/50 bg-[#3e7b52]/15 hover:bg-[#3e7b52]/25 text-[#3e7b52] dark:text-[#7ec792] text-xs font-bold transition-all flex items-center gap-1.5 shadow-xs cursor-pointer"
+            >
+              <Sparkles size={14} />
+              Upgrade Tier
+            </button>
+            <button
               onClick={() => setRequestModalOpen(true)}
               className="px-5 py-2.5 rounded-full bg-[#3e7b52] text-white text-xs font-bold hover:bg-[#346a45] transition-all flex items-center gap-2 shadow-sm shadow-[#3e7b52]/25"
             >
@@ -134,29 +144,35 @@ export default function TradeOverview() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
         {/* Tier Card */}
         <div
-          className={`p-5 rounded-2xl border transition-colors ${
+          onClick={() => setUpgradeModalOpen(true)}
+          className={`p-5 rounded-2xl border transition-all cursor-pointer group hover:scale-[1.01] hover:shadow-md ${
             isDark
-              ? "bg-[#141a15] border-[#253327]"
-              : "bg-white border-[#e4ede5]"
+              ? "bg-[#141a15] border-[#253327] hover:border-[#3e7b52]/60"
+              : "bg-white border-[#e4ede5] hover:border-[#3e7b52]/60"
           }`}
         >
           <div className="flex items-center justify-between mb-3">
             <span className="text-xs font-semibold uppercase tracking-wider text-[#627766]">
               Trade Tier
             </span>
-            <div className="w-8 h-8 rounded-full bg-[#3e7b52]/10 text-[#3e7b52] flex items-center justify-center">
+            <div className="w-8 h-8 rounded-full bg-[#3e7b52]/10 text-[#3e7b52] flex items-center justify-center group-hover:bg-[#3e7b52] group-hover:text-white transition-colors">
               <Award size={16} />
             </div>
           </div>
-          <p className="text-2xl font-bold tracking-tight text-[#3e7b52]">
-            {tier.discountPercentage}% OFF
-          </p>
+          <div className="flex items-baseline justify-between">
+            <p className="text-2xl font-bold tracking-tight text-[#3e7b52]">
+              {tier.discountPercentage}% OFF
+            </p>
+            <span className="text-[10px] uppercase font-bold text-[#3e7b52] group-hover:underline flex items-center gap-0.5">
+              Upgrade <ChevronRight size={11} />
+            </span>
+          </div>
           <p
             className={`text-xs mt-1 font-medium ${
               isDark ? "text-[#9db3a1]" : "text-[#526956]"
             }`}
           >
-            {tier.displayName}
+            {tier.displayName || tier.name}
           </p>
         </div>
 
@@ -372,6 +388,10 @@ export default function TradeOverview() {
       </div>
 
       {/* Modals */}
+      <UpgradeTierModal
+        isOpen={upgradeModalOpen}
+        onClose={() => setUpgradeModalOpen(false)}
+      />
       <RequestQuoteModal
         isOpen={requestModalOpen}
         onClose={() => setRequestModalOpen(false)}
