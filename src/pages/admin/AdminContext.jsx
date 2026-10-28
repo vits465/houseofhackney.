@@ -83,6 +83,10 @@ export function AdminProvider({ children }) {
   const [viewingProduct, setViewingProduct] = useState(null);
   const [viewProductModalOpen, setViewProductModalOpen] = useState(false);
 
+  // Global Sync & Loading Flags
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
   // Sync theme
   useEffect(() => {
     localStorage.setItem("hoh_admin_theme", theme);
@@ -114,9 +118,14 @@ export function AdminProvider({ children }) {
   }, []);
 
   // Fetch initial backend Trade, Product, User & Order data in real-time
-  const loadBackendData = useCallback(async () => {
-    setLoadingTradeData(true);
-    setLoadingProducts(true);
+  const loadBackendData = useCallback(async (isManual = false) => {
+    if (isManual) {
+      setIsRefreshing(true);
+      adminApiService.clearCache();
+    } else {
+      setLoadingTradeData(true);
+      setLoadingProducts(true);
+    }
     try {
       const [
         profileData,
@@ -216,6 +225,8 @@ export function AdminProvider({ children }) {
     } finally {
       setLoadingTradeData(false);
       setLoadingProducts(false);
+      setIsRefreshing(false);
+      setIsInitialLoading(false);
     }
   }, []);
 
@@ -642,6 +653,9 @@ export function AdminProvider({ children }) {
         convertQuoteToOrder,
         reviewApplication,
         negotiateQuote,
+        isInitialLoading,
+        isRefreshing,
+        refreshData: () => loadBackendData(true),
         reloadBackendData: loadBackendData,
       }}
     >

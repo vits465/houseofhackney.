@@ -101,6 +101,8 @@ function Header() {
       startTransition(() => setActiveNavTab("SHOP"));
     }
     setActiveCategory(null);
+    setIsMobileOpen(false);
+    setIsSearchOpen(false);
   }, [location.pathname]);
 
   // Robust window scroll listener for sticky header shadow and 2-section alternating logo
@@ -277,9 +279,9 @@ function Header() {
               onClick={openMobileMenu}
               aria-label="Open menu"
               aria-expanded={isMobileOpen}
-              className="grid h-10 w-10 place-items-center lg:hidden text-[#171713] hover:opacity-75"
+              className="grid h-10 w-10 place-items-center lg:hidden text-[#171713] hover:opacity-75 cursor-pointer touch-manipulation z-20"
             >
-              <Menu size={24} strokeWidth={1.5} />
+              <Menu size={24} strokeWidth={1.5} className="pointer-events-none" />
             </button>
 
             {/* Mobile Quick Search Button */}

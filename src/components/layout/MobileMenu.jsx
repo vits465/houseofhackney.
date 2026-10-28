@@ -1,5 +1,5 @@
 import { memo, useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useSelector } from "react-redux";
 import {
   X,
@@ -103,8 +103,21 @@ const ourHouseSections = [
 
 function MobileMenu({ isOpen, onClose, activeTab = "SHOP", setActiveTab = () => {} }) {
   const navigate = useNavigate();
+  const location = useLocation();
   const [activeCategory, setActiveCategory] = useState(null);
   const { user, isAuthenticated } = useSelector((state) => state.auth || {});
+
+  const closeMenu = () => {
+    setActiveCategory(null);
+    onClose?.();
+  };
+
+  // Automatically close mobile menu when navigating
+  useEffect(() => {
+    if (isOpen) {
+      closeMenu();
+    }
+  }, [location.pathname]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -127,11 +140,6 @@ function MobileMenu({ isOpen, onClose, activeTab = "SHOP", setActiveTab = () => 
   }, [isOpen, onClose]);
 
   if (!isOpen) return null;
-
-  const closeMenu = () => {
-    setActiveCategory(null);
-    onClose?.();
-  };
 
   const handleMobileLogout = async () => {
     const result = await showConfirm(
@@ -156,7 +164,7 @@ function MobileMenu({ isOpen, onClose, activeTab = "SHOP", setActiveTab = () => 
   };
 
   return (
-    <div className="fixed inset-0 z-[100] lg:hidden">
+    <div className="fixed inset-0 z-[9999] lg:hidden">
       {/* Dark overlay */}
       <button
         type="button"
@@ -339,34 +347,66 @@ function MobileMenu({ isOpen, onClose, activeTab = "SHOP", setActiveTab = () => 
         {/* Bottom account and currency options */}
         <div className="shrink-0 border-t border-gray-100 bg-[#fbf9f5] px-6 pb-6 pt-5 sm:px-9">
           {isAuthenticated ? (
-            <div className="mb-4 space-y-2.5">
-              <div className="flex items-center gap-2 text-xs font-semibold tracking-wider text-[#394132] uppercase">
-                <User size={14} />
-                <span>Patron: {user?.firstName ? `${user.firstName} ${user.lastName || ""}` : "Member"}</span>
-              </div>
-              <div className="flex flex-wrap items-center gap-4 text-sm font-medium">
-                <Link
-                  to="/account"
-                  onClick={closeMenu}
-                  className="underline underline-offset-4 text-[#171713] hover:text-[#394132]"
+            <div className="mb-4 space-y-3">
+              <div className="flex items-center justify-between text-xs font-semibold tracking-wider text-[#394132] uppercase">
+                <div className="flex items-center gap-1.5">
+                  <User size={14} />
+                  <span>Patron: {user?.firstName ? `${user.firstName} ${user.lastName || ""}` : "Sanctuary Member"}</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleMobileLogout}
+                  className="flex items-center gap-1 text-[#b83232] hover:underline cursor-pointer font-medium text-[11px]"
                 >
-                  My Patron Account
+                  <LogOut size={12} />
+                  <span>Sign Out</span>
+                </button>
+              </div>
+
+              {/* Quick links to Sanctuary sections */}
+              <div className="grid grid-cols-2 gap-2 text-xs font-medium pt-1">
+                <Link
+                  to="/profile/overview"
+                  onClick={closeMenu}
+                  className="rounded-lg bg-white px-2.5 py-1.5 border border-gray-200 text-[#171713] hover:border-[#394132] transition"
+                >
+                  Overview
+                </Link>
+                <Link
+                  to="/profile/orders"
+                  onClick={closeMenu}
+                  className="rounded-lg bg-white px-2.5 py-1.5 border border-gray-200 text-[#171713] hover:border-[#394132] transition"
+                >
+                  My Orders
                 </Link>
                 <Link
                   to="/wishlist"
                   onClick={closeMenu}
-                  className="underline underline-offset-4 text-[#171713] hover:text-[#394132]"
+                  className="rounded-lg bg-white px-2.5 py-1.5 border border-gray-200 text-[#171713] hover:border-[#394132] transition"
                 >
-                  Wishlist
+                  Saved Wishlist
                 </Link>
-                <button
-                  type="button"
-                  onClick={handleMobileLogout}
-                  className="flex items-center gap-1 text-[#b83232] hover:underline cursor-pointer"
+                <Link
+                  to="/profile/addresses"
+                  onClick={closeMenu}
+                  className="rounded-lg bg-white px-2.5 py-1.5 border border-gray-200 text-[#171713] hover:border-[#394132] transition"
                 >
-                  <LogOut size={13} />
-                  <span>Sign Out</span>
-                </button>
+                  Residences
+                </Link>
+                <Link
+                  to="/profile/details"
+                  onClick={closeMenu}
+                  className="rounded-lg bg-white px-2.5 py-1.5 border border-gray-200 text-[#171713] hover:border-[#394132] transition"
+                >
+                  Personal Details
+                </Link>
+                <Link
+                  to="/profile/trade"
+                  onClick={closeMenu}
+                  className="rounded-lg bg-[#c29b38]/10 px-2.5 py-1.5 border border-[#c29b38]/30 text-[#8a681c] font-semibold hover:bg-[#c29b38]/20 transition"
+                >
+                  Trade Concierge
+                </Link>
               </div>
             </div>
           ) : (

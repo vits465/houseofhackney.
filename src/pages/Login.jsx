@@ -128,10 +128,24 @@ const Login = () => {
     } catch (err) {
       console.error("Login error:", err);
 
-      const message =
+      let message =
         err.response?.data?.message ||
         err.message ||
         "Unable to sign in. Please try again.";
+
+      if (Array.isArray(err.response?.data?.errors) && err.response.data.errors.length > 0) {
+        const fieldDetails = err.response.data.errors
+          .map((e) => e.msg || e.message)
+          .filter(Boolean)
+          .join(". ");
+        if (fieldDetails) {
+          message = fieldDetails;
+        }
+      }
+
+      if (message.toLowerCase().includes("network error") || err.code === "ERR_NETWORK") {
+        message = "Unable to connect to the House of Hackney atelier server. Please verify your connection or ensure the API server is active.";
+      }
 
       dispatch(setAuthError(message));
 

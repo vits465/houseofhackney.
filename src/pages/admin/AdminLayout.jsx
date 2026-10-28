@@ -1,4 +1,5 @@
 import { AnimatePresence, motion } from "framer-motion";
+import { RefreshCw, Sparkles } from "lucide-react";
 import { AdminProvider, useAdmin } from "./AdminContext";
 
 // V14 Layout Components matching reference video & light green and white theme
@@ -42,6 +43,7 @@ function DashboardV14Main() {
     productModalOpen,
     setProductModalOpen,
     editingProduct,
+    isInitialLoading,
   } = useAdmin();
   const isDark = theme === "dark";
 
@@ -112,25 +114,42 @@ function DashboardV14Main() {
       <V14Sidebar />
 
       {/* 2. Main Layout Container: permanently offset by pl-16 for the 64px rail */}
-      <div className="flex-1 flex flex-col min-h-screen pl-16 w-full overflow-x-hidden">
-        {/* Sticky Top Header Bar */}
-        <div className="sticky top-0 z-30 backdrop-blur-md">
+      <div className="flex-1 flex flex-col min-h-screen pl-16 w-full">
+        {/* Fixed Top Header Bar: locked to top: 0, left: 16 (64px), right: 0 just like the sidebar rail */}
+        <header className="fixed top-0 left-16 right-0 z-30 shadow-xs backdrop-blur-md">
           <V14Header activeTab={activeTab} setActiveTab={setActiveTab} />
-        </div>
+        </header>
 
-        {/* Main Dashboard Canvas with Smooth Page Transition */}
-        <main className="flex-1 p-3 sm:p-6 md:p-8 max-w-7xl w-full mx-auto">
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={`${currentRole}-${activeTab}`}
-              initial={{ opacity: 0, y: 12, scale: 0.995 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: -8, scale: 0.995 }}
-              transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
-            >
-              {renderTabContent()}
-            </motion.div>
-          </AnimatePresence>
+        {/* Main Dashboard Canvas with Smooth Page Transition - padded top for fixed header */}
+        <main className="flex-1 p-3 sm:p-6 md:p-8 max-w-7xl w-full mx-auto pt-28 md:pt-20">
+          {isInitialLoading ? (
+            <div className="flex flex-col items-center justify-center min-h-[55vh] gap-4">
+              <div className="relative">
+                <div className="w-14 h-14 rounded-full border-3 border-[#3e7b52]/20 border-t-[#3e7b52] animate-spin" />
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <Sparkles size={18} className="text-[#3e7b52] animate-pulse" />
+                </div>
+              </div>
+              <div className="text-center">
+                <h3 className="font-serif text-lg font-bold">House of Hackney Atelier</h3>
+                <p className="text-xs text-[#526956] dark:text-[#859b89] animate-pulse mt-1">
+                  Synchronizing live commerce catalog, telemetry & orders...
+                </p>
+              </div>
+            </div>
+          ) : (
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={`${currentRole}-${activeTab}`}
+                initial={{ opacity: 0, y: 12, scale: 0.995 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: -8, scale: 0.995 }}
+                transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
+              >
+                {renderTabContent()}
+              </motion.div>
+            </AnimatePresence>
+          )}
         </main>
       </div>
 

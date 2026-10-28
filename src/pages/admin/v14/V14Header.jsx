@@ -13,6 +13,7 @@ import {
   Check,
   Building2,
   LogOut,
+  RefreshCw,
 } from "lucide-react";
 import { useAdmin } from "../AdminContext";
 import { showToast, showConfirm } from "../../../utils/sweetAlert";
@@ -29,6 +30,9 @@ export default function V14Header({ activeTab, setActiveTab }) {
     setSpotlightOpen,
     setNotificationsOpen,
     unreadCount,
+    isInitialLoading,
+    isRefreshing,
+    refreshData,
   } = useAdmin();
   const isDark = theme === "dark";
   const dispatch = useDispatch();
@@ -339,6 +343,40 @@ export default function V14Header({ activeTab, setActiveTab }) {
               )}
             </AnimatePresence>
           </div>
+
+          {/* Live Sync / API Telemetry Status & Manual Refresh Button */}
+          <button
+            onClick={() => {
+              if (!isRefreshing && !isInitialLoading) {
+                showToast("Flushing cache and re-syncing atelier data...");
+                refreshData?.();
+              }
+            }}
+            title={
+              isRefreshing || isInitialLoading
+                ? "Synchronizing live atelier records..."
+                : "Live connected • Click to re-sync database"
+            }
+            className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-full border text-xs font-semibold transition-all shadow-xs ${
+              isRefreshing || isInitialLoading
+                ? "bg-[#3e7b52]/15 border-[#3e7b52]/40 text-[#3e7b52]"
+                : isDark
+                ? "bg-[#1d271f] border-[#2e3f31] text-[#9db3a1] hover:text-white hover:bg-[#253528]"
+                : "bg-white border-[#d8e6dc] text-[#526956] hover:text-[#142617] hover:bg-[#edf6f0]"
+            }`}
+          >
+            <RefreshCw
+              size={12}
+              className={`${
+                isRefreshing || isInitialLoading
+                  ? "animate-spin text-[#3e7b52]"
+                  : "text-[#3e7b52]"
+              }`}
+            />
+            <span className="hidden sm:inline text-[11px] font-sans font-medium">
+              {isRefreshing || isInitialLoading ? "Syncing..." : "Live"}
+            </span>
+          </button>
 
           {/* Search Circle */}
           <button

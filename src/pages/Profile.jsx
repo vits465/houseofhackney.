@@ -337,7 +337,7 @@ export default function Profile({ defaultTab }) {
     : "HOH";
 
   return (
-    <div className="min-h-screen bg-[#f6f3ec] text-[#171713] pb-24 overflow-x-hidden w-full max-w-full">
+    <div className="min-h-screen bg-[#f6f3ec] text-[#171713] pb-24 overflow-x-clip w-full max-w-full">
       {/* Top Breadcrumb & Luxury Sanctuary Banner */}
       <div className="border-b border-[#dedbd4] bg-[#faf8f4] w-full overflow-hidden">
         <div className="mx-auto max-w-7xl px-4 py-5 sm:py-8 sm:px-6 lg:px-8 w-full overflow-hidden">

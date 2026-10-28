@@ -96,15 +96,17 @@ export default function TradeRegister() {
 
     try {
       const normalizedEmail = formData.email.trim().toLowerCase();
+      const sanitizedPhone = formData.phone.trim().replace(/[^\d+]/g, "");
+
       const payload = {
         firstName: formData.firstName.trim(),
         lastName: formData.lastName.trim(),
         email: normalizedEmail,
-        phone: formData.phone.trim(),
+        phone: sanitizedPhone,
         countryCode: formData.countryCode,
         password: formData.password,
         companyName: formData.companyName.trim(),
-        companyPhone: formData.phone.trim(),
+        companyPhone: sanitizedPhone,
         businessType:
           formData.businessType === "HOSPITALITY"
             ? "HOTEL_HOSPITALITY"
@@ -137,10 +139,31 @@ export default function TradeRegister() {
         replace: true,
       });
     } catch (err) {
-      const message =
+      let message =
         err.response?.data?.message ||
         err.message ||
         "Unable to complete trade registration. Please try again.";
+
+      // Extract specific field errors from backend express-validator
+      if (Array.isArray(err.response?.data?.errors) && err.response.data.errors.length > 0) {
+        const fieldDetails = err.response.data.errors
+          .map((e) => e.msg || e.message)
+          .filter(Boolean)
+          .join(". ");
+        if (fieldDetails) {
+          message = fieldDetails;
+        }
+      }
+
+      // Provide friendly actionable suggestions for duplicate account conflicts
+      if (message.toLowerCase().includes("phone already registered")) {
+        message = "This phone number is already registered to an account. If you already have a House of Hackney account, please sign in and apply for Trade Concierge privileges from your Sanctuary Profile, or use a distinct direct studio phone.";
+      } else if (message.toLowerCase().includes("email already registered")) {
+        message = "This email address is already registered. Please sign in to access your account or use your registered business email.";
+      } else if (message.toLowerCase().includes("network error") || err.code === "ERR_NETWORK") {
+        message = "Unable to connect to the House of Hackney atelier server. Please verify your connection or ensure the API server is active.";
+      }
+
       await showError("Registration Unsuccessful", message);
     } finally {
       setLoading(false);

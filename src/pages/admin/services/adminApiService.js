@@ -21,6 +21,22 @@ import {
  * - /users & /roles (User administration & RBAC)
  */
 
+// High-performance In-Memory TTL Cache to eliminate duplicate fetches
+const adminCache = new Map();
+const DEFAULT_CACHE_TTL = 45000; // 45 seconds
+
+function getCachedOrFetch(key, fetcher, ttl = DEFAULT_CACHE_TTL) {
+  const cached = adminCache.get(key);
+  const now = Date.now();
+  if (cached && now - cached.timestamp < ttl) {
+    return Promise.resolve(cached.data);
+  }
+  return fetcher().then((data) => {
+    adminCache.set(key, { data, timestamp: Date.now() });
+    return data;
+  });
+}
+
 // Graceful fallback helper: returns live response if successful, otherwise fallbackData
 async function safeApiCall(apiPromise, fallbackData) {
   try {
@@ -39,54 +55,69 @@ async function safeApiCall(apiPromise, fallbackData) {
 }
 
 export const adminApiService = {
+  // Clear in-memory cache on mutations or manual refresh
+  clearCache(keyPrefix) {
+    if (keyPrefix) {
+      for (const k of adminCache.keys()) {
+        if (k.startsWith(keyPrefix)) adminCache.delete(k);
+      }
+    } else {
+      adminCache.clear();
+    }
+  },
+
   // ==========================================
   // TRADE PROFILES (B2B Accounts & Approvals)
   // ==========================================
 
   // Get current user's trade profile (Trade Patron)
   async getMyTradeProfile() {
-    return safeApiCall(
-      axiosInstance.get("/trade/profiles/me"),
-      {
-        _id: "trade_profile_me",
-        status: "APPROVED",
-        company: {
-          _id: "comp_01",
-          name: "Kensington Heritage Interiors Ltd",
-          registrationNumber: "GB-9823145",
-          taxId: "GB123456789",
-          businessType: "Interior Design Studio",
-          email: "procurement@kensingtonheritage.co.uk",
-          phone: "+44 20 7946 0912",
-          address: "14 Kensington Church Street, London W8 4EP, United Kingdom",
-        },
-        tier: {
-          _id: "tier_gold",
-          name: "GOLD",
-          displayName: "Trade Gold Patron",
-          discountPercentage: 25,
+    return getCachedOrFetch("admin_trade_profile_me", () =>
+      safeApiCall(
+        axiosInstance.get("/trade/profiles/me"),
+        {
+          _id: "trade_profile_me",
+          status: "APPROVED",
+          company: {
+            _id: "comp_01",
+            name: "Kensington Heritage Interiors Ltd",
+            registrationNumber: "GB-9823145",
+            taxId: "GB123456789",
+            businessType: "Interior Design Studio",
+            email: "procurement@kensingtonheritage.co.uk",
+            phone: "+44 20 7946 0912",
+            address: "14 Kensington Church Street, London W8 4EP, United Kingdom",
+          },
+          tier: {
+            _id: "tier_gold",
+            name: "GOLD",
+            displayName: "Trade Gold Patron",
+            discountPercentage: 25,
+            creditLimit: 50000,
+            paymentTerm: "NET_30",
+            freeShipping: true,
+            prioritySupport: true,
+          },
           creditLimit: 50000,
-          paymentTerm: "NET_30",
-          freeShipping: true,
-          prioritySupport: true,
-        },
-        creditLimit: 50000,
-        appliedAt: "2026-09-12T10:00:00Z",
-        approvedAt: "2026-09-14T14:30:00Z",
-      }
+          appliedAt: "2026-09-12T10:00:00Z",
+          approvedAt: "2026-09-14T14:30:00Z",
+        }
+      )
     );
   },
 
   // Apply for trade account (Customer)
   async applyForTrade(profileData) {
     const res = await axiosInstance.post("/trade/profiles/apply", profileData);
+    adminApiService.clearCache("admin_trade_profile");
     return res.data;
   },
 
   // Get pending trade applications (Admin / Super Admin)
   async getPendingTradeApplications() {
-    return safeApiCall(
-      axiosInstance.get("/trade/profiles/pending"),
+    return getCachedOrFetch("admin_pending_apps", () =>
+      safeApiCall(
+        axiosInstance.get("/trade/profiles/pending"),
       [
         {
           _id: "app_pending_01",
@@ -138,7 +169,7 @@ export const adminApiService = {
           createdAt: "2026-10-23T11:45:00Z",
         },
       ]
-    );
+    ));
   },
 
   // Review trade application (Admin / Super Admin)
@@ -150,8 +181,11 @@ export const adminApiService = {
         creditLimit,
         rejectionReason,
       });
+      adminApiService.clearCache("admin_pending_apps");
+      adminApiService.clearCache("admin_trade");
       return res.data;
     } catch {
+      adminApiService.clearCache("admin_pending_apps");
       return { success: true, message: `Application ${status.toLowerCase()} successfully.` };
     }
   },
@@ -167,8 +201,9 @@ export const adminApiService = {
 
   // Get user quotations list (Trade customer or Admin)
   async getUserQuotes() {
-    return safeApiCall(
-      axiosInstance.get("/trade/quotations"),
+    return getCachedOrFetch("admin_quotes", () =>
+      safeApiCall(
+        axiosInstance.get("/trade/quotations"),
       [
         {
           _id: "quo_901",
@@ -263,7 +298,7 @@ export const adminApiService = {
           createdAt: "2026-10-10T16:40:00Z",
         },
       ]
-    );
+    ));
   },
 
   // Request a new quotation (Trade Patron)
@@ -273,11 +308,13 @@ export const adminApiService = {
         items,
         customerNotes,
       });
+      adminApiService.clearCache("admin_quotes");
       return res.data;
     } catch {
       // Simulate local creation if backend endpoint has network timeout
       const quoteNumber = `QUO-${Date.now().toString().slice(-6)}-${Math.floor(1000 + Math.random() * 9000)}`;
       const subtotal = items.reduce((acc, it) => acc + (it.unitPrice || 180) * (it.quantity || 1), 0);
+      adminApiService.clearCache("admin_quotes");
       return {
         success: true,
         data: {
@@ -302,8 +339,10 @@ export const adminApiService = {
         discount,
         adminNotes,
       });
+      adminApiService.clearCache("admin_quotes");
       return res.data;
     } catch {
+      adminApiService.clearCache("admin_quotes");
       return { success: true, message: "Quotation price negotiated successfully." };
     }
   },
@@ -312,8 +351,10 @@ export const adminApiService = {
   async approveQuote(quoteId) {
     try {
       const res = await axiosInstance.patch(`/trade/quotations/${quoteId}/approve`);
+      adminApiService.clearCache("admin_quotes");
       return res.data;
     } catch {
+      adminApiService.clearCache("admin_quotes");
       return { success: true, message: "Quotation approved." };
     }
   },
@@ -324,8 +365,12 @@ export const adminApiService = {
       const res = await axiosInstance.post(`/trade/quotations/${quoteId}/convert`, {
         shippingAddress,
       });
+      adminApiService.clearCache("admin_quotes");
+      adminApiService.clearCache("admin_orders");
       return res.data;
     } catch {
+      adminApiService.clearCache("admin_quotes");
+      adminApiService.clearCache("admin_orders");
       return {
         success: true,
         data: {
@@ -342,54 +387,58 @@ export const adminApiService = {
 
   // Get current user credit line (Trade Patron)
   async getMyCredit() {
-    return safeApiCall(
-      axiosInstance.get("/trade/credits/me"),
-      {
-        _id: "crd_me",
-        totalCredit: 50000,
-        usedCredit: 13580,
-        availableCredit: 36420,
-        pendingCredit: 4140,
-        paymentTerm: "NET_30",
-        currency: "GBP",
-        status: "ACTIVE",
-      }
+    return getCachedOrFetch("admin_credit_me", () =>
+      safeApiCall(
+        axiosInstance.get("/trade/credits/me"),
+        {
+          _id: "crd_me",
+          totalCredit: 50000,
+          usedCredit: 13580,
+          availableCredit: 36420,
+          pendingCredit: 4140,
+          paymentTerm: "NET_30",
+          currency: "GBP",
+          status: "ACTIVE",
+        }
+      )
     );
   },
 
   // Get all company credit limits (Admin / Super Admin)
   async getAllCredits() {
-    return safeApiCall(
-      axiosInstance.get("/trade/credits"),
-      [
-        {
-          _id: "crd_01",
-          company: { name: "Kensington Heritage Interiors Ltd" },
-          totalCredit: 50000,
-          usedCredit: 13580,
-          availableCredit: 36420,
-          paymentTerm: "NET_30",
-          status: "ACTIVE",
-        },
-        {
-          _id: "crd_02",
-          company: { name: "Belgravia Design Guild" },
-          totalCredit: 100000,
-          usedCredit: 62400,
-          availableCredit: 37600,
-          paymentTerm: "NET_60",
-          status: "ACTIVE",
-        },
-        {
-          _id: "crd_03",
-          company: { name: "Soho House & Co Studio" },
-          totalCredit: 150000,
-          usedCredit: 88900,
-          availableCredit: 61100,
-          paymentTerm: "NET_60",
-          status: "ACTIVE",
-        },
-      ]
+    return getCachedOrFetch("admin_all_credits", () =>
+      safeApiCall(
+        axiosInstance.get("/trade/credits"),
+        [
+          {
+            _id: "crd_01",
+            company: { name: "Kensington Heritage Interiors Ltd" },
+            totalCredit: 50000,
+            usedCredit: 13580,
+            availableCredit: 36420,
+            paymentTerm: "NET_30",
+            status: "ACTIVE",
+          },
+          {
+            _id: "crd_02",
+            company: { name: "Belgravia Design Guild" },
+            totalCredit: 100000,
+            usedCredit: 62400,
+            availableCredit: 37600,
+            paymentTerm: "NET_60",
+            status: "ACTIVE",
+          },
+          {
+            _id: "crd_03",
+            company: { name: "Soho House & Co Studio" },
+            totalCredit: 150000,
+            usedCredit: 88900,
+            availableCredit: 61100,
+            paymentTerm: "NET_60",
+            status: "ACTIVE",
+          },
+        ]
+      )
     );
   },
 
@@ -401,6 +450,8 @@ export const adminApiService = {
       totalCredit,
       paymentTerm,
     });
+    adminApiService.clearCache("admin_credit");
+    adminApiService.clearCache("admin_all_credits");
     return res.data;
   },
 
@@ -410,38 +461,40 @@ export const adminApiService = {
 
   // Get active trade tiers
   async getTradeTiers() {
-    return safeApiCall(
-      axiosInstance.get("/trade/tiers"),
-      [
-        {
-          _id: "tier_bronze",
-          name: "BRONZE",
-          displayName: "Tier 1: Trade Standard",
-          discountPercentage: 15,
-          creditLimit: 10000,
-          paymentTerm: "IMMEDIATE",
-          description: "Standard interior design discount across wallpapers, fabrics, and paint.",
-        },
-        {
-          _id: "tier_silver",
-          name: "SILVER",
-          displayName: "Tier 2: Trade Silver",
-          discountPercentage: 20,
-          creditLimit: 25000,
-          paymentTerm: "NET_15",
-          description: "For active studios with annual spend exceeding £5,000. Priority turnaround.",
-        },
-        {
-          _id: "tier_gold",
-          name: "GOLD",
-          displayName: "Tier 3: Trade Gold",
-          discountPercentage: 25,
-          creditLimit: 50000,
-          paymentTerm: "NET_30",
-          freeShipping: true,
-          description: "Our highest prestige tier for global commercial and luxury residential projects.",
-        },
-      ]
+    return getCachedOrFetch("admin_trade_tiers", () =>
+      safeApiCall(
+        axiosInstance.get("/trade/tiers"),
+        [
+          {
+            _id: "tier_bronze",
+            name: "BRONZE",
+            displayName: "Tier 1: Trade Standard",
+            discountPercentage: 15,
+            creditLimit: 10000,
+            paymentTerm: "IMMEDIATE",
+            description: "Standard interior design discount across wallpapers, fabrics, and paint.",
+          },
+          {
+            _id: "tier_silver",
+            name: "SILVER",
+            displayName: "Tier 2: Trade Silver",
+            discountPercentage: 20,
+            creditLimit: 25000,
+            paymentTerm: "NET_15",
+            description: "For active studios with annual spend exceeding £5,000. Priority turnaround.",
+          },
+          {
+            _id: "tier_gold",
+            name: "GOLD",
+            displayName: "Tier 3: Trade Gold",
+            discountPercentage: 25,
+            creditLimit: 50000,
+            paymentTerm: "NET_30",
+            freeShipping: true,
+            description: "Our highest prestige tier for global commercial and luxury residential projects.",
+          },
+        ]
+      )
     );
   },
 
@@ -450,165 +503,171 @@ export const adminApiService = {
   // ==========================================
 
   // Get products catalog (GET /products) - fetches full catalog across all pages
-  async getProducts(params = {}, fetchAll = true) {
-    try {
-      const response = await axiosInstance.get("/products", {
-        params: { limit: 100, ...params },
-      });
-      const data = response?.data?.data || response?.data;
-      let rawList = [];
+  async getProducts(params = {}, fetchAll = false) {
+    const cacheKey = `admin_products_${JSON.stringify(params)}_${fetchAll}`;
+    return getCachedOrFetch(cacheKey, async () => {
+      try {
+        const queryLimit = params.limit || (fetchAll ? 50 : 50);
+        const response = await axiosInstance.get("/products", {
+          params: { limit: queryLimit, ...params },
+        });
+        const data = response?.data?.data || response?.data;
+        let rawList = [];
 
-      if (Array.isArray(data?.products)) {
-        rawList = data.products;
-      } else if (Array.isArray(data)) {
-        rawList = data;
-      } else if (Array.isArray(data?.data)) {
-        rawList = data.data;
-      }
-
-      // Check pagination metadata from backend
-      const pagination = response?.data?.pagination || response?.data?.data?.pagination;
-      const totalPages = pagination?.totalPages || 1;
-
-      // When fetchAll is requested (default for full admin view) and more pages exist
-      if (fetchAll && totalPages > 1 && !params.page) {
-        const pagePromises = [];
-        for (let p = 2; p <= totalPages; p++) {
-          pagePromises.push(
-            axiosInstance.get("/products", {
-              params: { limit: 100, ...params, page: p },
-            }).catch((err) => {
-              console.warn(`Error fetching products page ${p}:`, err.message);
-              return null;
-            })
-          );
+        if (Array.isArray(data?.products)) {
+          rawList = data.products;
+        } else if (Array.isArray(data)) {
+          rawList = data;
+        } else if (Array.isArray(data?.data)) {
+          rawList = data.data;
         }
-        const pageResponses = await Promise.all(pagePromises);
-        for (const pRes of pageResponses) {
-          if (!pRes) continue;
-          const pData = pRes?.data?.data || pRes?.data?.products || pRes?.data;
-          if (Array.isArray(pData)) {
-            rawList = rawList.concat(pData);
-          } else if (Array.isArray(pData?.data)) {
-            rawList = rawList.concat(pData.data);
+
+        // Check pagination metadata from backend
+        const pagination = response?.data?.pagination || response?.data?.data?.pagination;
+        const totalPages = pagination?.totalPages || 1;
+
+        // When fetchAll is requested (default for full admin view) and more pages exist
+        if (fetchAll && totalPages > 1 && !params.page) {
+          const pagePromises = [];
+          for (let p = 2; p <= totalPages; p++) {
+            pagePromises.push(
+              axiosInstance
+                .get("/products", {
+                  params: { limit: queryLimit, ...params, page: p },
+                })
+                .catch((err) => {
+                  console.warn(`Error fetching products page ${p}:`, err.message);
+                  return null;
+                })
+            );
+          }
+          const pageResponses = await Promise.all(pagePromises);
+          for (const pRes of pageResponses) {
+            if (!pRes) continue;
+            const pData = pRes?.data?.data || pRes?.data?.products || pRes?.data;
+            if (Array.isArray(pData)) {
+              rawList = rawList.concat(pData);
+            } else if (Array.isArray(pData?.data)) {
+              rawList = rawList.concat(pData.data);
+            }
           }
         }
+
+        // Combine with custom created products and filter deleted
+        const customProds = getCustomProducts();
+        const deletedIds = getDeletedProductIds();
+        const existingIds = new Set(customProds.map((c) => String(c._id || c.id)));
+        const nonDuplicate = rawList.filter(
+          (p) => !existingIds.has(String(p._id || p.id)) && !deletedIds.has(String(p._id || p.id))
+        );
+        const combined = [...customProds, ...nonDuplicate];
+
+        if (combined.length > 0) {
+          return combined.map(normalizeProduct);
+        }
+      } catch (err) {
+        console.warn("Backend /products fetch fallback:", err.message);
       }
 
-      // Combine with custom created products and filter deleted
-      const customProds = getCustomProducts();
-      const deletedIds = getDeletedProductIds();
-      const existingIds = new Set(customProds.map((c) => String(c._id || c.id)));
-      const nonDuplicate = rawList.filter(
-        (p) => !existingIds.has(String(p._id || p.id)) && !deletedIds.has(String(p._id || p.id))
-      );
-      const combined = [...customProds, ...nonDuplicate];
-
-      if (combined.length > 0) {
-        return combined.map(normalizeProduct);
-      }
-    } catch (err) {
-      console.warn("Backend /products fetch fallback:", err.message);
-    }
-
-    // Default high-res fallback items if backend is empty
-    return [
-      {
-        _id: "prod_001",
-        name: "Artemis Velvet Fringe Cushion",
-        slug: "artemis-velvet-fringe-cushion",
-        sku: "HOH-CUSH-001",
-        category: { name: "Home Decor", _id: "66f00112233445566778899a" },
-        categoryName: "Home Decor",
-        productType: "SIMPLE",
-        price: 195,
-        stock: 42,
-        status: "PUBLISHED",
-        visibility: "PUBLIC",
-        isTradeAvailable: true,
-        isFeatured: true,
-        thumbnail:
-          "https://res.cloudinary.com/tysd8i65/image/upload/c_scale,w_800,f_auto,q_auto/house_of_hackney/furnishings/artemis_cotton_linen_vesper_sofa___jadeite/artemis-cotton-linen-vesper-sofa-jadeite-0",
-        shortDescription:
-          "Opulent British velvet cushion trimmed in dense bullion silk fringe.",
-      },
-      {
-        _id: "prod_002",
-        name: "Babylon Wallpaper - Dove & Willow",
-        slug: "babylon-wallpaper-dove-willow",
-        sku: "HOH-WALL-002",
-        category: { name: "Wallpaper", _id: "66f00112233445566778899b" },
-        categoryName: "Wallpaper",
-        productType: "SIMPLE",
-        price: 220,
-        stock: 85,
-        status: "PUBLISHED",
-        visibility: "PUBLIC",
-        isTradeAvailable: true,
-        isFeatured: true,
-        thumbnail:
-          "https://res.cloudinary.com/tysd8i65/image/upload/c_scale,w_800,f_auto,q_auto/house_of_hackney/wallpaper/babylon_wallpaper_dove___willow/babylon-wallpaper-dove-willow-0",
-        shortDescription:
-          "Sublime botanical weeping willow pattern printed on FSC certified non-woven paper.",
-      },
-      {
-        _id: "prod_003",
-        name: "Phantasia Jacquard Fabric",
-        slug: "phantasia-jacquard-fabric",
-        sku: "HOH-FAB-003",
-        category: { name: "Fabric", _id: "66f00112233445566778899c" },
-        categoryName: "Fabric",
-        productType: "SIMPLE",
-        price: 240,
-        stock: 28,
-        status: "PUBLISHED",
-        visibility: "PUBLIC",
-        isTradeAvailable: true,
-        isFeatured: false,
-        thumbnail:
-          "https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?auto=format&fit=crop&w=800&q=80",
-        shortDescription:
-          "Woven in Suffolk, England on heritage looms with fantastical mythological flora.",
-      },
-      {
-        _id: "prod_004",
-        name: "Woad Mineral Velvet Paint",
-        slug: "woad-mineral-velvet-paint",
-        sku: "HOH-PNT-004",
-        category: { name: "Paint", _id: "66f00112233445566778899d" },
-        categoryName: "Paint",
-        productType: "SIMPLE",
-        price: 68,
-        stock: 14,
-        status: "PUBLISHED",
-        visibility: "PUBLIC",
-        isTradeAvailable: true,
-        isFeatured: false,
-        thumbnail:
-          "https://res.cloudinary.com/tysd8i65/image/upload/c_scale,w_800,f_auto,q_auto/house_of_hackney/paint/woad_paint___21/woad-paint-21-1",
-        shortDescription:
-          "Low VOC chalky mineral emulsion with depth of tone inspired by English natural woad.",
-      },
-      {
-        _id: "prod_005",
-        name: "Gothic Garden Silk Lamp Shade",
-        slug: "gothic-garden-silk-lamp-shade",
-        sku: "HOH-LGT-005",
-        category: { name: "Home Decor", _id: "66f00112233445566778899a" },
-        categoryName: "Home Decor",
-        productType: "SIMPLE",
-        price: 310,
-        stock: 6,
-        status: "DRAFT",
-        visibility: "PUBLIC",
-        isTradeAvailable: false,
-        isFeatured: false,
-        thumbnail:
-          "https://images.unsplash.com/photo-1513694203232-719a280e022f?auto=format&fit=crop&w=800&q=80",
-        shortDescription:
-          "Scalloped Victorian frame dressed in pleated black silk dupion with dramatic flora.",
-      },
-    ].map(normalizeProduct);
+      // Default high-res fallback items if backend is empty
+      return [
+        {
+          _id: "prod_001",
+          name: "Artemis Velvet Fringe Cushion",
+          slug: "artemis-velvet-fringe-cushion",
+          sku: "HOH-CUSH-001",
+          category: { name: "Home Decor", _id: "66f00112233445566778899a" },
+          categoryName: "Home Decor",
+          productType: "SIMPLE",
+          price: 195,
+          stock: 42,
+          status: "PUBLISHED",
+          visibility: "PUBLIC",
+          isTradeAvailable: true,
+          isFeatured: true,
+          thumbnail:
+            "https://res.cloudinary.com/tysd8i65/image/upload/c_scale,w_800,f_auto,q_auto/house_of_hackney/furnishings/artemis_cotton_linen_vesper_sofa___jadeite/artemis-cotton-linen-vesper-sofa-jadeite-0",
+          shortDescription:
+            "Opulent British velvet cushion trimmed in dense bullion silk fringe.",
+        },
+        {
+          _id: "prod_002",
+          name: "Babylon Wallpaper - Dove & Willow",
+          slug: "babylon-wallpaper-dove-willow",
+          sku: "HOH-WALL-002",
+          category: { name: "Wallpaper", _id: "66f00112233445566778899b" },
+          categoryName: "Wallpaper",
+          productType: "SIMPLE",
+          price: 220,
+          stock: 85,
+          status: "PUBLISHED",
+          visibility: "PUBLIC",
+          isTradeAvailable: true,
+          isFeatured: true,
+          thumbnail:
+            "https://res.cloudinary.com/tysd8i65/image/upload/c_scale,w_800,f_auto,q_auto/house_of_hackney/wallpaper/babylon_wallpaper_dove___willow/babylon-wallpaper-dove-willow-0",
+          shortDescription:
+            "Sublime botanical weeping willow pattern printed on FSC certified non-woven paper.",
+        },
+        {
+          _id: "prod_003",
+          name: "Phantasia Jacquard Fabric",
+          slug: "phantasia-jacquard-fabric",
+          sku: "HOH-FAB-003",
+          category: { name: "Fabric", _id: "66f00112233445566778899c" },
+          categoryName: "Fabric",
+          productType: "SIMPLE",
+          price: 240,
+          stock: 28,
+          status: "PUBLISHED",
+          visibility: "PUBLIC",
+          isTradeAvailable: true,
+          isFeatured: false,
+          thumbnail:
+            "https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?auto=format&fit=crop&w=800&q=80",
+          shortDescription:
+            "Woven in Suffolk, England on heritage looms with fantastical mythological flora.",
+        },
+        {
+          _id: "prod_004",
+          name: "Woad Mineral Velvet Paint",
+          slug: "woad-mineral-velvet-paint",
+          sku: "HOH-PNT-004",
+          category: { name: "Paint", _id: "66f00112233445566778899d" },
+          categoryName: "Paint",
+          productType: "SIMPLE",
+          price: 68,
+          stock: 14,
+          status: "PUBLISHED",
+          visibility: "PUBLIC",
+          isTradeAvailable: true,
+          isFeatured: false,
+          thumbnail:
+            "https://res.cloudinary.com/tysd8i65/image/upload/c_scale,w_800,f_auto,q_auto/house_of_hackney/paint/woad_paint___21/woad-paint-21-1",
+          shortDescription:
+            "Low VOC chalky mineral emulsion with depth of tone inspired by English natural woad.",
+        },
+        {
+          _id: "prod_005",
+          name: "Gothic Garden Silk Lamp Shade",
+          slug: "gothic-garden-silk-lamp-shade",
+          sku: "HOH-LGT-005",
+          category: { name: "Home Decor", _id: "66f00112233445566778899a" },
+          categoryName: "Home Decor",
+          productType: "SIMPLE",
+          price: 310,
+          stock: 6,
+          status: "DRAFT",
+          visibility: "PUBLIC",
+          isTradeAvailable: false,
+          isFeatured: false,
+          thumbnail:
+            "https://images.unsplash.com/photo-1513694203232-719a280e022f?auto=format&fit=crop&w=800&q=80",
+          shortDescription:
+            "Scalloped Victorian frame dressed in pleated black silk dupion with dramatic flora.",
+        },
+      ].map(normalizeProduct);
+    });
   },
 
   // Get product by ID (GET /products/:id)
@@ -636,6 +695,7 @@ export const adminApiService = {
       createdAt: new Date().toISOString(),
     };
     saveCustomProduct(newProd);
+    adminApiService.clearCache("admin_products");
 
     try {
       const res = await axiosInstance.post("/products", data);
@@ -664,6 +724,7 @@ export const adminApiService = {
 
     // Immediately persist to local overrides so storefront and admin update in real time
     saveProductOverride(id, cleanUpdate);
+    adminApiService.clearCache("admin_products");
 
     try {
       const res = await axiosInstance.put(`/products/${id}`, cleanUpdate);
@@ -681,6 +742,7 @@ export const adminApiService = {
   async deleteProduct(id) {
     // Immediately mark deleted in productSync so storefront and admin hide it in real time
     saveDeletedProductId(id);
+    adminApiService.clearCache("admin_products");
 
     try {
       const res = await axiosInstance.delete(`/products/${id}`);
@@ -784,35 +846,43 @@ export const adminApiService = {
   // ==========================================
 
   async getCategories() {
-    return safeApiCall(axiosInstance.get("/categories"), [
-      { _id: "66f00112233445566778899a", name: "Home Decor", slug: "home-decor" },
-      { _id: "66f00112233445566778899b", name: "Wallpaper", slug: "wallpaper" },
-      { _id: "66f00112233445566778899c", name: "Fabric", slug: "fabric" },
-      { _id: "66f00112233445566778899d", name: "Paint", slug: "paint" },
-    ]);
+    return getCachedOrFetch("admin_categories", () =>
+      safeApiCall(axiosInstance.get("/categories"), [
+        { _id: "66f00112233445566778899a", name: "Home Decor", slug: "home-decor" },
+        { _id: "66f00112233445566778899b", name: "Wallpaper", slug: "wallpaper" },
+        { _id: "66f00112233445566778899c", name: "Fabric", slug: "fabric" },
+        { _id: "66f00112233445566778899d", name: "Paint", slug: "paint" },
+      ])
+    );
   },
 
   async createCategory(data) {
     const res = await axiosInstance.post("/categories", data);
+    adminApiService.clearCache("admin_categories");
     return res.data;
   },
 
   async updateCategory(id, data) {
     const res = await axiosInstance.put(`/categories/${id}`, data);
+    adminApiService.clearCache("admin_categories");
     return res.data;
   },
 
   async deleteCategory(id) {
     const res = await axiosInstance.delete(`/categories/${id}`);
+    adminApiService.clearCache("admin_categories");
     return res.data;
   },
 
   async getBrands() {
-    return safeApiCall(axiosInstance.get("/brands"), []);
+    return getCachedOrFetch("admin_brands", () =>
+      safeApiCall(axiosInstance.get("/brands"), [])
+    );
   },
 
   async createBrand(data) {
     const res = await axiosInstance.post("/brands", data);
+    adminApiService.clearCache("admin_brands");
     return res.data;
   },
 
@@ -821,7 +891,9 @@ export const adminApiService = {
   // ==========================================
 
   async getOrders() {
-    return safeApiCall(axiosInstance.get("/orders"), []);
+    return getCachedOrFetch("admin_orders", () =>
+      safeApiCall(axiosInstance.get("/orders"), [])
+    );
   },
 
   async getOrderById(id) {
@@ -829,6 +901,7 @@ export const adminApiService = {
   },
 
   async updateOrderStatus(id, status) {
+    adminApiService.clearCache("admin_orders");
     const isMongoId = /^[0-9a-fA-F]{24}$/.test(id);
     if (!isMongoId || (typeof id === "string" && (id.startsWith("ord_") || id.startsWith("HOH-")))) {
       // Local or mock order - persist directly to localStorage
@@ -870,40 +943,45 @@ export const adminApiService = {
   },
 
   async getCoupons() {
-    return safeApiCall(axiosInstance.get("/coupons"), [
-      {
-        _id: "coup_01",
-        code: "ATELIER15",
-        discountType: "PERCENTAGE",
-        discountValue: 15,
-        minOrderAmount: 100,
-        status: "ACTIVE",
-        expiryDate: "2026-12-31T23:59:59Z",
-      },
-      {
-        _id: "coup_02",
-        code: "MAXIMALIST50",
-        discountType: "FIXED",
-        discountValue: 50,
-        minOrderAmount: 350,
-        status: "ACTIVE",
-        expiryDate: "2026-11-30T23:59:59Z",
-      },
-    ]);
+    return getCachedOrFetch("admin_coupons", () =>
+      safeApiCall(axiosInstance.get("/coupons"), [
+        {
+          _id: "coup_01",
+          code: "ATELIER15",
+          discountType: "PERCENTAGE",
+          discountValue: 15,
+          minOrderAmount: 100,
+          status: "ACTIVE",
+          expiryDate: "2026-12-31T23:59:59Z",
+        },
+        {
+          _id: "coup_02",
+          code: "MAXIMALIST50",
+          discountType: "FIXED",
+          discountValue: 50,
+          minOrderAmount: 350,
+          status: "ACTIVE",
+          expiryDate: "2026-11-30T23:59:59Z",
+        },
+      ])
+    );
   },
 
   async createCoupon(data) {
     const res = await axiosInstance.post("/coupons", data);
+    adminApiService.clearCache("admin_coupons");
     return res.data;
   },
 
   async updateCoupon(id, data) {
     const res = await axiosInstance.put(`/coupons/${id}`, data);
+    adminApiService.clearCache("admin_coupons");
     return res.data;
   },
 
   async deleteCoupon(id) {
     const res = await axiosInstance.delete(`/coupons/${id}`);
+    adminApiService.clearCache("admin_coupons");
     return res.data;
   },
 
@@ -912,7 +990,9 @@ export const adminApiService = {
   },
 
   async getInvoices() {
-    return safeApiCall(axiosInstance.get("/invoices"), []);
+    return getCachedOrFetch("admin_invoices", () =>
+      safeApiCall(axiosInstance.get("/invoices"), [])
+    );
   },
 
   // ==========================================
@@ -920,7 +1000,9 @@ export const adminApiService = {
   // ==========================================
 
   async getUsers() {
-    return safeApiCall(axiosInstance.get("/users"), []);
+    return getCachedOrFetch("admin_users", () =>
+      safeApiCall(axiosInstance.get("/users"), [])
+    );
   },
 
   async getUserById(id) {
@@ -928,6 +1010,7 @@ export const adminApiService = {
   },
 
   async createUser(userData) {
+    adminApiService.clearCache("admin_users");
     try {
       const res = await axiosInstance.post("/users/register", userData);
       return res.data;
@@ -938,11 +1021,13 @@ export const adminApiService = {
   },
 
   async updateUser(id, data) {
+    adminApiService.clearCache("admin_users");
     const res = await axiosInstance.put(`/users/${id}`, data);
     return res.data;
   },
 
   async deleteUser(id) {
+    adminApiService.clearCache("admin_users");
     const res = await axiosInstance.delete(`/users/${id}`);
     return res.data;
   },
@@ -987,24 +1072,29 @@ export const adminApiService = {
   },
 
   async getReviewsSummary() {
-    return safeApiCall(axiosInstance.get("/reviews/summary"), {
-      totalReviews: 48,
-      averageRating: 4.85,
-      ratingDistribution: { 5: 38, 4: 8, 3: 2, 2: 0, 1: 0 },
-    });
+    return getCachedOrFetch("admin_reviews_summary", () =>
+      safeApiCall(axiosInstance.get("/reviews/summary"), {
+        totalReviews: 48,
+        averageRating: 4.85,
+        ratingDistribution: { 5: 38, 4: 8, 3: 2, 2: 0, 1: 0 },
+      })
+    );
   },
 
   async updateReviewStatus(reviewId, status) {
+    adminApiService.clearCache("admin_reviews");
     const res = await axiosInstance.patch(`/reviews/${reviewId}/status`, { status });
     return res.data;
   },
 
   async replyToReview(reviewId, comment) {
+    adminApiService.clearCache("admin_reviews");
     const res = await axiosInstance.post(`/reviews/${reviewId}/reply`, { comment });
     return res.data;
   },
 
   async deleteReview(reviewId) {
+    adminApiService.clearCache("admin_reviews");
     const res = await axiosInstance.delete(`/reviews/${reviewId}`);
     return res.data;
   },
