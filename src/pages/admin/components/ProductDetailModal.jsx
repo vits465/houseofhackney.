@@ -131,7 +131,7 @@ export default function ProductDetailModal() {
               : "bg-white border-[#dbe6de] text-[#142617]"
           }`}
         >
-          {/* Header Bar */}
+          
           <div
             className={`px-6 py-4 border-b flex items-center justify-between gap-4 backdrop-blur-md ${
               isDark
@@ -294,7 +294,7 @@ export default function ProductDetailModal() {
 
               {/* Right Column: Full Specifications & Commerce (7 cols) */}
               <div className="lg:col-span-7 space-y-5">
-                {/* 1. Commercial Pricing & Stock Dashboard */}
+                {/* commercial pricing & stock dashboard */}
                 <div
                   className={`p-5 rounded-3xl border grid grid-cols-2 sm:grid-cols-4 gap-4 shadow-sm ${
                     isDark ? "bg-[#18231a] border-[#263728]" : "bg-white border-[#e0ebe2]"
@@ -357,7 +357,7 @@ export default function ProductDetailModal() {
                   </div>
                 </div>
 
-                {/* 2. Interactive Detail Tabs */}
+                {/* interactive detail */}
                 <div className="flex items-center gap-1.5 border-b border-inherit pb-2 text-xs font-semibold overflow-x-auto">
                   {[
                     { id: "specifications", label: "Technical Specs" },

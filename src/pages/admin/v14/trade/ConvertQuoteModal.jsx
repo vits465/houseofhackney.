@@ -58,7 +58,7 @@ export default function ConvertQuoteModal({ quote, isOpen, onClose }) {
               : "bg-white border-[#dce8df] text-[#142617]"
           }`}
         >
-          {/* Header */}
+          
           <div className="px-6 py-5 border-b border-inherit flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="w-9 h-9 rounded-full bg-[#3e7b52]/15 text-[#3e7b52] flex items-center justify-center">
@@ -192,7 +192,7 @@ export default function ConvertQuoteModal({ quote, isOpen, onClose }) {
               Your credit limit will be reserved immediately.
             </p>
 
-            {/* Action buttons */}
+            
             <div className="flex items-center justify-end gap-3 pt-3 border-t border-inherit">
               <button
                 type="button"

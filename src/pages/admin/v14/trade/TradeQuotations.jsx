@@ -110,7 +110,7 @@ export default function TradeQuotations() {
 
   return (
     <div className="space-y-6">
-      {/* Header bar */}
+      
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-xl sm:text-2xl font-bold tracking-tight">
@@ -231,7 +231,7 @@ export default function TradeQuotations() {
                     : "bg-white border-[#e4ede5] hover:border-[#c9dece] shadow-sm"
                 }`}
               >
-                {/* Approved Atelier Highlight Banner */}
+                {/* approved banner */}
                 {quote.status === "APPROVED" && (
                   <div className="mb-4 p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/25 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                     <div className="flex items-center gap-2.5">
@@ -403,7 +403,7 @@ export default function TradeQuotations() {
                   </div>
                 </div>
 
-                {/* Notes and Atelier Remarks */}
+                {/* notes */}
                 {(quote.customerNotes || quote.adminNotes) && (
                   <div className="mt-4 pt-3 border-t border-inherit grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
                     {quote.customerNotes && (

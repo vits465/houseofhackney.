@@ -38,7 +38,7 @@ export default function V14Overview() {
   } = useAdmin();
   const isDark = theme === "dark";
 
-  // Currency Selection: GBP (Base Atelier), USD, EUR
+  // currency: GBP, USD, EUR
   const [selectedCurrency, setSelectedCurrency] = useState("GBP");
   const [hoveredBar, setHoveredBar] = useState(null);
   const [searchActivity, setSearchActivity] = useState("");
@@ -283,7 +283,7 @@ export default function V14Overview() {
 
   return (
     <div className="space-y-6">
-      {/* 1. Header Greeting with Real-Time Telemetry Badge */}
+      {/* header greeting with real-time telemetry badge */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2 mb-1">
@@ -350,7 +350,7 @@ export default function V14Overview() {
         </div>
       </div>
 
-      {/* 2. Top Row: 3 Columns (Total Revenue Card | 2x2 KPIs | Dynamic Monthly Chart) */}
+      {/* top : 3 columns */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
         {/* Column 1: Total Balance Card (4 cols) */}
         <div
@@ -794,7 +794,7 @@ export default function V14Overview() {
         </div>
       </div>
 
-      {/* 3. Bottom Row: Monthly Spending Budget (4 cols) & Live Recent Orders Table (8 cols) */}
+      {/* bottom : monthly spending budget  & live recent orders table */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
         {/* Left Bottom Card: Dynamic Budget & Expenditure */}
         <div

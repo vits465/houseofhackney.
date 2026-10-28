@@ -1,4 +1,4 @@
-// Authentic House of Hackney mock dataset curated for V12 Atelier Admin Panel
+// mock data
 
 export const INITIAL_METRICS = {
   revenue: {

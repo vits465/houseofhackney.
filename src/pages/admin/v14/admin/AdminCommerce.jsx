@@ -35,7 +35,7 @@ export default function AdminCommerce() {
 
   const [activeSubTab, setActiveSubTab] = useState("orders"); // 'orders' | 'coupons' | 'shipments' | 'invoices'
 
-  // Data states
+  
   const [orders, setOrders] = useState([]);
   const [coupons, setCoupons] = useState([]);
   const [shipments, setShipments] = useState([]);
@@ -43,7 +43,7 @@ export default function AdminCommerce() {
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
 
-  // Coupon modal
+  
   const [createCouponOpen, setCreateCouponOpen] = useState(false);
   const [newCoupon, setNewCoupon] = useState({
     code: "",
@@ -53,7 +53,7 @@ export default function AdminCommerce() {
     expiryDate: new Date(Date.now() + 30 * 86400000).toISOString().split("T")[0],
   });
 
-  // Load all live commerce data
+  // load commerce data
   const loadCommerceData = async () => {
     setLoading(true);
     try {
@@ -103,7 +103,7 @@ export default function AdminCommerce() {
     loadCommerceData();
   }, []);
 
-  // Real-time synchronization when user completes checkout in store
+  // sync new orders
   useEffect(() => {
     const handleNewOrder = (e) => {
       if (e.detail) {
@@ -118,9 +118,9 @@ export default function AdminCommerce() {
     };
   }, []);
 
-  // Handle Order Status Change (PATCH /orders/:id/status)
+  // update order status
   const handleOrderStatusChange = async (orderId, newStatus) => {
-    // Immediately update UI state
+    
     setOrders((prev) =>
       prev.map((o) =>
         (o._id === orderId || o.id === orderId || o.orderNumber === orderId)
@@ -140,7 +140,7 @@ export default function AdminCommerce() {
     }
   };
 
-  // Handle Create Coupon (POST /coupons)
+  // create coupon
   const handleCreateCouponSubmit = async (e) => {
     e.preventDefault();
     if (!newCoupon.code.trim()) return;
@@ -191,7 +191,7 @@ export default function AdminCommerce() {
     }
   };
 
-  // Handle Delete Coupon (DELETE /coupons/:id)
+  // delete coupon
   const handleDeleteCoupon = async (couponId, code) => {
     const confirmed = await showConfirm(`Delete Coupon?`, `Remove voucher code ${code}?`);
     if (!confirmed || !confirmed.isConfirmed) return;
@@ -214,7 +214,7 @@ export default function AdminCommerce() {
     }
   };
 
-  // Handle Update Shipment Status (PATCH /shipments/:id/status)
+  // update shipment status
   const handleShipmentStatusChange = async (shipmentId, newStatus) => {
     try {
       await adminApiService.updateShipmentStatus(shipmentId, newStatus);
@@ -230,7 +230,7 @@ export default function AdminCommerce() {
     }
   };
 
-  // Handle Generate Invoice (POST /invoices/generate)
+  // generate invoice
   const handleGenerateInvoice = async (orderId) => {
     try {
       const res = await adminApiService.generateInvoice(orderId);
@@ -250,7 +250,7 @@ export default function AdminCommerce() {
 
   return (
     <div className="space-y-6">
-      {/* Header bar */}
+      {/* header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2 mb-1">
@@ -284,7 +284,7 @@ export default function AdminCommerce() {
         </button>
       </div>
 
-      {/* Sub-Navigation Tabs */}
+      {/* tabs */}
       <div
         className={`p-1.5 rounded-full border max-w-fit flex items-center gap-1 transition-colors ${
           isDark ? "bg-[#1d271f] border-[#2e3f31]" : "bg-[#f5f9f6] border-[#dce8df]"
@@ -347,7 +347,7 @@ export default function AdminCommerce() {
         </button>
       </div>
 
-      {/* 1. ORDERS SECTION */}
+      {/* orders */}
       {activeSubTab === "orders" && (
         <div
           className={`rounded-3xl border p-6 overflow-hidden shadow-sm transition-colors ${
@@ -481,7 +481,7 @@ export default function AdminCommerce() {
         </div>
       )}
 
-      {/* 2. COUPONS & VOUCHERS SECTION */}
+      {/* coupons */}
       {activeSubTab === "coupons" && (
         <div
           className={`rounded-3xl border p-6 overflow-hidden shadow-sm transition-colors ${
@@ -549,7 +549,7 @@ export default function AdminCommerce() {
         </div>
       )}
 
-      {/* 3. SHIPMENTS SECTION */}
+      {/* shipments */}
       {activeSubTab === "shipments" && (
         <div
           className={`rounded-3xl border p-6 overflow-hidden shadow-sm transition-colors ${
@@ -628,7 +628,7 @@ export default function AdminCommerce() {
         </div>
       )}
 
-      {/* 4. INVOICES SECTION */}
+      {/* invoices */}
       {activeSubTab === "invoices" && (
         <div
           className={`rounded-3xl border p-6 overflow-hidden shadow-sm transition-colors ${
@@ -747,7 +747,7 @@ export default function AdminCommerce() {
         </div>
       )}
 
-      {/* Create Coupon Modal */}
+      {/* coupon modal */}
       <AnimatePresence>
         {createCouponOpen && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">

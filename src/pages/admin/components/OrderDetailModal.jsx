@@ -28,7 +28,7 @@ export default function OrderDetailModal() {
     }
   };
 
-  // Safe client fields
+  
   const clientName =
     typeof selectedOrder.client?.name === "string"
       ? selectedOrder.client.name
@@ -201,7 +201,7 @@ export default function OrderDetailModal() {
             : "bg-white border-[#dce8df] text-[#142617]"
         }`}
       >
-        {/* Header Bar */}
+        
         <div
           className={`px-5 sm:px-7 py-4 border-b flex items-center justify-between gap-3 ${
             isDark ? "border-[#293d2c] bg-[#121b14]" : "border-[#e5ede6] bg-[#f9fbf9]"
@@ -498,7 +498,7 @@ export default function OrderDetailModal() {
           </div>
         </div>
 
-        {/* Footer Bar */}
+        
         <div
           className={`px-5 sm:px-7 py-3.5 border-t flex items-center justify-between text-xs ${
             isDark

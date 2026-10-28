@@ -18,7 +18,7 @@ function DesignServices() {
       </div>
 
       <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-8">
-        {/* 1. VIRTUALLY */}
+        {/* virtually */}
         <div className="bg-white rounded-[26px] p-8 md:p-10 border border-[#ede9e1] shadow-sm text-center flex flex-col justify-between hover:shadow-xl transition-all duration-300">
           <div>
             <div className="w-16 h-16 rounded-full bg-[#f1ede4] mx-auto mb-6 flex items-center justify-center text-[#394132]">
@@ -40,7 +40,7 @@ function DesignServices() {
           </Link>
         </div>
 
-        {/* 2. IN STORE */}
+        {/* in store */}
         <div className="bg-white rounded-[26px] p-8 md:p-10 border border-[#ede9e1] shadow-sm text-center flex flex-col justify-between hover:shadow-xl transition-all duration-300">
           <div>
             <div className="w-16 h-16 rounded-full bg-[#f1ede4] mx-auto mb-6 flex items-center justify-center text-[#394132]">
@@ -62,7 +62,7 @@ function DesignServices() {
           </Link>
         </div>
 
-        {/* 3. AT HOME */}
+        {/* at home */}
         <div className="bg-white rounded-[26px] p-8 md:p-10 border border-[#ede9e1] shadow-sm text-center flex flex-col justify-between hover:shadow-xl transition-all duration-300">
           <div>
             <div className="w-16 h-16 rounded-full bg-[#f1ede4] mx-auto mb-6 flex items-center justify-center text-[#394132]">

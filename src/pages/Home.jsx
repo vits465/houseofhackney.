@@ -419,7 +419,7 @@ function Home() {
                       />
                     </Link>
 
-                    {/* Wishlist Heart Button */}
+                    
                     <button
                       type="button"
                       aria-label={isWishlisted(item.slug) ? "Remove from wishlist" : "Add to wishlist"}
@@ -448,7 +448,7 @@ function Home() {
                       />
                     </button>
 
-                    {/* Badge */}
+                    
                     <span className="absolute top-3 left-3 rounded-full bg-[#f6f3ec]/95 px-2.5 py-0.5 text-[9px] font-medium tracking-wider uppercase text-[#171713] shadow-xs backdrop-blur-xs">
                       {item.tag}
                     </span>

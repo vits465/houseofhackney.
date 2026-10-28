@@ -12,8 +12,8 @@ const OVERRIDES_STORAGE_KEY = "hoh_product_overrides";
 const CUSTOM_PRODUCTS_KEY = "hoh_custom_products";
 const DELETED_PRODUCTS_KEY = "hoh_deleted_products";
 
-// Default curated list of product IDs designated as OUT_OF_STOCK (1-2 per category)
-// so the boutique feels realistic, while allowing shoppers to purchase all other creations.
+// out-of-stock product ids
+
 const DEFAULT_OUT_OF_STOCK_IDS = new Set([
   "6a76d06bb4a90fc1d5c9b943", // Wallpaper (1)
   "6a76d06ab4a90fc1d5c9b8fe", // Wallpaper (2)
@@ -168,7 +168,7 @@ export function applySmartStock(product) {
 
   const id = String(product._id || product.id || "");
 
-  // 1. Check if admin manually saved a stock or status override
+  
   const overrides = getProductOverrides();
   const override = overrides[id];
   if (override && override.stock !== undefined) {
@@ -186,7 +186,7 @@ export function applySmartStock(product) {
     };
   }
 
-  // 2. Check if product is in the curated 1-2 out of stock list per category
+  
   if (DEFAULT_OUT_OF_STOCK_IDS.has(id)) {
     return {
       ...product,
@@ -200,8 +200,8 @@ export function applySmartStock(product) {
     };
   }
 
-  // 3. All other creations in each category are in stock!
-  // Generate a stable stock count between 24 and 48 based on ID characters
+  
+  
   let hash = 0;
   for (let i = 0; i < id.length; i++) {
     hash = (hash * 31 + id.charCodeAt(i)) % 1000;

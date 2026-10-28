@@ -258,7 +258,7 @@ function SearchModal({ isOpen, onClose }) {
             ) : (
               /* Default Overview (House Favourites, Categories, Help, Sample Packs) */
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-8 lg:gap-10">
-                {/* 1. House Favourites */}
+                {/* house favourites */}
                 <div className="lg:col-span-4 space-y-4">
                   <h3 className="font-serif text-xl tracking-tight text-[#171713]">
                     House Favourites
@@ -288,7 +288,7 @@ function SearchModal({ isOpen, onClose }) {
                   </div>
                 </div>
 
-                {/* 2. Categories */}
+                {/* categories */}
                 <div className="lg:col-span-3 space-y-4">
                   <h3 className="font-serif text-xl tracking-tight text-[#171713]">
                     Categories
@@ -308,7 +308,7 @@ function SearchModal({ isOpen, onClose }) {
                   </ul>
                 </div>
 
-                {/* 3. Help */}
+                {/* help */}
                 <div className="lg:col-span-2 space-y-4">
                   <h3 className="font-serif text-xl tracking-tight text-[#171713]">
                     Help
@@ -328,7 +328,7 @@ function SearchModal({ isOpen, onClose }) {
                   </ul>
                 </div>
 
-                {/* 4. Sample Packs Promotion Card */}
+                {/* sample packs promotion card */}
                 <div className="lg:col-span-3">
                   <div
                     onClick={() => {

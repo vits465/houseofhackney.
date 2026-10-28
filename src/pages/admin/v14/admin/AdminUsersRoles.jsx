@@ -101,7 +101,7 @@ export default function AdminUsersRoles() {
   const { theme, currentRole, setCurrentRole, authUser } = useAdmin();
   const isDark = theme === "dark";
 
-  // Strict Super Admin Access Verification
+  // check super admin
   const isSuperAdmin =
     currentRole === "super-admin" ||
     authUser?.email === "adichauha465@gmail.com";
@@ -139,7 +139,7 @@ export default function AdminUsersRoles() {
   });
   const [savingRole, setSavingRole] = useState(false);
 
-  // Fetch live Users and Roles from backend
+  // fetch users and roles
   const loadRBACData = async () => {
     setLoading(true);
     try {
@@ -348,7 +348,7 @@ export default function AdminUsersRoles() {
     }
   };
 
-  // Delete User with Super Admin Confirmation
+  // delete user
   const handleDeleteUser = async (user) => {
     const confirmed = await showConfirm(
       `Delete User ${user.name}?`,
@@ -396,7 +396,7 @@ export default function AdminUsersRoles() {
     setRoleModalOpen(true);
   };
 
-  // Toggle permission in role form
+  // toggle permission
   const handleTogglePermission = (perm) => {
     setRoleFormData((prev) => {
       const exists = prev.permissions.includes(perm);
@@ -486,10 +486,9 @@ export default function AdminUsersRoles() {
       u.role.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  // ==========================================
   // SUPER ADMIN RESTRICTION SCREEN
   // If user is not super-admin, restrict access immediately
-  // ==========================================
+
   if (!isSuperAdmin) {
     return (
       <div className="py-12 px-4 max-w-2xl mx-auto text-center space-y-6">
@@ -534,12 +533,11 @@ export default function AdminUsersRoles() {
     );
   }
 
-  // ==========================================
   // SUPER ADMIN AUTHORIZED VIEW
-  // ==========================================
+
   return (
     <div className="space-y-6">
-      {/* Top Banner */}
+      
       <div
         className={`p-6 sm:p-8 rounded-3xl border transition-all ${
           isDark
@@ -568,7 +566,7 @@ export default function AdminUsersRoles() {
             </p>
           </div>
 
-          {/* Action Buttons */}
+          
           <div className="flex items-center gap-3">
             {activeTab === "users" ? (
               <button
@@ -602,7 +600,7 @@ export default function AdminUsersRoles() {
           </div>
         </div>
 
-        {/* Sub Tabs Pill */}
+        
         <div className="mt-6 pt-5 border-t border-inherit flex items-center gap-2">
           <div
             className={`p-1.5 rounded-2xl border flex items-center gap-1 transition-colors ${
@@ -640,16 +638,14 @@ export default function AdminUsersRoles() {
         </div>
       </div>
 
-      {/* ==========================================
-          USERS TAB
-          ========================================== */}
+      {}
       {activeTab === "users" && (
         <div
           className={`rounded-3xl border p-6 transition-all shadow-sm ${
             isDark ? "bg-[#141a15] border-[#253327]" : "bg-white border-[#e0ece2]"
           }`}
         >
-          {/* Search Bar */}
+          
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-5">
             <div>
               <h3 className="font-serif font-bold text-base">Atelier Accounts</h3>
@@ -676,7 +672,7 @@ export default function AdminUsersRoles() {
             </div>
           </div>
 
-          {/* Users Table */}
+          
           {loading ? (
             <div className="flex flex-col items-center justify-center py-16 gap-3">
               <RefreshCw size={24} className="animate-spin text-[#3e7b52]" />
@@ -718,7 +714,7 @@ export default function AdminUsersRoles() {
                         isDark ? "hover:bg-[#1a231b]" : "hover:bg-[#f8fbf9]"
                       }`}
                     >
-                      {/* Name & Initials */}
+                      
                       <td className="py-3.5 pl-3">
                         <div className="flex items-center gap-2.5">
                           <div className="w-8 h-8 rounded-full bg-[#3e7b52]/15 text-[#3e7b52] font-bold flex items-center justify-center text-xs">
@@ -738,12 +734,12 @@ export default function AdminUsersRoles() {
                         </div>
                       </td>
 
-                      {/* Email */}
+                      
                       <td className="py-3.5 text-[#627766] font-mono text-[11px]">
                         {u.email}
                       </td>
 
-                      {/* Role */}
+                      
                       <td className="py-3.5">
                         <span className="font-semibold text-[#3e7b52] flex items-center gap-1">
                           <Shield size={12} />
@@ -751,7 +747,7 @@ export default function AdminUsersRoles() {
                         </span>
                       </td>
 
-                      {/* Status */}
+                      
                       <td className="py-3.5">
                         <span
                           className={`px-2.5 py-0.5 rounded-full text-[10px] font-mono tracking-wider uppercase font-bold ${
@@ -764,15 +760,15 @@ export default function AdminUsersRoles() {
                         </span>
                       </td>
 
-                      {/* Telemetry */}
+                      
                       <td className="py-3.5 text-[#859b89] font-mono text-[11px]">
                         {u.lastLogin}
                       </td>
 
-                      {/* Super Admin Action Buttons */}
+                      
                       <td className="py-3.5 pr-3 text-right">
                         <div className="flex items-center justify-end gap-1.5">
-                          {/* View Details */}
+                          
                           <button
                             onClick={() => handleViewDetails(u)}
                             title="View Full User Details (Super Admin)"
@@ -781,7 +777,7 @@ export default function AdminUsersRoles() {
                             <Eye size={14} />
                           </button>
 
-                          {/* Edit User */}
+                          
                           <button
                             onClick={() => handleOpenEditUser(u)}
                             title="Edit User Profile (Super Admin)"
@@ -790,7 +786,7 @@ export default function AdminUsersRoles() {
                             <Edit2 size={14} />
                           </button>
 
-                          {/* Delete User */}
+                          
                           <button
                             onClick={() => handleDeleteUser(u)}
                             title="Delete User (Super Admin)"
@@ -809,9 +805,7 @@ export default function AdminUsersRoles() {
         </div>
       )}
 
-      {/* ==========================================
-          ROLES TAB
-          ========================================== */}
+      {}
       {activeTab === "roles" && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
           {rolesList.map((r) => (
@@ -841,7 +835,7 @@ export default function AdminUsersRoles() {
                   {r.description}
                 </p>
 
-                {/* Permissions List */}
+                
                 <div className="space-y-1.5 pt-3 border-t border-inherit">
                   <span className="text-[10px] font-semibold uppercase tracking-wider text-[#627766] block">
                     Granted Permissions ({r.permissions?.length || 0}):
@@ -864,7 +858,7 @@ export default function AdminUsersRoles() {
                 </div>
               </div>
 
-              {/* Card Footer with Super Admin Controls */}
+              
               <div className="mt-6 pt-4 border-t border-inherit flex items-center justify-between text-xs">
                 <span className="text-[#859b89] text-[11px] font-mono">
                   Policy #{r.id.slice(-4)}
@@ -893,9 +887,7 @@ export default function AdminUsersRoles() {
         </div>
       )}
 
-      {/* ==========================================
-          MODAL 1: USER DETAILS MODAL (Super Admin Only)
-          ========================================== */}
+      {}
       <AnimatePresence>
         {detailsModalOpen && selectedUser && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -917,7 +909,7 @@ export default function AdminUsersRoles() {
                   : "bg-white border-[#dce8df] text-[#142617]"
               }`}
             >
-              {/* Header */}
+              
               <div className="flex items-center justify-between pb-4 border-b border-inherit">
                 <div className="flex items-center gap-2.5">
                   <div className="w-10 h-10 rounded-full bg-[#3e7b52] text-white flex items-center justify-center font-bold text-sm">
@@ -945,7 +937,7 @@ export default function AdminUsersRoles() {
                 </button>
               </div>
 
-              {/* Body Details */}
+              
               <div className="py-4 space-y-4 text-xs">
                 <div className="grid grid-cols-2 gap-3">
                   <div
@@ -1036,7 +1028,7 @@ export default function AdminUsersRoles() {
                 </div>
               </div>
 
-              {/* Footer Actions */}
+              
               <div className="pt-4 border-t border-inherit flex items-center justify-between">
                 <button
                   onClick={() => handleDeleteUser(selectedUser)}
@@ -1064,9 +1056,7 @@ export default function AdminUsersRoles() {
         )}
       </AnimatePresence>
 
-      {/* ==========================================
-          MODAL 2: ADD / EDIT USER MODAL (Super Admin Only)
-          ========================================== */}
+      {}
       <AnimatePresence>
         {userModalOpen && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -1284,9 +1274,7 @@ export default function AdminUsersRoles() {
         )}
       </AnimatePresence>
 
-      {/* ==========================================
-          MODAL 3: ADD / EDIT ROLE MODAL (Super Admin Only)
-          ========================================== */}
+      {}
       <AnimatePresence>
         {roleModalOpen && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4">

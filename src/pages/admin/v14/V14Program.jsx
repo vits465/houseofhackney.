@@ -91,7 +91,7 @@ export default function V14Program() {
 
   return (
     <div className="space-y-6">
-      {/* 1. Header */}
+      {/* header */}
       <div>
         <h1
           className={`text-2xl sm:text-3xl font-sans font-bold tracking-tight ${
@@ -109,7 +109,7 @@ export default function V14Program() {
         </p>
       </div>
 
-      {/* 2. Top Row: Hero Points Card (Left) & Tier Benefits (Right) */}
+      {/* top : hero points card  & tier benefits */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
         {/* Left Hero Card: Botanical Gradient */}
         <div className="lg:col-span-7 p-7 rounded-3xl bg-gradient-to-br from-[#2e5e3a] via-[#3e7b52] to-[#559a68] text-white flex flex-col justify-between shadow-md">
@@ -250,7 +250,7 @@ export default function V14Program() {
         </div>
       </div>
 
-      {/* 3. Bottom Row: Atelier Offers (Left) & Dynamic Points History (Right) */}
+      {/* offers & points history */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
         {/* Left: Offers for You */}
         <div

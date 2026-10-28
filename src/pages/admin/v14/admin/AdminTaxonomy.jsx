@@ -190,7 +190,7 @@ export default function AdminTaxonomy() {
 
   return (
     <div className="space-y-6">
-      {/* Header bar */}
+      
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2 mb-1">
@@ -287,7 +287,7 @@ export default function AdminTaxonomy() {
         </button>
       </div>
 
-      {/* 1. CATEGORIES */}
+      {/* categories */}
       {activeSubTab === "categories" && (
         <div
           className={`rounded-3xl border p-6 overflow-hidden shadow-sm transition-colors ${
@@ -348,7 +348,7 @@ export default function AdminTaxonomy() {
         </div>
       )}
 
-      {/* 2. BRANDS */}
+      {/* brands */}
       {activeSubTab === "brands" && (
         <div
           className={`rounded-3xl border p-6 overflow-hidden shadow-sm transition-colors ${
@@ -399,7 +399,7 @@ export default function AdminTaxonomy() {
         </div>
       )}
 
-      {/* 3. ATTRIBUTES */}
+      {/* attributes */}
       {activeSubTab === "attributes" && (
         <div
           className={`rounded-3xl border p-6 overflow-hidden shadow-sm transition-colors ${
@@ -465,7 +465,7 @@ export default function AdminTaxonomy() {
         </div>
       )}
 
-      {/* 4. INVENTORY & STOCK OVERVIEW */}
+      {/* inventory & stock overview */}
       {activeSubTab === "inventory" && (
         <div
           className={`rounded-3xl border p-6 overflow-hidden shadow-sm transition-colors ${

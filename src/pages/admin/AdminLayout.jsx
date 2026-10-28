@@ -112,10 +112,10 @@ function DashboardV14Main() {
           : "bg-[#f4f7f4] text-[#142617]"
       }`}
     >
-      {/* 1. Permanently Fixed Left Aside Rail (Never moves or jumps when scrolling or changing sections) */}
+      {/* permanently fixed left aside rail */}
       <V14Sidebar />
 
-      {/* 2. Main Layout Container: permanently offset by pl-16 for the 64px rail */}
+      {/* main layout container: permanently offset by pl-16 for the 64px rail */}
       <div className="flex-1 flex flex-col min-h-screen pl-16 w-full">
         {/* Fixed Top Header Bar: locked to top: 0, left: 16 (64px), right: 0 just like the sidebar rail */}
         <header className="fixed top-0 left-16 right-0 z-30 shadow-xs backdrop-blur-md">

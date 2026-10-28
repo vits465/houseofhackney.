@@ -190,7 +190,7 @@ export default function HelpFaq() {
             and international parcel despatches.
           </p>
 
-          {/* Search Bar */}
+          
           <div className="relative mx-auto mt-8 max-w-lg">
             <Search
               size={18}
@@ -411,7 +411,7 @@ export default function HelpFaq() {
               </form>
             </div>
 
-            {/* Showroom & Atelier Details */}
+            {/* showrooms */}
             <div className="rounded-2xl border border-[#dedbd4] bg-white p-6 shadow-xs space-y-4">
               <h4 className="font-serif text-lg font-medium text-[#171713]">
                 Showrooms & Ateliers

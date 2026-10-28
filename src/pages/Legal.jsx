@@ -199,7 +199,7 @@ export default function Legal({ defaultTopic }) {
 
   return (
     <div className="min-h-screen bg-[#f6f3ec] text-[#171713] pb-24">
-      {/* Top Banner */}
+      
       <div className="border-b border-[#dedbd4] bg-[#faf8f4] py-12 text-center">
         <div className="mx-auto max-w-4xl px-4 sm:px-6">
           <span className="text-[11px] font-semibold tracking-[2px] uppercase text-[#c29b38]">
@@ -214,7 +214,7 @@ export default function Legal({ defaultTopic }) {
         </div>
       </div>
 
-      {/* Main Container */}
+      
       <div className="mx-auto max-w-5xl px-4 pt-10 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 gap-8 md:grid-cols-12">
           {/* Policy Navigation (4 cols) */}

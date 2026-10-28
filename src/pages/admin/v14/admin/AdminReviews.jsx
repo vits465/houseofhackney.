@@ -36,7 +36,7 @@ export default function AdminReviews() {
   const [replyText, setReplyText] = useState("");
   const [submittingReply, setSubmittingReply] = useState(false);
 
-  // Load reviews and metrics from backend
+  // load reviews
   const loadData = async () => {
     setLoading(true);
     try {
@@ -132,7 +132,7 @@ export default function AdminReviews() {
     loadData();
   }, []);
 
-  // Update Review Status (Approve / Reject)
+  // update review status
   const handleUpdateStatus = async (reviewId, newStatus) => {
     try {
       await adminApiService.updateReviewStatus(reviewId, newStatus);
@@ -174,7 +174,7 @@ export default function AdminReviews() {
     setReplyModalOpen(true);
   };
 
-  // Submit Official Atelier Response
+  // reply to review
   const handleSubmitReply = async (e) => {
     e.preventDefault();
     if (!replyText.trim() || !selectedReview) return;
@@ -248,7 +248,7 @@ export default function AdminReviews() {
             </p>
           </div>
 
-          {/* Quick Metrics Capsule */}
+          
           <div className="flex items-center gap-3">
             <div
               className={`px-4 py-3 rounded-2xl border text-center ${
@@ -302,9 +302,9 @@ export default function AdminReviews() {
           </div>
         </div>
 
-        {/* Filter Bar & Search */}
+        
         <div className="mt-6 pt-5 border-t border-inherit flex flex-col sm:flex-row items-center justify-between gap-4">
-          {/* Status Tabs */}
+          
           <div className="flex items-center gap-1.5 p-1 rounded-2xl bg-black/5 dark:bg-white/5 w-full sm:w-auto overflow-x-auto">
             {["ALL", "PENDING", "APPROVED", "REJECTED"].map((st) => (
               <button
@@ -329,7 +329,7 @@ export default function AdminReviews() {
             ))}
           </div>
 
-          {/* Search Input & Refresh */}
+          
           <div className="flex items-center gap-2.5 w-full sm:w-auto">
             <div
               className={`flex items-center gap-2 px-3 py-2 rounded-2xl border w-full sm:w-64 ${
@@ -407,7 +407,7 @@ export default function AdminReviews() {
                 <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
                   {/* Left: Product Thumbnail + Client Info + Review Details */}
                   <div className="flex items-start gap-4">
-                    {/* Product Image */}
+                    
                     {rev.product?.thumbnail && (
                       <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl overflow-hidden bg-black/5 flex-shrink-0 border border-inherit">
                         <img
@@ -422,7 +422,7 @@ export default function AdminReviews() {
                     )}
 
                     <div className="space-y-1.5 flex-1">
-                      {/* Product Name & Stars */}
+                      
                       <div className="flex flex-wrap items-center gap-2">
                         <span className="text-xs font-bold text-[#3e7b52] flex items-center gap-1">
                           <Package size={12} />
@@ -443,7 +443,7 @@ export default function AdminReviews() {
                         </div>
                       </div>
 
-                      {/* Review Title */}
+                      
                       <h4
                         className={`text-sm sm:text-base font-serif font-bold ${
                           isDark ? "text-white" : "text-[#142617]"
@@ -452,12 +452,12 @@ export default function AdminReviews() {
                         {rev.title}
                       </h4>
 
-                      {/* Comment */}
+                      
                       <p className="text-xs sm:text-sm text-[#627766] leading-relaxed">
                         "{rev.comment}"
                       </p>
 
-                      {/* Client Meta */}
+                      
                       <div className="flex flex-wrap items-center gap-3 pt-1 text-[11px] text-[#859b89]">
                         <span className="flex items-center gap-1 font-semibold text-[#142617] dark:text-white">
                           <User size={11} className="text-[#3e7b52]" />
@@ -479,9 +479,9 @@ export default function AdminReviews() {
                     </div>
                   </div>
 
-                  {/* Right: Status Pill & Action Buttons */}
+                  
                   <div className="flex sm:flex-col items-center sm:items-end justify-between gap-2.5 pt-3 sm:pt-0 border-t sm:border-t-0 border-inherit flex-shrink-0">
-                    {/* Status Badge */}
+                    
                     <span
                       className={`px-3 py-1 rounded-full text-[10px] font-mono tracking-wider uppercase font-bold ${
                         isApproved
@@ -494,7 +494,7 @@ export default function AdminReviews() {
                       {rev.status}
                     </span>
 
-                    {/* Actions */}
+                    
                     <div className="flex items-center gap-1.5">
                       {isPending && (
                         <>
@@ -545,7 +545,7 @@ export default function AdminReviews() {
                         </button>
                       )}
 
-                      {/* Reply Button */}
+                      
                       <button
                         onClick={() => openReplyModal(rev)}
                         title="Atelier Official Reply"
@@ -560,7 +560,7 @@ export default function AdminReviews() {
                         <Reply size={15} />
                       </button>
 
-                      {/* Delete Button */}
+                      
                       <button
                         onClick={() => handleDelete(rev._id)}
                         title="Delete Review"
@@ -572,7 +572,7 @@ export default function AdminReviews() {
                   </div>
                 </div>
 
-                {/* Atelier Official Response (if present) */}
+                
                 {rev.adminReply && (
                   <div
                     className={`mt-4 p-3.5 rounded-2xl border flex items-start gap-3 ${
@@ -602,7 +602,7 @@ export default function AdminReviews() {
         )}
       </div>
 
-      {/* Atelier Reply Modal */}
+      
       <AnimatePresence>
         {replyModalOpen && selectedReview && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -646,7 +646,7 @@ export default function AdminReviews() {
                 </button>
               </div>
 
-              {/* Customer Comment Snippet */}
+              
               <div
                 className={`my-4 p-3 rounded-2xl text-xs border italic ${
                   isDark
@@ -657,7 +657,7 @@ export default function AdminReviews() {
                 "{selectedReview.comment}"
               </div>
 
-              {/* Form */}
+              
               <form onSubmit={handleSubmitReply} className="space-y-4">
                 <div>
                   <label className="block text-[10px] font-mono uppercase tracking-widest text-[#627766] mb-1.5 font-bold">

@@ -138,7 +138,7 @@ export default function GiftVoucher() {
               onSubmit={handleAddToBag}
               className="rounded-2xl border border-[#dedbd4] bg-white p-6 sm:p-10 shadow-xs space-y-8"
             >
-              {/* 1. Select Amount */}
+              {/* select amount */}
               <div>
                 <label className="block text-xs font-semibold uppercase tracking-wider text-[#171713] mb-3">
                   1. Choose Voucher Value
@@ -196,7 +196,7 @@ export default function GiftVoucher() {
                 </div>
               </div>
 
-              {/* 2. Recipient Information */}
+              {/* recipient information */}
               <div className="space-y-4 border-t border-[#dedbd4] pt-6">
                 <label className="block text-xs font-semibold uppercase tracking-wider text-[#171713]">
                   2. Recipient Details
@@ -233,7 +233,7 @@ export default function GiftVoucher() {
                 </div>
               </div>
 
-              {/* 3. Personal Message */}
+              {/* personal message */}
               <div className="space-y-4 border-t border-[#dedbd4] pt-6">
                 <label className="block text-xs font-semibold uppercase tracking-wider text-[#171713]">
                   3. From & Personal Message
@@ -269,7 +269,7 @@ export default function GiftVoucher() {
                 </div>
               </div>
 
-              {/* Submit button */}
+              
               <div className="border-t border-[#dedbd4] pt-6">
                 <button
                   type="submit"

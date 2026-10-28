@@ -164,7 +164,7 @@ export default function RequestQuoteModal({ isOpen, onClose, initialProduct = nu
               : "bg-white border-[#dce8df] text-[#142617]"
           }`}
         >
-          {/* Header */}
+          
           <div className="px-6 py-5 border-b border-inherit flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="w-9 h-9 rounded-full bg-[#3e7b52]/15 text-[#3e7b52] flex items-center justify-center">
@@ -208,7 +208,7 @@ export default function RequestQuoteModal({ isOpen, onClose, initialProduct = nu
               </span>
             </div>
 
-            {/* Items Table */}
+            
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <label className="text-xs font-semibold uppercase tracking-wider text-[#627766]">
@@ -269,7 +269,7 @@ export default function RequestQuoteModal({ isOpen, onClose, initialProduct = nu
                       </div>
                     </div>
 
-                    {/* Subtotal */}
+                    
                     <div className="w-24 text-right">
                       <p className="text-xs font-bold text-[#3e7b52]">
                         £{(row.unitPrice * row.quantity).toLocaleString()}

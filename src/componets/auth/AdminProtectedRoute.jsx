@@ -12,7 +12,7 @@ export default function AdminProtectedRoute() {
   );
   const location = useLocation();
 
-  // If auth is still restoring from session, display elegant atelier loader
+  // loading session
   if (!initialized) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[#f4f7f4] text-[#142617]">

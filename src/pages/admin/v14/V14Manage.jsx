@@ -42,14 +42,14 @@ export default function V14Manage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(18); // 12, 18, 36, 72, 999 (All)
 
-  // Ensure full catalog (170+ items) is loaded immediately on mount
+  // load full catalog
   useEffect(() => {
     if (products.length < 100 && !loadingProducts && refreshProducts) {
       refreshProducts();
     }
   }, []);
 
-  // Dynamic categories from all loaded products with standard presets (clean strings only)
+  // categories
   const dynamicCategories = [
     "all",
     ...new Set([
@@ -118,7 +118,7 @@ export default function V14Manage() {
 
   return (
     <div className="space-y-6">
-      {/* 1. Header Bar with Actions */}
+      {/* header bar with actions */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2 mb-1">
@@ -168,7 +168,7 @@ export default function V14Manage() {
         </div>
       </div>
 
-      {/* 2. KPI Live Metrics Row */}
+      {/* kpi live metrics */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5">
         <div
           className={`p-4 rounded-2xl border transition-colors ${
@@ -231,7 +231,7 @@ export default function V14Manage() {
         </div>
       </div>
 
-      {/* 3. Filter, Search and View Switcher Bar */}
+      {/* filter, search and view switcher bar */}
       <div
         className={`p-4 rounded-3xl border flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-sm transition-colors ${
           isDark
@@ -375,7 +375,7 @@ export default function V14Manage() {
         </div>
       </div>
 
-      {/* 4. Products Presentation (Grid View or Table View) */}
+      {/* products presentation */}
       {paginatedProducts.length === 0 ? (
         <div
           className={`p-12 rounded-3xl border text-center space-y-3 ${
@@ -454,7 +454,7 @@ export default function V14Manage() {
                         {prod.status}
                       </span>
 
-                      {/* Hover overlay hint */}
+                      
                       <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                         <span className="px-3 py-1.5 rounded-full bg-white/90 text-[#142617] text-xs font-bold flex items-center gap-1.5 shadow-md backdrop-blur-sm">
                           <Eye size={13} /> View Full Details
@@ -462,7 +462,7 @@ export default function V14Manage() {
                       </div>
                     </div>
 
-                    {/* Details */}
+                    
                     <div className="p-5">
                       <div className="flex items-center justify-between text-[11px] font-mono text-[#859b89] mb-1">
                         <span>SKU: {prod.sku || "HOH-AUTO"}</span>
@@ -673,7 +673,7 @@ export default function V14Manage() {
         </div>
       )}
 
-      {/* 5. Pagination Bar (Full Catalog Navigation) */}
+      {/* pagination bar */}
       {totalItems > 0 && (
         <div
           className={`p-4 rounded-3xl border flex flex-col sm:flex-row items-center justify-between gap-4 text-xs font-sans transition-colors ${

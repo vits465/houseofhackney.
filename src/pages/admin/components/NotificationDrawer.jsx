@@ -53,7 +53,7 @@ export default function NotificationDrawer() {
               : "bg-white border-[#e2ece4] text-[#1e2a21]"
           }`}
         >
-          {/* Header */}
+          
           <div
             className={`p-5 border-b flex items-center justify-between ${
               isDark ? "border-[#293a2c]" : "border-[#e5ede6]"

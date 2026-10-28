@@ -47,7 +47,7 @@ function OurHouse({ defaultTab = "about" }) {
         </div>
       </section>
 
-      {/* 1. ABOUT US */}
+      {/* about us */}
       {activeTab === "about" && (
         <section className="px-6 pb-24 max-w-6xl mx-auto space-y-16">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-10 items-center bg-white rounded-[26px] p-8 md:p-12 border border-[#ede9e1] shadow-sm">
@@ -103,7 +103,7 @@ function OurHouse({ defaultTab = "about" }) {
         </section>
       )}
 
-      {/* 2. SHOWROOMS */}
+      {/* showrooms */}
       {activeTab === "showrooms" && (
         <section className="px-6 pb-24 max-w-6xl mx-auto space-y-12">
           <div className="bg-white rounded-[26px] p-8 md:p-12 border border-[#ede9e1] shadow-sm grid grid-cols-1 lg:grid-cols-2 gap-10 items-center">
@@ -162,7 +162,7 @@ function OurHouse({ defaultTab = "about" }) {
         </section>
       )}
 
-      {/* 3. OUR IMPACT */}
+      {/* our impact */}
       {activeTab === "regenerative" && (
         <section className="px-6 pb-24 max-w-6xl mx-auto space-y-12">
           <div className="text-center max-w-3xl mx-auto mb-12">

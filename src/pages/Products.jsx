@@ -213,7 +213,7 @@ function Products() {
   const [reloadKey, setReloadKey] = useState(0);
   const [gridCols, setGridCols] = useState(4); // 2, 3, or 4 columns view
 
-  // Parse active filters from URL query params and route params
+  // parse url filters
   const urlCategoryRaw = searchParams.get("category") || categorySlug || "";
   const urlColour = searchParams.get("colour") || searchParams.get("color") || colourSlug || "";
   const urlStyle = searchParams.get("style") || styleSlug || "";
@@ -303,11 +303,11 @@ function Products() {
           });
         }
 
-        // Client-side colour filtering if colour param is present
+        // filter by colour
         if (urlColour) {
           const targetColour = urlColour.toLowerCase().replace(/s$/, ""); // "greens" -> "green"
           list = list.filter((p) => {
-            // 1. Check colours array
+            
             const matchesColourObj = (p.colours || []).some((c) => {
               const cName = (c.name || "").toLowerCase();
               const cSlug = (c.slug || "").toLowerCase();
@@ -315,7 +315,7 @@ function Products() {
             });
             if (matchesColourObj) return true;
 
-            // 2. Check product name, description or search keywords
+            
             const pName = (p.name || "").toLowerCase();
             const pDesc = (p.description || "").toLowerCase();
             const pKw = (p.searchKeywords || []).map((k) => String(k).toLowerCase());
@@ -323,7 +323,7 @@ function Products() {
               return true;
             }
 
-            // 3. Common colour aliases
+            
             if (targetColour === "green" && (pName.includes("willow") || pName.includes("jadeite") || pName.includes("olive") || pName.includes("sage") || pName.includes("botanical"))) {
               return true;
             }
@@ -383,7 +383,7 @@ function Products() {
     urlStyle,
   ]);
 
-  // Live auto-refresh when an admin creates, updates, or deletes a product
+  // sync product updates
   useEffect(() => {
     const handleUpdate = () => {
       setReloadKey((k) => k + 1);
@@ -551,7 +551,7 @@ function Products() {
 
   return (
     <main className="min-h-screen bg-[#f6f3ec] text-[#171713]">
-      {/* Hero banner */}
+      
       <section className="mx-auto max-w-7xl px-5 pt-8 pb-12 sm:px-8 md:px-12 md:pt-14 md:pb-16">
         <div className="grid grid-cols-1 md:grid-cols-12 gap-8 md:gap-14 items-center">
           <div className="md:col-span-5 lg:col-span-5">
@@ -588,7 +588,7 @@ function Products() {
         </div>
       </section>
 
-      {/* Subcategories */}
+      
       <section className="border-t border-[#d8d1c5] bg-[#f6f3ec]">
         <div className="mx-auto max-w-7xl px-5 py-4 sm:px-8 md:px-12">
           <p className="text-[10px] font-medium tracking-[2.5px] uppercase text-[#777267] text-center mb-3">
@@ -613,7 +613,7 @@ function Products() {
         </div>
       </section>
 
-      {/* Quick Filter Bar for Colours / Styles / Collections */}
+      
       {urlFilter === "all-colours" && (
         <section className="border-b border-[#d8d1c5] bg-[#ece7dd] py-3 px-5 sm:px-8 md:px-12">
           <div className="mx-auto max-w-7xl flex flex-wrap items-center justify-center gap-3">
@@ -699,7 +699,7 @@ function Products() {
         </section>
       )}
 
-      {/* 2b. Sub-Category Motif Chips (Wallpaper, Fabric, Paint, Decor) */}
+      {/* sub-category motif chips */}
       {SUB_CATEGORIES_BY_CATEGORY[activeCategory] && (
         <section className="border-b border-[#d8d1c5] bg-[#eae5db] px-5 py-2.5 sm:px-8 md:px-12">
           <div className="mx-auto flex max-w-7xl items-center gap-2 overflow-x-auto scrollbar-none py-1">
@@ -759,7 +759,7 @@ function Products() {
         </section>
       )}
 
-      {/* 3. Filter and Sort Toolbar */}
+      {/* filter and sort */}
       <section className="sticky top-0 z-20 border-y border-[#d8d1c5] bg-[#f6f3ec]/95 backdrop-blur">
         <div className="mx-auto flex max-w-7xl flex-col gap-3 px-5 py-3 sm:px-8 md:flex-row md:items-center md:justify-between md:px-12">
           {/* Left: Product Count */}
@@ -816,7 +816,7 @@ function Products() {
               <option value="name-desc">Name: Z–A</option>
             </select>
 
-            {/* Grid Layout Switcher (2, 3, 4 columns) */}
+            
             <div className="hidden sm:flex items-center gap-1 border-l border-[#d8d1c5] pl-3 ml-1">
               <span className="text-[9px] uppercase tracking-wider text-[#777267] mr-1">
                 VIEW:
@@ -855,13 +855,13 @@ function Products() {
           </div>
         </div>
 
-        {/* Sample postage strip */}
+        
         <div className="border-t border-[#d8d1c5] bg-[#394132] py-2 px-4 text-center text-white text-[10px] tracking-[1.5px] uppercase font-medium flex items-center justify-center gap-2">
           <Truck size={13} />
           <span>Complimentary A4 Wallpaper & Fabric Swatch Delivery on All Sample Orders</span>
         </div>
 
-        {/* Active Filters Chip Row */}
+        
         {hasActiveFilters && (
           <div className="mx-auto max-w-7xl px-5 pb-3 sm:px-8 md:px-12 flex flex-wrap items-center gap-2 border-t border-[#d8d1c5]/40 pt-2.5">
             <span className="text-[10px] font-medium uppercase tracking-[1.5px] text-[#777267]">
@@ -948,7 +948,7 @@ function Products() {
         )}
       </section>
 
-      {/* 4. Main Product Grid Section (Screenshot 2) */}
+      
       <section className="mx-auto max-w-7xl px-5 py-10 sm:px-8 md:px-12">
         {loading && (
           <div className="grid grid-cols-2 gap-x-4 gap-y-10 sm:gap-x-6 sm:gap-y-12 lg:grid-cols-4">
@@ -1039,7 +1039,7 @@ function Products() {
 
                   return (
                     <div key={product._id} className="contents">
-                      {/* Editorial In-Grid Banner 1 (at position 4) */}
+                      
                       {index === 4 && (
                         <div className="col-span-full my-4 rounded-sm bg-[#32392b] text-[#f6f3ec] p-6 sm:p-9 flex flex-col md:flex-row items-center justify-between gap-6 shadow-sm">
                           <div className="max-w-xl">
@@ -1062,7 +1062,7 @@ function Products() {
                         </div>
                       )}
 
-                      {/* Editorial In-Grid Banner 2 (at position 10) */}
+                      
                       {index === 10 && (
                         <div className="col-span-full my-4 rounded-sm bg-[#eae4d9] border border-[#d8d1c5] p-6 sm:p-9 flex flex-col md:flex-row items-center justify-between gap-6 shadow-2xs">
                           <div className="max-w-xl">
@@ -1118,7 +1118,7 @@ function Products() {
                               )}
                             </Link>
 
-                            {/* Wishlist Heart Button */}
+                            
                             <button
                               type="button"
                               aria-label={isWishlisted(product._id) ? "Remove from wishlist" : "Add to wishlist"}
@@ -1139,7 +1139,7 @@ function Products() {
                               />
                             </button>
 
-                            {/* Bestseller Badge */}
+                            
                             {product.isFeatured && (
                               <span className="absolute top-2.5 left-2.5 bg-[#eae4d9] text-[#171713] text-[8px] sm:text-[9px] font-medium uppercase px-2.5 py-0.5 rounded-full shadow-xs tracking-wider">
                                 Bestseller
@@ -1163,7 +1163,7 @@ function Products() {
                             </span>
                           </div>
 
-                          {/* Title in Uppercase Serif */}
+                          
                           <div className="mt-3.5">
                             <Link
                               to={`/products/${targetSlug}`}
@@ -1173,13 +1173,13 @@ function Products() {
                               {product.name}
                             </Link>
 
-                            {/* Subtitle / Finish (e.g. Cotton Linen - Spring) */}
+                            
                             <p className="mt-0.5 text-xs text-[#666257] line-clamp-1">
                               {subtitleText}
                             </p>
                           </div>
 
-                          {/* Price */}
+                          
                           <div className="mt-1 flex items-baseline gap-2 text-xs">
                             {sellingPrice !== null && (
                               <span className="font-semibold text-[#171713]">
@@ -1197,7 +1197,7 @@ function Products() {
                             )}
                           </div>
 
-                          {/* Swatch indicators with names */}
+                          
                           {colours.length > 0 && (
                             <div className="mt-2.5 flex items-center gap-1.5">
                               {colours.slice(0, 4).map((c, idx) => (
@@ -1249,7 +1249,7 @@ function Products() {
               </div>
             )}
 
-            {/* 5. LOAD MORE Button & Pagination (Screenshot 3) */}
+            
             <div className="mt-16 flex flex-col items-center justify-center border-t border-[#d8d1c5] pt-12">
               {pagination?.totalPages > 1 && currentPage < pagination.totalPages && (
                 <button
@@ -1264,7 +1264,7 @@ function Products() {
                 </button>
               )}
 
-              {/* Numbered Pagination */}
+              
               {pagination?.totalPages > 1 && (
                 <div className="mt-6 flex items-center justify-center gap-2 text-xs">
                   <button
@@ -1319,7 +1319,7 @@ function Products() {
               )}
             </div>
 
-            {/* 6. Editorial Story Block (Screenshot 3) */}
+            
             <div className="mt-20 max-w-4xl mx-auto text-center px-4">
               <p className="text-xs sm:text-sm leading-7 text-[#666257]">
                 Step into a world of colour, print and timeless craftsmanship with House of Hackney&apos;s collection of luxury fabrics, wallpapers and handcrafted mineral paints. From rich velvets to elegant weaves, our creations are designed to transform interiors into works of art. Whether you&apos;re reupholstering a vintage armchair, sewing bespoke curtains, or hanging statement wallpaper, this is where wonder starts.
@@ -1332,11 +1332,11 @@ function Products() {
         )}
       </section>
 
-      {/* 7. Curtains & Free Design Consultation Feature Banner (Screenshot 4) */}
+      
       <section className="border-t border-[#d8d1c5] bg-[#f6f3ec] py-16 sm:py-20">
         <div className="mx-auto max-w-7xl px-5 sm:px-8 md:px-12">
           <div className="grid grid-cols-1 md:grid-cols-12 gap-8 md:gap-14 items-center">
-            {/* Left Content */}
+            
             <div className="md:col-span-6 flex flex-col justify-center">
               <p className="text-[10px] font-medium tracking-[3px] uppercase text-[#777267]">
                 CURTAINS, BLINDS & UPHOLSTERY
@@ -1360,7 +1360,7 @@ function Products() {
               </div>
             </div>
 
-            {/* Right Photo */}
+            
             <div className="md:col-span-6">
               <div className="relative aspect-[4/3] sm:aspect-[16/11] overflow-hidden rounded-md bg-[#e8e2d7] shadow-sm">
                 <img
@@ -1374,7 +1374,7 @@ function Products() {
         </div>
       </section>
 
-      {/* 8. Brand Trust & Sustainability Footer Bar */}
+      {/* brand trust & sustainability footer bar */}
       <section className="border-t border-[#d8d1c5] bg-[#eae5db] py-12 px-5 sm:px-8">
         <div className="mx-auto max-w-7xl grid grid-cols-2 sm:grid-cols-4 gap-6 text-center">
           <div className="flex flex-col items-center">

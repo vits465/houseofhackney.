@@ -14,7 +14,7 @@ export function AdminProvider({ children }) {
   // Redux active user
   const authUser = useSelector((state) => state.auth?.user);
 
-  // Authoritative Admin Verification: Only true internal admins can access admin features or preview roles
+  // check admin access
   const authUserRoles = useMemo(() => {
     const rawRoles = [];
     if (Array.isArray(authUser?.roles)) {
@@ -41,15 +41,14 @@ export function AdminProvider({ children }) {
     authUserRoles.includes("admin") ||
     authUserRoles.includes("manager");
 
-  // Determine initial role:
-  // Trade users and non-admins are STRICTLY locked to "trade". Genuine admins default to admin/super-admin.
+  // initial role
   const [currentRole, setCurrentRoleState] = useState(() => {
     if (!isActualAdmin) {
       sessionStorage.removeItem("hoh_preview_role");
       return "trade";
     }
 
-    // Only genuine admins may preview different role perspectives
+    // preview role
     const savedRole = sessionStorage.getItem("hoh_preview_role");
     if (savedRole && (savedRole === "super-admin" || savedRole === "admin" || savedRole === "trade")) {
       return savedRole;
@@ -69,7 +68,7 @@ export function AdminProvider({ children }) {
     "trade-profile",
   ];
 
-  // Keep role locked to trade for non-admins; genuine admins stay in admin view unless previewing
+  
   useEffect(() => {
     if (!isActualAdmin) {
       sessionStorage.removeItem("hoh_preview_role");
@@ -108,7 +107,7 @@ export function AdminProvider({ children }) {
     });
   };
 
-  // Keep activeTab in sync with browser forward/back or external ?tab= change
+  // sync tab with url
   useEffect(() => {
     if (typeof window === "undefined") return;
     const syncTabFromUrl = () => {
@@ -127,7 +126,7 @@ export function AdminProvider({ children }) {
   const [newProductOpen, setNewProductOpen] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState(null);
 
-  // Real-time dynamic state
+  
   const [orders, setOrders] = useState(() => {
     try {
       const local = JSON.parse(localStorage.getItem("hoh_local_orders") || "[]");
@@ -142,7 +141,7 @@ export function AdminProvider({ children }) {
   const [revenuePeriod, setRevenuePeriod] = useState("30D");
   const [chartMetric, setChartMetric] = useState("revenue");
 
-  // Trade B2B state
+  
   const [tradeProfile, setTradeProfile] = useState(null);
   const [tradeCredit, setTradeCredit] = useState(null);
   const [tradeQuotations, setTradeQuotations] = useState([]);
@@ -151,7 +150,7 @@ export function AdminProvider({ children }) {
   const [allTradeProfiles, setAllTradeProfiles] = useState([]);
   const [loadingTradeData, setLoadingTradeData] = useState(false);
 
-  // Products & Catalog State
+  
   const [products, setProducts] = useState([]);
   const [loadingProducts, setLoadingProducts] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
@@ -229,7 +228,7 @@ export function AdminProvider({ children }) {
         adminApiService.getAllTradeProfiles().catch(() => []),
       ]);
 
-      // Merge saved tier override if exists in localStorage
+      // load saved tier
       let savedTier = null;
       try {
         savedTier = JSON.parse(localStorage.getItem("hoh_trade_tier"));
@@ -278,7 +277,7 @@ export function AdminProvider({ children }) {
 
       setTradeCredit(effectiveCredit);
 
-      // Merge local created/approved quotations with fetched quotes
+      // merge quotations
       let localQuotes = [];
       try {
         localQuotes = JSON.parse(localStorage.getItem("hoh_trade_quotations") || "[]");
@@ -287,12 +286,12 @@ export function AdminProvider({ children }) {
       const rawQuotes = Array.isArray(quotesData) ? quotesData : quotesData?.data || [];
       const mergedQuotesMap = new Map();
 
-      // Seed with fetched backend quotes
+      
       rawQuotes.forEach((q) => {
         if (q && q._id) mergedQuotesMap.set(q._id, q);
       });
 
-      // Overlay locally updated / created quotes while preserving progressed statuses
+      
       const statusPriority = { CONVERTED: 4, APPROVED: 3, NEGOTIATING: 2, REQUESTED: 1, DRAFT: 0 };
       localQuotes.forEach((q) => {
         if (q && q._id) {
@@ -332,7 +331,7 @@ export function AdminProvider({ children }) {
       const validBrands = Array.isArray(brandsData) ? brandsData : brandsData?.data || [];
       setBrands(validBrands);
 
-      // Merge real backend orders with local checkout orders
+      // merge orders
       let localOrders = [];
       try {
         localOrders = JSON.parse(localStorage.getItem("hoh_local_orders") || "[]");
@@ -345,7 +344,7 @@ export function AdminProvider({ children }) {
 
       setOrders(combinedOrders);
 
-      // Generate dynamic real-time notifications
+      // notifications
       const dynamicNotifs = [];
       combinedOrders.slice(0, 5).forEach((o, i) => {
         const patron = o.shippingAddress?.fullName || o.user?.name || "Patron";
@@ -881,7 +880,7 @@ export function AdminProvider({ children }) {
     ) {
       setSelectedOrder((prev) => ({ ...prev, fulfillmentStatus: newStatus, status: newStatus }));
     }
-    // Persist to local storage if it's a local order
+    
     try {
       const local = JSON.parse(localStorage.getItem("hoh_local_orders") || "[]");
       const updated = local.map((ord) =>
@@ -897,7 +896,7 @@ export function AdminProvider({ children }) {
     setOrders((prev) => [newOrder, ...prev]);
   };
 
-  // Dynamic Real-Time Metrics calculated from live orders & users
+  // metrics
   const dynamicMetrics = useMemo(() => {
     const rawRevenue = orders.reduce((sum, o) => {
       return sum + (Number(o.grandTotal || o.totalAmount || o.total) || 0);
@@ -1011,7 +1010,7 @@ export function AdminProvider({ children }) {
         setChartMetric,
         metrics: dynamicMetrics,
         revenueTimeline: dynamicRevenueTimeline,
-        // Products & Catalog CRUD
+        // products
         products,
         loadingProducts,
         editingProduct,
@@ -1027,7 +1026,7 @@ export function AdminProvider({ children }) {
         addProduct,
         editProduct,
         deleteProduct,
-        // Trade B2B
+        // trade
         tradeProfile,
         tradeCredit,
         tradeQuotations,

@@ -47,7 +47,7 @@ const ProductCard = ({ product, media }) => {
           </span>
         )}
 
-        {/* Wishlist button */}
+        
         <button
           type="button"
           aria-label={wishlisted ? "Remove from wishlist" : "Add to wishlist"}

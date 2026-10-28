@@ -200,7 +200,7 @@ function MobileMenu({ isOpen, onClose, activeTab = "SHOP", setActiveTab = () => 
 
         {/* Scrollable category area */}
         <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-4 sm:px-9">
-          {/* 1. SHOP MODE */}
+          {/* shop mode */}
           {activeTab === "SHOP" && (
             activeCategory ? (
               <div>
@@ -261,7 +261,7 @@ function MobileMenu({ isOpen, onClose, activeTab = "SHOP", setActiveTab = () => 
             )
           )}
 
-          {/* 2. INSPIRATION MODE */}
+          {/* inspiration mode */}
           {activeTab === "INSPIRATION" && (
             <div className="space-y-6">
               {inspirationSections.map((section) => (
@@ -286,7 +286,7 @@ function MobileMenu({ isOpen, onClose, activeTab = "SHOP", setActiveTab = () => 
             </div>
           )}
 
-          {/* 3. OUR HOUSE MODE */}
+          {/* our house mode */}
           {activeTab === "OUR HOUSE" && (
             <div className="space-y-6">
               {ourHouseSections.map((section) => (

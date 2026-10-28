@@ -162,7 +162,7 @@ export default function AdminMediaLibrary() {
     loadMedia();
   }, []);
 
-  // Copy CDN link to clipboard
+  // copy link
   const handleCopyUrl = (asset) => {
     navigator.clipboard.writeText(asset.url);
     setCopiedId(asset._id);
@@ -215,7 +215,7 @@ export default function AdminMediaLibrary() {
     };
 
     try {
-      // Create FormData if backend expects file/form or JSON
+      
       const formData = new FormData();
       formData.append("title", uploadData.title);
       formData.append("folder", uploadData.folder);
@@ -262,7 +262,7 @@ export default function AdminMediaLibrary() {
 
   return (
     <div className="space-y-6">
-      {/* Top Banner */}
+      
       <div
         className={`p-6 sm:p-8 rounded-3xl border transition-all ${
           isDark
@@ -395,7 +395,7 @@ export default function AdminMediaLibrary() {
                     : "bg-white border-[#e0ece2] hover:border-[#b8d6bf] shadow-sm hover:shadow-md"
                 }`}
               >
-                {/* Thumbnail Container */}
+                
                 <div className="relative aspect-square w-full bg-black/5 overflow-hidden">
                   <img
                     src={asset.url}
@@ -409,7 +409,7 @@ export default function AdminMediaLibrary() {
                     }}
                   />
 
-                  {/* Top Badges */}
+                  
                   <div className="absolute top-3 left-3 flex items-center gap-1.5">
                     <span className="px-2 py-0.5 rounded-full text-[9px] font-mono font-bold tracking-wider uppercase bg-black/60 text-white backdrop-blur-md">
                       {asset.format?.toUpperCase() || "WEBP"}
@@ -419,7 +419,7 @@ export default function AdminMediaLibrary() {
                     </span>
                   </div>
 
-                  {/* Hover Overlay with Preview & Copy */}
+                  
                   <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2 backdrop-blur-xs">
                     <button
                       onClick={() => setPreviewAsset(asset)}
@@ -445,7 +445,7 @@ export default function AdminMediaLibrary() {
                   </div>
                 </div>
 
-                {/* Details Footer */}
+                
                 <div className="p-4 flex-1 flex flex-col justify-between">
                   <div>
                     <h4
@@ -457,7 +457,7 @@ export default function AdminMediaLibrary() {
                       {asset.title}
                     </h4>
 
-                    {/* Tags */}
+                    
                     {asset.tags && asset.tags.length > 0 && (
                       <div className="flex flex-wrap gap-1 mt-1.5">
                         {asset.tags.slice(0, 3).map((tag, idx) => (
@@ -476,7 +476,7 @@ export default function AdminMediaLibrary() {
                     )}
                   </div>
 
-                  {/* Copy Link Button */}
+                  
                   <div className="mt-3 pt-2.5 border-t border-inherit flex items-center justify-between">
                     <span className="text-[10px] text-[#627766] font-mono truncate max-w-[140px]">
                       {asset.url.split("/").pop()}
@@ -525,7 +525,7 @@ export default function AdminMediaLibrary() {
               exit={{ opacity: 0, scale: 0.95 }}
               className="relative max-w-4xl w-full max-h-[90vh] flex flex-col rounded-3xl overflow-hidden z-10 bg-[#131b14] border border-[#2c3d2e] text-white shadow-2xl"
             >
-              {/* Header */}
+              
               <div className="p-4 px-6 flex items-center justify-between border-b border-[#243527] bg-[#162017]">
                 <div className="flex items-center gap-2">
                   <span className="px-2 py-0.5 rounded-full text-[10px] font-mono uppercase bg-[#3e7b52] text-white">
@@ -560,7 +560,7 @@ export default function AdminMediaLibrary() {
                 </div>
               </div>
 
-              {/* Main Image */}
+              
               <div className="flex-1 overflow-auto flex items-center justify-center p-6 bg-black/40">
                 <img
                   src={previewAsset.url}
@@ -569,7 +569,7 @@ export default function AdminMediaLibrary() {
                 />
               </div>
 
-              {/* Bottom Meta Bar */}
+              
               <div className="p-4 px-6 border-t border-[#243527] bg-[#162017] flex items-center justify-between text-xs text-[#859b89]">
                 <span className="font-mono">{previewAsset.url}</span>
                 <span className="font-bold text-[#7ec792]">

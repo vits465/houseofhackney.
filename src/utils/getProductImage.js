@@ -138,7 +138,7 @@ export function getProductImage(source) {
       }
     }
 
-    // 4. Object thumbnail
+    // thumbnail
     const thumbUrl = record.thumbnail?.secureUrl || record.thumbnail?.url;
     if (typeof thumbUrl === "string" && isValidImageUrl(thumbUrl)) {
       return {
@@ -147,7 +147,7 @@ export function getProductImage(source) {
       };
     }
 
-    // 5. Gallery items
+    // gallery
     const galleryItems = Array.isArray(record.gallery) ? record.gallery : [];
     for (const item of galleryItems) {
       const mediaObj = item?.media || item;
@@ -160,13 +160,13 @@ export function getProductImage(source) {
       }
     }
 
-    // 6. Direct secureUrl or url on the object itself
+    // direct url
     const directUrl = record.secureUrl || record.url || record.src;
     if (typeof directUrl === "string" && isValidImageUrl(directUrl)) {
       return { url: optimizeImageUrl(directUrl.trim()), alt: altText };
     }
 
-    // 7. Check variants array on product
+    // variants
     if (Array.isArray(record.variants) && record.variants.length > 0) {
       for (const variant of record.variants) {
         if (!variant) continue;
@@ -177,7 +177,7 @@ export function getProductImage(source) {
       }
     }
 
-    // 8. Check colours array on product
+    // colours
     if (Array.isArray(record.colours) && record.colours.length > 0) {
       for (const col of record.colours) {
         if (!col) continue;
@@ -188,7 +188,7 @@ export function getProductImage(source) {
       }
     }
 
-    // 9. Check product media relation directly
+    // media relation
     if (record.media && typeof record.media === "object") {
       const pmImg = getProductImage(record.media);
       if (pmImg?.url && isValidImageUrl(pmImg.url)) {
@@ -196,7 +196,7 @@ export function getProductImage(source) {
       }
     }
 
-    // 10. Check if product name matches iconic creations
+    // iconic product fallbacks
     const nameKey = (record.name || record.title || record.slug || "").toLowerCase();
     for (const [key, fallbackUrl] of Object.entries(ICONIC_PRODUCT_FALLBACKS)) {
       if (nameKey.includes(key)) {
@@ -204,7 +204,7 @@ export function getProductImage(source) {
       }
     }
 
-    // 11. Category Fallback
+    // category fallback
     const catKey = (record.category?.name || record.categoryName || (typeof record.category === "string" ? record.category : "") || "")
       .toLowerCase()
       .replace(/[^a-z]/g, "");

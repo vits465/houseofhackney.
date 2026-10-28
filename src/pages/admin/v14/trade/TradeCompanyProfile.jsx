@@ -115,7 +115,7 @@ export default function TradeCompanyProfile() {
 
   return (
     <div className="space-y-6">
-      {/* Header bar */}
+      
       <div>
         <h1 className="text-xl sm:text-2xl font-bold tracking-tight">
           Company Profile & Trade Membership

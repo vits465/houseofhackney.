@@ -229,7 +229,7 @@ function Cart() {
     type: "HOME",
   });
 
-  // Pre-fill user information and fetch saved residences
+  // load user details & addresses
   useEffect(() => {
     let isMounted = true;
 
@@ -288,7 +288,7 @@ function Cart() {
     };
   }, [isAuthenticated, user]);
 
-  // Helpers to resolve current effective address
+  
   const getEffectiveAddress = () => {
     if (selectedAddressId && selectedAddressId !== "new") {
       const found = savedAddresses.find(
@@ -310,7 +310,7 @@ function Cart() {
     );
   };
 
-  // Save new delivery residence
+  // save address
   const handleSaveNewAddress = async (e) => {
     if (e) e.preventDefault();
     if (!isAddressValid(addressForm)) {
@@ -355,7 +355,7 @@ function Cart() {
 
   const currency = items[0]?.currency || "GBP";
 
-  // Resolve Trade Member Tier & Wholesale Margin
+  // trade tier & discount
   const isTradeAccount = Boolean(
     user?.isTradeAccount ||
     user?.accountType === "BUSINESS" ||
@@ -394,7 +394,7 @@ function Cart() {
     }
   }
 
-  // Calculate Trade wholesale savings
+  
   const tradeDiscountAmount =
     isTradeAccount && tradeDiscountPercent > 0
       ? Math.round(subtotal * (tradeDiscountPercent / 100) * 100) / 100
@@ -402,7 +402,7 @@ function Cart() {
 
   const subtotalAfterTrade = Math.max(0, subtotal - tradeDiscountAmount);
 
-  // Calculate discount based on subtotal
+  // calculate discount
   const calculateDiscount = (coupon, currentSubtotal) => {
     if (!coupon) return 0;
     let disc = 0;
@@ -422,7 +422,7 @@ function Cart() {
   const discountAmount = totalDiscountAmount;
   const finalTotal = Math.max(0, Math.round((subtotal - totalDiscountAmount) * 100) / 100);
 
-  // Auto-remove coupon if subtotal falls below minimum requirement
+  // validate min order
   useEffect(() => {
     if (appliedCoupon && appliedCoupon.minOrderAmount && subtotal < appliedCoupon.minOrderAmount) {
       showToast(
@@ -432,7 +432,7 @@ function Cart() {
     }
   }, [subtotal, appliedCoupon, currency]);
 
-  // Handle Apply Coupon
+  // apply coupon
   const handleApplyCoupon = async (e) => {
     if (e) e.preventDefault();
     const cleanCode = couponInput.trim().toUpperCase();
@@ -450,7 +450,7 @@ function Cart() {
     setIsValidatingCoupon(true);
     setCouponError("");
 
-    // 1. If authenticated, try backend validate endpoint first
+    // validate coupon with backend
     if (isAuthenticated) {
       try {
         const res = await axiosInstance.post("/coupons/validate", {
@@ -485,7 +485,7 @@ function Cart() {
       }
     }
 
-    // 2. Local fallback: check admin custom coupons and built-in atelier vouchers
+    // fallback coupon validation
     let customCoupons = [];
     try {
       customCoupons = JSON.parse(localStorage.getItem("hoh_custom_coupons") || "[]");
@@ -567,7 +567,7 @@ function Cart() {
     showToast("Voucher code removed.");
   };
 
-  // Trigger Razorpay Standard Web Checkout with finalTotal and validated address
+  // open checkout
   const handleProceedToCheckout = () => {
     if (items.length === 0 || isProcessing) return;
 
@@ -609,7 +609,7 @@ function Cart() {
     });
   };
 
-  // Called when Razorpay simulates payment success
+  // payment success handler
   const handlePaymentSuccess = async (paymentData, confirmedAddress = null) => {
     setShowRazorpay(false);
 
@@ -623,7 +623,7 @@ function Cart() {
       couponDiscountAmount,
     };
 
-    // Save order locally for patron profile display
+    // save local order
     const newOrder = buildOrderRecord(
       items,
       subtotal,
@@ -645,7 +645,7 @@ function Cart() {
       console.warn("Could not save to localStorage", e);
     }
 
-    // Try sending order to backend if authenticated
+    // submit order
     if (isAuthenticated) {
       try {
         await axiosInstance.post("/orders", {
@@ -666,15 +666,15 @@ function Cart() {
           })),
         });
       } catch {
-        // Simulated checkout succeeds offline/locally without logging warnings
+        
       }
     }
 
-    // Clear cart and show confirmation
+    // clear cart
     dispatch(clearCart());
     setOrderComplete(newOrder);
 
-    // Dispatch luxury order confirmation email using backend mailer
+    // send confirmation email
     const targetRecipientEmail =
       activeAddress?.email || user?.email || "adichauha465@gmail.com";
     const targetRecipientName =
@@ -699,7 +699,7 @@ function Cart() {
     );
   };
 
-  // Render order confirmed screen
+  
   if (orderComplete) {
     return (
       <main className="min-h-[75vh] bg-[#f6f3ec] px-5 py-20 text-center text-[#26251f]">
@@ -750,7 +750,7 @@ function Cart() {
               <span className="font-serif text-base text-[#171713]">{formatPrice(orderComplete.totalAmount, orderComplete.currency)}</span>
             </div>
 
-            {/* Delivery Residence Destination Details */}
+            
             <div className="border-t border-[#ede8de] pt-2.5">
               <span className="text-[11px] font-semibold uppercase tracking-wider text-[#777] block mb-1">
                 Dispatched To:
@@ -848,7 +848,7 @@ function Cart() {
         <div className="mt-10 grid items-start gap-10 lg:grid-cols-[1fr_340px]">
           {/* Left Column: Creations & Delivery */}
           <div className="space-y-8 min-w-0">
-            {/* Trade Member Advantage Notification */}
+            
             {isTradeAccount && tradeDiscountPercent > 0 && (
               <div className="flex items-start gap-3.5 rounded-2xl border border-[#3e7b52]/30 bg-[#eff5ec] p-4 text-[#1b381e]">
                 <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#3e7b52]/10 text-[#3e7b52]">
@@ -1001,7 +1001,7 @@ function Cart() {
             })}
           </div>
 
-          {/* 2. Delivery Residence & Courier Destination */}
+          
           <div
             id="delivery-address-section"
             className="rounded-2xl border border-[#d8d1c5] bg-white p-5 sm:p-7 shadow-xs"
@@ -1033,14 +1033,14 @@ function Cart() {
               )}
             </div>
 
-            {/* Loading saved addresses */}
+            
             {loadingAddresses && (
               <div className="py-6 text-center text-xs text-[#777267] animate-pulse">
                 Accessing your Patron sanctuary residences...
               </div>
             )}
 
-            {/* Saved Addresses List (if user has saved residences and is not in add form) */}
+            
             {isAuthenticated && savedAddresses.length > 0 && !showNewAddressForm ? (
               <div className="mt-5 space-y-4">
                 <p className="text-xs font-semibold uppercase tracking-wider text-[#777267]">
@@ -1328,13 +1328,13 @@ function Cart() {
         <aside className="border border-[#d8d1c5] bg-[#faf8f4] p-6 sm:p-7 lg:sticky lg:top-24 rounded-2xl shadow-sm">
           <h2 className="font-serif text-2xl text-[#171713]">Order summary</h2>
 
-          {/* Subtotal */}
+          
           <div className="mt-6 flex items-center justify-between gap-3 text-sm">
             <span className="text-[#666257]">Atelier Subtotal</span>
             <span className="font-medium text-[#171713]">{formatPrice(subtotal, currency)}</span>
           </div>
 
-          {/* Trade Wholesale Privilege Discount */}
+          
           {isTradeAccount && tradeDiscountAmount > 0 && (
             <div className="mt-3 flex items-center justify-between gap-3 text-sm text-[#3e7b52]">
               <span className="flex items-center gap-1.5 font-medium">
@@ -1347,7 +1347,7 @@ function Cart() {
             </div>
           )}
 
-          {/* Applied Coupon Line (if any) */}
+          
           {appliedCoupon && (
             <div className="mt-3 flex items-center justify-between gap-3 text-sm text-[#2d5022]">
               <span className="flex items-center gap-1.5 font-medium">
@@ -1360,7 +1360,7 @@ function Cart() {
             </div>
           )}
 
-          {/* Total */}
+          
           <div className="mt-4 flex items-center justify-between gap-3 border-t border-[#d8d1c5] pt-4 text-base font-semibold">
             <span className="text-[#171713]">Estimated Total</span>
             <span className="font-serif text-xl text-[#171713]">
@@ -1368,7 +1368,7 @@ function Cart() {
             </span>
           </div>
 
-          {/* Delivery Destination in Order Summary */}
+          
           {(() => {
             const activeAddr = getEffectiveAddress();
             const valid = isAddressValid(activeAddr);
@@ -1423,7 +1423,7 @@ function Cart() {
             );
           })()}
 
-          {/* Promotional Voucher / Coupon Code Form */}
+          
           <div className="mt-5 border-t border-[#d8d1c5] pt-5">
             <label className="block text-[11px] font-semibold uppercase tracking-[1.5px] text-[#555047] mb-2.5">
               Promotional Voucher / Coupon
@@ -1479,7 +1479,7 @@ function Cart() {
                   <p className="text-[11px] text-[#a83232] font-medium">{couponError}</p>
                 )}
 
-                {/* Available codes sample chips */}
+                
                 <div className="flex flex-wrap items-center gap-1.5 pt-1">
                   <span className="text-[10px] text-[#777267]">Try voucher:</span>
                   {["ATELIER15", "WELCOME10", "MAXIMALIST50"].map((sample) => (
@@ -1504,7 +1504,7 @@ function Cart() {
             All commissions are printed to order in England. Sustainable packaging and tracked carbon-neutral courier delivery.
           </p>
 
-          {/* Address Error Alert (if user tries to pay before providing address) */}
+          
           {addressError && (
             <div className="mt-4 rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-red-700 flex items-start gap-2">
               <AlertCircle size={15} className="shrink-0 mt-0.5 text-red-600" />
@@ -1533,7 +1533,7 @@ function Cart() {
       </div>
     </div>
 
-    {/* Fake Razorpay Checkout Modal */}
+    
     <RazorpayModal
       isOpen={showRazorpay}
       onClose={() => setShowRazorpay(false)}

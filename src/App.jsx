@@ -177,7 +177,7 @@ function AppContent() {
 function App() {
   return (
     <BrowserRouter>
-      {/* Scroll to top whenever route changes */}
+      
       <ScrollToTop />
       <AppContent />
     </BrowserRouter>

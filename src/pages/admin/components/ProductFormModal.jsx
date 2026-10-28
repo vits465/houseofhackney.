@@ -147,7 +147,7 @@ export default function ProductFormModal({ isOpen, onClose, editingProduct = nul
               : "bg-white border-[#dce8df] text-[#142617]"
           }`}
         >
-          {/* Header */}
+          
           <div className="px-6 py-4.5 border-b border-inherit flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-2xl bg-[#3e7b52]/15 text-[#3e7b52] flex items-center justify-center">
@@ -175,7 +175,7 @@ export default function ProductFormModal({ isOpen, onClose, editingProduct = nul
             </button>
           </div>
 
-          {/* Form */}
+          
           <form onSubmit={handleSubmit} className="p-6 space-y-4.5 overflow-y-auto flex-1">
             {/* Top row: Name & SKU */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
@@ -284,7 +284,7 @@ export default function ProductFormModal({ isOpen, onClose, editingProduct = nul
               </div>
             </div>
 
-            {/* Description */}
+            
             <div>
               <label className="block text-[11px] font-semibold uppercase text-[#627766] mb-1">
                 Editorial Description & Substrate Notes

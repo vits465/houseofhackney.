@@ -194,7 +194,7 @@ export default function UpgradeTierModal({ isOpen, onClose }) {
               : "bg-white border-[#dce8df] text-[#142617]"
           }`}
         >
-          {/* Top Bar */}
+          
           <div className="flex items-center justify-between p-5 sm:p-6 border-b border-inherit sticky top-0 bg-inherit z-20">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-[#2a5b36] to-[#4e8d64] text-white flex items-center justify-center shadow-md shadow-[#3e7b52]/20">
@@ -304,7 +304,7 @@ export default function UpgradeTierModal({ isOpen, onClose }) {
                           : "bg-white border-[#e0ece2] hover:border-[#b4d4bb]"
                       }`}
                     >
-                      {/* Top Badges */}
+                      
                       <div>
                         <div className="flex items-center justify-between mb-2">
                           <span

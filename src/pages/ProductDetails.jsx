@@ -121,7 +121,7 @@ function ProductDetails() {
   const [error, setError] = useState("");
   const [openSection, setOpenSection] = useState("description");
 
-  // Interactive Wallpaper Roll Calculator & View Scale States
+  // wallpaper roll calculator
   const [showCalculator, setShowCalculator] = useState(false);
   const [calcUnit, setCalcUnit] = useState("meters"); // "meters" or "feet"
   const [wallWidth, setWallWidth] = useState(3.5);
@@ -135,7 +135,7 @@ function ProductDetails() {
     const widthInM = calcUnit === "feet" ? Number(wallWidth) * 0.3048 : Number(wallWidth);
     const heightInM = calcUnit === "feet" ? Number(wallHeight) * 0.3048 : Number(wallHeight);
     const totalArea = Math.max(0.1, widthInM * heightInM * numWalls);
-    // Standard roll covers ~5.4m² (180cm x 300cm), plus 15% allowance for repeat matching & trimming
+    // 5.4m² per roll + 15% trimming allowance
     const needed = Math.max(1, Math.ceil((totalArea * 1.15) / 5.4));
     setCalculatedRolls(needed);
   };
@@ -162,7 +162,7 @@ function ProductDetails() {
       setSelectedVariantId("");
 
       try {
-        // 1. Fetch main product details (accepts ID or slug)
+        // fetch product details
         const productData = await getProductById(productId);
         if (cancelled) return;
 
@@ -171,7 +171,7 @@ function ProductDetails() {
 
         const realId = productData._id;
 
-        // 2. Fetch supplementary endpoints in parallel for complete data
+        // fetch related data
         const [mediaData, variantData, pricingData, specsData, relatedData] = await Promise.all([
           getProductMedia(realId).catch(() => null),
           getProductVariants(realId).catch(() => []),
@@ -202,7 +202,7 @@ function ProductDetails() {
 
         setSpecifications(combinedSpecs);
 
-        // Ensure related products have valid, crisp image assets
+        
         let validRelated = (relatedData || []).filter(
           (rel) => rel && (rel.thumbnail || rel.image || (Array.isArray(rel.images) && rel.images.length > 0))
         );
@@ -281,7 +281,7 @@ function ProductDetails() {
     };
   }, [productId, dispatch]);
 
-  // Live auto-refresh when an admin modifies this product
+  // sync product updates
   useEffect(() => {
     const handleUpdate = () => {
       getProductById(productId)
@@ -322,7 +322,7 @@ function ProductDetails() {
     return cols.find((c) => String(c._id || c.slug || c.name) === selectedColourId) || null;
   }, [product, selectedColourId]);
 
-  // Gallery calculation with intelligent filename-based deduplication
+  // gallery images
   const gallery = useMemo(() => {
     const urls = [];
     const seenUrls = new Set();
@@ -333,7 +333,7 @@ function ProductDetails() {
       if (!isValidImageUrl(rawUrl)) return;
       const url = optimizeImageUrl(rawUrl.trim(), 1400);
 
-      // Extract filename to avoid cross-folder duplicates
+      
       const parts = url.split("/");
       const filename = parts[parts.length - 1]?.split(".")[0]?.toLowerCase();
 
@@ -344,7 +344,7 @@ function ProductDetails() {
       }
     };
 
-    // 1. Variant specific images first if available
+    
     if (selectedVariant) {
       if (selectedVariant.image) addUrl(selectedVariant.image, selectedVariant.title);
       if (selectedVariant.thumbnail) {
@@ -383,7 +383,7 @@ function ProductDetails() {
       }
     }
 
-    // 2. Selected colour media & image
+    
     if (selectedColour) {
       if (selectedColour.image) addUrl(selectedColour.image, selectedColour.name);
       if (selectedColour.media) {
@@ -396,7 +396,7 @@ function ProductDetails() {
       }
     }
 
-    // 3. Product Media gallery
+    
     if (media?.gallery && Array.isArray(media.gallery)) {
       media.gallery.forEach((item) => {
         const m = item.media || item;
@@ -405,7 +405,7 @@ function ProductDetails() {
       });
     }
 
-    // 4. Direct product images
+    
     if (product) {
       if (product.thumbnail) addUrl(product.thumbnail, product.name);
       if (Array.isArray(product.images)) {
@@ -430,7 +430,7 @@ function ProductDetails() {
     setSelectedColourId(cid);
     setSelectedImageIndex(0);
 
-    // 1. Explicit variantId on colour
+    
     if (colour.variantId) {
       const v = variants.find(
         (item) => String(item._id) === String(colour.variantId) || String(item.id) === String(colour.variantId)
@@ -441,7 +441,7 @@ function ProductDetails() {
       }
     }
 
-    // 2. Variant referencing this colour's ID
+    
     const varByColId = variants.find(
       (v) => String(v.colourId || v.colorId) === String(colour._id)
     );
@@ -450,7 +450,7 @@ function ProductDetails() {
       return;
     }
 
-    // 3. Exact attribute match for Color / Colour / Shade
+    
     const cName = (colour.name || "").trim().toLowerCase();
     if (!cName) return;
 
@@ -475,7 +475,7 @@ function ProductDetails() {
       return;
     }
 
-    // 4. Exact variant title match or exact prefix/suffix boundary (e.g. " - ColourName")
+    
     const foundVar = variants.find((v) => {
       const vTitle = (v.title || "").trim().toLowerCase();
       return (
@@ -497,7 +497,7 @@ function ProductDetails() {
 
     const rawCols = product?.colours || [];
 
-    // 1. Explicit variantId relationship from colour
+    
     const colByVariantId = rawCols.find(
       (c) =>
         c.variantId &&
@@ -518,7 +518,7 @@ function ProductDetails() {
       }
     }
 
-    // 3. Exact attribute match for Color / Colour / Shade
+    
     const colorAttr = (variant.attributes || []).find((a) => {
       const attrName = String(a.attribute?.name || a.attribute || a.name || "").toLowerCase();
       return (
@@ -537,7 +537,7 @@ function ProductDetails() {
       }
     }
 
-    // 4. Exact variant title match or exact boundary
+    
     const vTitle = (variant.title || "").trim().toLowerCase();
     const foundCol = rawCols.find((c) => {
       const cName = (c.name || "").trim().toLowerCase();
@@ -582,7 +582,7 @@ function ProductDetails() {
 
   const hasDiscount = compareAtPrice && sellingPrice && compareAtPrice > sellingPrice;
 
-  // Sample information - validated against API with authentic fallback for wallpapers & fabrics
+  // sample info
   const isWallpaperOrFabric = Boolean(
     (product?.category?.name || product?.category || product?.productType || "")
       .toString()
@@ -728,11 +728,11 @@ function ProductDetails() {
           </Link>
         </div>
 
-        {/* Product Hero Grid */}
+        
         <div className="grid items-start gap-9 md:grid-cols-2 md:gap-14">
-          {/* Gallery Component */}
+          
           <div className="grid grid-cols-[64px_minmax(0,1fr)] gap-3 sm:grid-cols-[84px_minmax(0,1fr)] sm:gap-4">
-            {/* Thumbnails Sidebar */}
+            
             {gallery.length > 1 && (
               <div className="flex flex-col gap-3 max-h-[640px] overflow-y-auto scrollbar-none">
                 {gallery.map((image, index) => (
@@ -756,9 +756,9 @@ function ProductDetails() {
               </div>
             )}
 
-            {/* Primary Main Display Image with Scale View Toggle */}
+            
             <div className="relative aspect-[4/5] overflow-hidden bg-[#e8e2d7] rounded-sm shadow-sm flex items-center justify-center p-3 sm:p-5">
-              {/* Scale View Toggle */}
+              
               <div className="absolute top-3 right-3 z-10 flex items-center gap-1 bg-white/90 backdrop-blur-xs p-1 rounded-full shadow-xs text-[9px] uppercase tracking-wider">
                 <button
                   type="button"
@@ -794,7 +794,7 @@ function ProductDetails() {
                 </div>
               )}
 
-              {/* Badges */}
+              
               {hasDiscount && (
                 <span className="absolute top-3 left-3 bg-[#394132] text-white text-[10px] font-medium uppercase px-2.5 py-1 tracking-wider shadow-sm">
                   Sale
@@ -809,7 +809,7 @@ function ProductDetails() {
             </div>
           </div>
 
-          {/* Product Details & Actions */}
+          
           <div className="md:sticky md:top-24">
             {/* Category / Brand / ProductType */}
             <p className="mb-2 text-[10px] font-medium uppercase tracking-[2.5px] text-[#777267]">
@@ -839,7 +839,7 @@ function ProductDetails() {
               )}
             </div>
 
-            {/* Out of Stock Notice */}
+            
             {!inStock && (
               <div className="mt-3 flex items-center gap-2 rounded border border-stone-300 bg-stone-100/90 px-3 py-2 text-xs text-stone-700">
                 <AlertCircle size={15} className="text-stone-600 shrink-0" />
@@ -850,14 +850,14 @@ function ProductDetails() {
               </div>
             )}
 
-            {/* Short Description */}
+            
             {product.shortDescription && (
               <p className="mt-4 text-sm leading-7 text-[#5c584e]">
                 {product.shortDescription}
               </p>
             )}
 
-            {/* Colour Swatches Selector */}
+            
             {Array.isArray(product.colours) && product.colours.length > 0 && (
               <div className="mt-6 border-t border-[#d8d1c5] pt-5">
                 <p className="mb-3 text-[11px] font-medium uppercase tracking-[1.5px] text-[#171713]">
@@ -896,7 +896,7 @@ function ProductDetails() {
               </div>
             )}
 
-            {/* Variant Selector (Options / Finishes) */}
+            
             {variants.length > 0 && (
               <div className="mt-6 border-t border-[#d8d1c5] pt-5">
                 <p className="mb-3 text-[11px] font-medium uppercase tracking-[1.5px] text-[#171713]">
@@ -936,14 +936,14 @@ function ProductDetails() {
               </div>
             )}
 
-            {/* Quantity Selector & Wallpaper Roll Estimator Tool */}
+            
             <div className={`mt-6 ${!inStock ? "opacity-50 pointer-events-none" : ""}`}>
               <div className="flex items-center justify-between mb-2">
                 <label htmlFor="quantity" className="text-[10px] font-medium uppercase tracking-[1.5px] text-[#171713]">
                   Quantity ({priceUnit || "Rolls"})
                 </label>
 
-                {/* Wallpaper Calculator Trigger */}
+                
                 {(labelHeader.toLowerCase().includes("wallpaper") || labelHeader.toLowerCase().includes("mural")) && (
                   <button
                     type="button"
@@ -959,7 +959,7 @@ function ProductDetails() {
                 )}
               </div>
 
-              {/* Wallpaper Roll Calculator Tool Widget */}
+              
               {showCalculator && (
                 <div className="mb-6 rounded-sm border border-[#394132] bg-[#fbf9f5] p-4 text-xs shadow-sm">
                   <div className="flex items-center justify-between border-b border-[#e5dfd4] pb-2">
@@ -1070,7 +1070,7 @@ function ProductDetails() {
                 </div>
               )}
 
-              {/* Quantity Counter */}
+              
               <div className="flex h-11 w-36 items-center justify-between border border-[#d8d1c5] bg-white/50">
                 <button
                   type="button"
@@ -1108,7 +1108,7 @@ function ProductDetails() {
               </div>
             </div>
 
-            {/* Action Buttons */}
+            
             <div className="mt-6 flex items-center gap-3">
               <button
                 type="button"
@@ -1124,7 +1124,7 @@ function ProductDetails() {
                 {inStock ? "Add to Bag" : "Out of Stock"}
               </button>
 
-              {/* Wishlist Button */}
+              
               <button
                 type="button"
                 aria-label={isWishlisted(product?._id) ? "Remove from wishlist" : "Add to wishlist"}
@@ -1143,7 +1143,7 @@ function ProductDetails() {
               </button>
             </div>
 
-            {/* Dedicated Sample Box Card */}
+            
             {sampleSupported && samplePrice !== null && (
               <div
                 id="sample-box-card"
@@ -1184,7 +1184,7 @@ function ProductDetails() {
               </div>
             )}
 
-            {/* World Land Trust & B-Corp Impact Banner */}
+            
             <div className="mt-6 rounded-sm bg-[#32392b] text-[#f6f3ec] p-4 text-xs flex items-center gap-3.5 shadow-2xs">
               <TreePine size={22} className="text-[#d8c4a5] shrink-0" />
               <div>
@@ -1197,7 +1197,7 @@ function ProductDetails() {
               </div>
             </div>
 
-            {/* Trust Features */}
+            
             <div className="mt-7 grid grid-cols-3 gap-2 border-y border-[#d8d1c5] py-4 text-center text-[10px] text-[#666257]">
               <div className="flex flex-col items-center gap-1">
                 <Truck size={16} className="text-[#394132]" />
@@ -1213,9 +1213,9 @@ function ProductDetails() {
               </div>
             </div>
 
-            {/* Collapsible Information Accordions */}
+            
             <div className="mt-8 border-t border-[#d8d1c5]">
-              {/* 1. Description */}
+              
               {product.description && (
                 <div className="border-b border-[#d8d1c5]">
                   <button
@@ -1234,7 +1234,7 @@ function ProductDetails() {
                 </div>
               )}
 
-              {/* 2. Specifications & Dimensions (Hides if no data provided) */}
+              
               {hasSpecs && (
                 <div className="border-b border-[#d8d1c5]">
                   <button
@@ -1298,7 +1298,7 @@ function ProductDetails() {
                 </div>
               )}
 
-              {/* 3. Delivery & Returns */}
+              
               <div className="border-b border-[#d8d1c5]">
                 <button
                   type="button"
@@ -1317,7 +1317,7 @@ function ProductDetails() {
                 )}
               </div>
 
-              {/* 4. Hanging & Application Guide */}
+              
               <div className="border-b border-[#d8d1c5]">
                 <button
                   type="button"
@@ -1337,7 +1337,7 @@ function ProductDetails() {
                 )}
               </div>
 
-              {/* 5. Sustainability & Craftsmanship */}
+              
               <div className="border-b border-[#d8d1c5]">
                 <button
                   type="button"
@@ -1359,7 +1359,7 @@ function ProductDetails() {
           </div>
         </div>
 
-        {/* Curated Paint Pairings Section */}
+        
         <section className="mt-20 border-t border-[#d8d1c5] pt-14">
           <div className="mb-8 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
             <div>
@@ -1411,7 +1411,7 @@ function ProductDetails() {
           </div>
         </section>
 
-        {/* Related Designs Section */}
+        
         {relatedProducts.length > 0 && (
           <section className="mt-20 border-t border-[#d8d1c5] pt-16">
             <div className="mb-8 flex items-end justify-between">
@@ -1504,7 +1504,7 @@ function ProductDetails() {
           </section>
         )}
 
-        {/* Real Homes Community Lookbook */}
+        
         <section className="mt-20 border-t border-[#d8d1c5] pt-14">
           <div className="mb-8 text-center">
             <p className="text-[10px] font-semibold tracking-[2.5px] uppercase text-[#394132]">

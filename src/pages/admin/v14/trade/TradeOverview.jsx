@@ -70,7 +70,7 @@ export default function TradeOverview() {
 
   return (
     <div className="space-y-6">
-      {/* 1. Hero Welcome & Partner Status Banner */}
+      {/* hero welcome & partner status banner */}
       <div
         className={`relative overflow-hidden rounded-3xl p-6 sm:p-8 border shadow-sm transition-colors duration-300 ${
           isDark
@@ -140,7 +140,7 @@ export default function TradeOverview() {
         </div>
       </div>
 
-      {/* 2. 4 Key B2B Metrics Cards */}
+      {/* 4 key b2b metrics cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
         {/* Tier Card */}
         <div
@@ -266,7 +266,7 @@ export default function TradeOverview() {
         </div>
       </div>
 
-      {/* 3. Quotation Pipeline Section with Live Conversion */}
+      {/* quotation pipeline section with live conversion */}
       <div
         className={`rounded-2xl border p-6 transition-colors ${
           isDark

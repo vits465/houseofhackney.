@@ -9,19 +9,9 @@ import {
   syncProductData,
 } from "../../../utils/productSync";
 
-/**
- * Backend API Service for House of Hackney Admin & Trade Portal
- * Connects directly to backend endpoints defined in:
- * - /trade/profiles (Trade account applications & reviews)
- * - /trade/quotations (B2B quotations request, negotiation, approval, and order conversion)
- * - /trade/credits (Credit limit assignment, balance, and usage)
- * - /trade/tiers (Trade tiers and discount rules)
- * - /products (Master catalog & inventory)
- * - /orders (E-commerce & B2B order management)
- * - /users & /roles (User administration & RBAC)
- */
+// admin api client
 
-// High-performance In-Memory TTL Cache to eliminate duplicate fetches
+// in-memory cache
 const adminCache = new Map();
 const DEFAULT_CACHE_TTL = 45000; // 45 seconds
 
@@ -37,7 +27,7 @@ function getCachedOrFetch(key, fetcher, ttl = DEFAULT_CACHE_TTL) {
   });
 }
 
-// Graceful fallback helper: returns live response if successful, otherwise fallbackData
+// api call with fallback
 async function safeApiCall(apiPromise, fallbackData) {
   try {
     const response = await apiPromise;
@@ -55,7 +45,7 @@ async function safeApiCall(apiPromise, fallbackData) {
 }
 
 export const adminApiService = {
-  // Clear in-memory cache on mutations or manual refresh
+  // clear cache
   clearCache(keyPrefix) {
     if (keyPrefix) {
       for (const k of adminCache.keys()) {
@@ -66,11 +56,9 @@ export const adminApiService = {
     }
   },
 
-  // ==========================================
   // TRADE PROFILES (B2B Accounts & Approvals)
-  // ==========================================
 
-  // Get current user's trade profile (Trade Patron)
+  // current user trade profile
   async getMyTradeProfile() {
     return getCachedOrFetch("admin_trade_profile_me", () =>
       safeApiCall(
@@ -106,14 +94,14 @@ export const adminApiService = {
     );
   },
 
-  // Apply for trade account (Customer)
+  // apply for trade
   async applyForTrade(profileData) {
     const res = await axiosInstance.post("/trade/profiles/apply", profileData);
     adminApiService.clearCache("admin_trade_profile");
     return res.data;
   },
 
-  // Get pending trade applications (Admin / Super Admin)
+  // pending applications
   async getPendingTradeApplications() {
     return getCachedOrFetch("admin_pending_apps", () =>
       safeApiCall(
@@ -172,7 +160,7 @@ export const adminApiService = {
     ));
   },
 
-  // Review trade application (Admin / Super Admin)
+  // review application
   async reviewTradeApplication(profileId, { status, tierId, creditLimit, rejectionReason }) {
     try {
       const res = await axiosInstance.patch(`/trade/profiles/${profileId}/review`, {
@@ -190,16 +178,14 @@ export const adminApiService = {
     }
   },
 
-  // Get all trade profiles (Admin / Super Admin)
+  // all trade profiles
   async getAllTradeProfiles() {
     return safeApiCall(axiosInstance.get("/trade/profiles"), []);
   },
 
-  // ==========================================
   // TRADE QUOTATIONS (B2B Pipeline & Conversion)
-  // ==========================================
 
-  // Get user quotations list (Trade customer or Admin)
+  // user quotations
   async getUserQuotes() {
     return getCachedOrFetch("admin_quotes", () =>
       safeApiCall(
@@ -301,7 +287,7 @@ export const adminApiService = {
     ));
   },
 
-  // Request a new quotation (Trade Patron)
+  // request quotation
   async requestQuote({ items, customerNotes }) {
     try {
       const res = await axiosInstance.post("/trade/quotations/request", {
@@ -311,7 +297,7 @@ export const adminApiService = {
       adminApiService.clearCache("admin_quotes");
       return res.data;
     } catch {
-      // Simulate local creation if backend endpoint has network timeout
+
       const quoteNumber = `QUO-${Date.now().toString().slice(-6)}-${Math.floor(1000 + Math.random() * 9000)}`;
       const subtotal = items.reduce((acc, it) => acc + (it.unitPrice || 180) * (it.quantity || 1), 0);
       adminApiService.clearCache("admin_quotes");
@@ -331,7 +317,7 @@ export const adminApiService = {
     }
   },
 
-  // Negotiate quotation pricing (Admin / Super Admin)
+  // negotiate quote
   async negotiateQuote(quoteId, { negotiatedItems, discount = 0, adminNotes = "" }) {
     try {
       const res = await axiosInstance.patch(`/trade/quotations/${quoteId}/negotiate`, {
@@ -347,7 +333,7 @@ export const adminApiService = {
     }
   },
 
-  // Approve quotation (Customer or Admin)
+  // approve quote
   async approveQuote(quoteId) {
     try {
       const res = await axiosInstance.patch(`/trade/quotations/${quoteId}/approve`);
@@ -359,7 +345,7 @@ export const adminApiService = {
     }
   },
 
-  // Convert quotation to Trade Order (Customer)
+  // convert quote to order
   async convertQuoteToOrder(quoteId, shippingAddress) {
     try {
       const res = await axiosInstance.post(`/trade/quotations/${quoteId}/convert`, {
@@ -381,11 +367,9 @@ export const adminApiService = {
     }
   },
 
-  // ==========================================
   // TRADE CREDITS & LIMITS
-  // ==========================================
 
-  // Get current user credit line (Trade Patron)
+  // trade credit
   async getMyCredit() {
     return getCachedOrFetch("admin_credit_me", () =>
       safeApiCall(
@@ -404,7 +388,7 @@ export const adminApiService = {
     );
   },
 
-  // Get all company credit limits (Admin / Super Admin)
+  // company credit limits
   async getAllCredits() {
     return getCachedOrFetch("admin_all_credits", () =>
       safeApiCall(
@@ -442,7 +426,7 @@ export const adminApiService = {
     );
   },
 
-  // Set company credit limit (Admin / Super Admin)
+  // set credit limit
   async setCreditLimit({ companyId, userId, totalCredit, paymentTerm }) {
     const res = await axiosInstance.post("/trade/credits", {
       companyId,
@@ -455,7 +439,7 @@ export const adminApiService = {
     return res.data;
   },
 
-  // Settle credit balance (Admin / Super Admin)
+  // settle balance
   async settleCredit(companyId, amount) {
     const res = await safeApiCall(
       axiosInstance.post("/trade/credits/settle", { companyId, amount }),
@@ -466,11 +450,9 @@ export const adminApiService = {
     return res;
   },
 
-  // ==========================================
   // TRADE TIERS
-  // ==========================================
 
-  // Get active trade tiers
+  // trade tiers
   async getTradeTiers() {
     return getCachedOrFetch("admin_trade_tiers", () =>
       safeApiCall(
@@ -550,7 +532,7 @@ export const adminApiService = {
     );
   },
 
-  // Request / Upgrade Trade Tier
+  // upgrade tier
   async requestTierUpgrade(profileId, { tierId, tierName, notes, projectSpend, sector }) {
     try {
       const res = await axiosInstance.post("/trade/profiles/upgrade-tier", {
@@ -573,11 +555,9 @@ export const adminApiService = {
     }
   },
 
-  // ==========================================
   // MASTER PRODUCTS & COMMERCE (Full CRUD)
-  // ==========================================
 
-  // Get products catalog (GET /products) - fetches full catalog across all pages
+  // products
   async getProducts(params = {}, fetchAll = true) {
     const cacheKey = `admin_products_${JSON.stringify(params)}_${fetchAll}`;
     return getCachedOrFetch(cacheKey, async () => {
@@ -597,11 +577,9 @@ export const adminApiService = {
           rawList = data.data;
         }
 
-        // Check pagination metadata from backend
         const pagination = response?.data?.pagination || response?.data?.data?.pagination;
         const totalPages = pagination?.totalPages || 1;
 
-        // When fetchAll is requested (default for full admin view) and more pages exist
         if (fetchAll && totalPages > 1 && !params.page) {
           const pagePromises = [];
           for (let p = 2; p <= totalPages; p++) {
@@ -628,7 +606,6 @@ export const adminApiService = {
           }
         }
 
-        // Combine with custom created products and filter deleted
         const customProds = getCustomProducts();
         const deletedIds = getDeletedProductIds();
         const existingIds = new Set(customProds.map((c) => String(c._id || c.id)));
@@ -644,7 +621,7 @@ export const adminApiService = {
         console.warn("Backend /products fetch fallback:", err.message);
       }
 
-      // Default high-res fallback items if backend is empty
+      // fallback products
       return [
         {
           _id: "prod_001",
@@ -745,7 +722,7 @@ export const adminApiService = {
     });
   },
 
-  // Get product by ID (GET /products/:id)
+  // get product by id
   async getProductById(id) {
     try {
       const res = await axiosInstance.get(`/products/${encodeURIComponent(id)}`);
@@ -760,7 +737,7 @@ export const adminApiService = {
     }
   },
 
-  // Create product (POST /products)
+  // create product
   async createProduct(data) {
     const newProd = {
       _id: `prod_${Date.now()}`,
@@ -788,7 +765,7 @@ export const adminApiService = {
     }
   },
 
-  // Update product (PUT /products/:id)
+  // update product
   async updateProduct(id, data) {
     const cleanUpdate = {
       ...data,
@@ -797,7 +774,6 @@ export const adminApiService = {
       updatedAt: new Date().toISOString(),
     };
 
-    // Immediately persist to local overrides so storefront and admin update in real time
     saveProductOverride(id, cleanUpdate);
     adminApiService.clearCache("admin_products");
 
@@ -813,9 +789,9 @@ export const adminApiService = {
     }
   },
 
-  // Delete product (DELETE /products/:id)
+  // delete product
   async deleteProduct(id) {
-    // Immediately mark deleted in productSync so storefront and admin hide it in real time
+
     saveDeletedProductId(id);
     adminApiService.clearCache("admin_products");
 
@@ -828,9 +804,7 @@ export const adminApiService = {
     }
   },
 
-  // ==========================================
   // PRODUCT SUB-RESOURCES (Pricing, Media, Variants, Specs, SEO, Inventory)
-  // ==========================================
 
   async getProductPricing(productId) {
     return safeApiCall(axiosInstance.get(`/products/${productId}/pricing`), null);
@@ -916,9 +890,7 @@ export const adminApiService = {
     }
   },
 
-  // ==========================================
   // CATEGORIES & BRANDS (Catalog Engine)
-  // ==========================================
 
   async getCategories() {
     return getCachedOrFetch("admin_categories", () =>
@@ -961,9 +933,7 @@ export const adminApiService = {
     return res.data;
   },
 
-  // ==========================================
   // COMMERCE (Orders, Coupons, Shipments, Invoices)
-  // ==========================================
 
   async getOrders() {
     return getCachedOrFetch("admin_orders", () =>
@@ -979,7 +949,7 @@ export const adminApiService = {
     adminApiService.clearCache("admin_orders");
     const isMongoId = /^[0-9a-fA-F]{24}$/.test(id);
     if (!isMongoId || (typeof id === "string" && (id.startsWith("ord_") || id.startsWith("HOH-")))) {
-      // Local or mock order - persist directly to localStorage
+
       try {
         const local = JSON.parse(localStorage.getItem("hoh_local_orders") || "[]");
         const updated = local.map((o) =>
@@ -998,7 +968,7 @@ export const adminApiService = {
       const res = await axiosInstance.patch(`/orders/${id}/status`, { status });
       return res.data;
     } catch (err) {
-      // Fallback for local order storage
+
       try {
         const local = JSON.parse(localStorage.getItem("hoh_local_orders") || "[]");
         const updated = local.map((o) =>
@@ -1070,9 +1040,7 @@ export const adminApiService = {
     );
   },
 
-  // ==========================================
   // USERS & ROLES (RBAC Governance)
-  // ==========================================
 
   async getUsers() {
     return getCachedOrFetch("admin_users", () =>
@@ -1148,9 +1116,7 @@ export const adminApiService = {
     return safeApiCall(axiosInstance.get("/modules"), []);
   },
 
-  // ==========================================
   // REVIEWS & MODERATION
-  // ==========================================
 
   async getReviews(params = {}) {
     return safeApiCall(axiosInstance.get("/reviews", { params }), []);
@@ -1184,9 +1150,7 @@ export const adminApiService = {
     return res.data;
   },
 
-  // ==========================================
   // ATTRIBUTES & CONFIGURABLE OPTIONS
-  // ==========================================
 
   async getAttributes() {
     return safeApiCall(axiosInstance.get("/attributes"), []);
@@ -1216,9 +1180,7 @@ export const adminApiService = {
     return res.data;
   },
 
-  // ==========================================
   // SHIPMENTS & LOGISTICS UPDATES
-  // ==========================================
 
   async updateShipmentStatus(shipmentId, status) {
     const res = await axiosInstance.patch(`/shipments/${shipmentId}/status`, { status });
@@ -1229,9 +1191,7 @@ export const adminApiService = {
     return safeApiCall(axiosInstance.get(`/shipments/track/${trackingNumber}`), null);
   },
 
-  // ==========================================
   // INVOICES GENERATION
-  // ==========================================
 
   async generateInvoice(orderId) {
     const res = await axiosInstance.post("/invoices/generate", { orderId });
@@ -1243,9 +1203,7 @@ export const adminApiService = {
     return res.data;
   },
 
-  // ==========================================
   // TRADE COMPANIES & MEDIA
-  // ==========================================
 
   async getCompanies() {
     return safeApiCall(axiosInstance.get("/trade/companies"), []);
@@ -1272,9 +1230,7 @@ export const adminApiService = {
     return res.data;
   },
 
-  // ==========================================
   // PRODUCT REVIEWS & RATINGS
-  // ==========================================
 
   async getReviews(params = {}) {
     return safeApiCall(axiosInstance.get("/reviews", { params }), []);

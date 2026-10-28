@@ -93,18 +93,18 @@ export default function AdminTradeReview() {
   const [selectedQuoteForNegotiate, setSelectedQuoteForNegotiate] = useState(null);
   const [quoteFilter, setQuoteFilter] = useState("ALL");
 
-  // Application review modal form state
+  
   const [assignedTier, setAssignedTier] = useState("tier_gold");
   const [assignedCredit, setAssignedCredit] = useState(50000);
   const [rejectionReason, setRejectionReason] = useState("");
   const [reviewingAction, setReviewingAction] = useState(false);
 
-  // Quote negotiation modal state
+  
   const [negotiatedDiscount, setNegotiatedDiscount] = useState(500);
   const [adminNotes, setAdminNotes] = useState("");
   const [negotiatingAction, setNegotiatingAction] = useState(false);
 
-  // Sub-tab 3: Approved Partners List
+  
   const approvedPartners = (allTradeProfiles || [])
     .filter((p) => p.status === "APPROVED")
     .map((p) => {
@@ -200,7 +200,7 @@ export default function AdminTradeReview() {
 
   return (
     <div className="space-y-6">
-      {/* Header bar */}
+      
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-xl sm:text-2xl font-bold tracking-tight">
@@ -212,7 +212,7 @@ export default function AdminTradeReview() {
         </div>
       </div>
 
-      {/* Sub Tabs */}
+      
       <div
         className={`p-1.5 rounded-full border max-w-fit flex items-center gap-1 transition-colors ${
           isDark
@@ -357,7 +357,7 @@ export default function AdminTradeReview() {
       {/* TAB 2: QUOTATION NEGOTIATIONS */}
       {activeSubTab === "quotes" && (
         <div className="space-y-4">
-          {/* Status Filter Bar */}
+          
           <div className="flex flex-wrap items-center gap-1.5 p-1 rounded-full border border-inherit max-w-fit">
             {["ALL", "REQUESTED", "NEGOTIATING", "APPROVED", "CONVERTED"].map((st) => (
               <button
@@ -510,7 +510,7 @@ export default function AdminTradeReview() {
                     </div>
                   </div>
 
-                  {/* Line Items Catalog Breakdown for Super Admin */}
+                  
                   <div className="pt-4 space-y-2.5">
                     <span className="text-[11px] font-semibold uppercase tracking-wider text-[#627766]">
                       Requested Catalog Line Items ({quote.items?.length || 0})
@@ -660,7 +660,7 @@ export default function AdminTradeReview() {
               </button>
             </div>
 
-            {/* Applicant credentials card */}
+            
             <div
               className={`p-3 rounded-xl border text-xs space-y-1 ${
                 isDark ? "bg-[#1c291f] border-[#2c4030]" : "bg-[#f5f9f6] border-[#dce8df]"
@@ -825,7 +825,7 @@ export default function AdminTradeReview() {
             </div>
 
             <div className="space-y-3 text-xs">
-              {/* Line items being negotiated */}
+              
               <div>
                 <label className="block text-[11px] font-semibold uppercase text-[#627766] mb-1.5">
                   Quotation Creations Breakdown ({selectedQuoteForNegotiate.items?.length || 0})

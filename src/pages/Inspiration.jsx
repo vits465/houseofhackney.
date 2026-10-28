@@ -180,7 +180,7 @@ function Inspiration() {
         </div>
       </section>
 
-      {/* 1. ROOM GALLERY */}
+      {/* room gallery */}
       {activeTab === "gallery" && (
         <section className="px-6 pb-24 max-w-7xl mx-auto">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
@@ -215,7 +215,7 @@ function Inspiration() {
         </section>
       )}
 
-      {/* 2. STORIES */}
+      {/* stories */}
       {activeTab === "stories" && (
         <section className="px-6 pb-24 max-w-7xl mx-auto">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
@@ -253,7 +253,7 @@ function Inspiration() {
         </section>
       )}
 
-      {/* 3. THE AURAS */}
+      {/* the auras */}
       {activeTab === "auras" && (
         <section className="px-6 pb-24 max-w-7xl mx-auto">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">

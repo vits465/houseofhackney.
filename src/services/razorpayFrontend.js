@@ -122,13 +122,13 @@ export async function initiateRazorpayCheckout({
   showLoading("Initiating secure payment...");
 
   try {
-    // 1. Convert amount to paise (subunits)
-    // If amount is small (e.g. 50.00), multiply by 100 => 5000 paise
-    // If amount is already in subunits (>= 100 paise), keep it
+    // convert to paise
+    
+    
     const amountInPaise = amount < 100 ? Math.round(amount * 100) : Math.round(amount * 100);
     const finalPaise = Math.max(100, amountInPaise);
 
-    // 2. Call backend create-order endpoint
+    // create order
     const order = await createRazorpayOrder({
       amount: finalPaise,
       currency,
@@ -137,7 +137,7 @@ export async function initiateRazorpayCheckout({
 
     closeAlert();
 
-    // 3. Configure Razorpay modal options
+    // razorpay modal config
     const patronName =
       shippingAddress?.fullName ||
       (user?.firstName ? `${user.firstName} ${user.lastName || ""}`.trim() : user?.name || "House of Hackney Patron");
@@ -156,7 +156,7 @@ export async function initiateRazorpayCheckout({
         showLoading("Verifying payment signature...");
 
         try {
-          // Send razorpay_payment_id, razorpay_order_id, razorpay_signature to verify endpoint
+          // verify payment
           const verifyResult = await verifyRazorpayPayment({
             order_id: response.razorpay_order_id,
             payment_id: response.razorpay_payment_id,
@@ -200,7 +200,7 @@ export async function initiateRazorpayCheckout({
         color: "#0c2340",
       },
       modal: {
-        // Handle modal dismiss (user cancelled)
+        // on cancel
         ondismiss: function () {
           closeAlert();
           showToast("Payment window closed", "info");
@@ -211,7 +211,7 @@ export async function initiateRazorpayCheckout({
 
     const rzp = new window.Razorpay(options);
 
-    // Handle payment.failed event
+    // on payment failure
     rzp.on("payment.failed", function (response) {
       closeAlert();
       const failureReason = response.error?.description || response.error?.reason || "Payment could not be completed.";
@@ -219,7 +219,7 @@ export async function initiateRazorpayCheckout({
       if (onError) onError(new Error(failureReason));
     });
 
-    // Open Razorpay Standard Checkout modal
+    // open razorpay modal
     rzp.open();
   } catch (error) {
     closeAlert();

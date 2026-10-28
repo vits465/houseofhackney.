@@ -166,7 +166,7 @@ export default function Profile({ defaultTab }) {
       try {
         setLoading(true);
 
-        // If guest/unauthenticated, load local storage items without triggering 401s
+        // load local data for guests
         if (!token) {
           const localWishlist = getStoredWishlist();
           setWishlistItems(localWishlist);
@@ -204,7 +204,7 @@ export default function Profile({ defaultTab }) {
           dispatch(setAuthUser(meRes.value));
         }
 
-        // Merge server orders with local orders belonging strictly to THIS user
+        // merge user orders
         const localOrders = JSON.parse(localStorage.getItem("hoh_local_orders") || "[]");
         const userEmail = (activeUser?.email || user?.email || "").toLowerCase().trim();
         const userId = String(activeUser?._id || activeUser?.id || user?._id || user?.id || "");
@@ -222,7 +222,7 @@ export default function Profile({ defaultTab }) {
           ? ordersRes.value
           : [];
 
-        // Server orders from /orders are authoritative and already scoped by user ID
+        // server orders
         const combinedOrders = [
           ...userLocalOrders.filter(
             (lo) => !apiOrders.some((ao) => ao._id === lo._id || ao.orderNumber === lo.orderNumber)
@@ -235,7 +235,7 @@ export default function Profile({ defaultTab }) {
           setAddresses(addressesRes.value || []);
         }
 
-        // Server wishlist is authoritative for authenticated user
+        // server wishlist
         if (wishlistRes.status === "fulfilled") {
           const rawItems = Array.isArray(wishlistRes.value) ? wishlistRes.value : [];
           const serverItems = rawItems.map((item) => {
@@ -338,11 +338,11 @@ export default function Profile({ defaultTab }) {
 
   return (
     <div className="min-h-screen bg-[#f6f3ec] text-[#171713] pb-24 overflow-x-clip w-full max-w-full">
-      {/* Top Breadcrumb & Luxury Sanctuary Banner */}
+      
       <div className="border-b border-[#dedbd4] bg-[#faf8f4] w-full overflow-hidden">
         <div className="mx-auto max-w-7xl px-4 py-5 sm:py-8 sm:px-6 lg:px-8 w-full overflow-hidden">
           <div className="flex flex-col gap-5 sm:gap-6 md:flex-row md:items-center md:justify-between">
-            {/* Patron Profile Info */}
+            
             <div className="flex items-center gap-3.5 sm:gap-5 min-w-0">
               <div className="relative flex h-14 w-14 sm:h-20 sm:w-20 shrink-0 items-center justify-center rounded-2xl bg-[#394132] text-white shadow-md ring-2 sm:ring-4 ring-[#dedbd4]/50">
                 {isGuest ? (
@@ -404,7 +404,7 @@ export default function Profile({ defaultTab }) {
               </div>
             </div>
 
-            {/* Quick Actions (Admin switcher & Logout if logged in, Log In & Register if guest) */}
+            
             <div className="flex items-center gap-2.5 w-full sm:w-auto">
               {isAdmin && (
                 <Link
@@ -448,9 +448,9 @@ export default function Profile({ defaultTab }) {
         </div>
       </div>
 
-      {/* Main Sanctuary Layout */}
+      
       <div className="mx-auto max-w-7xl px-4 pt-5 sm:pt-8 sm:px-6 lg:px-8 w-full overflow-hidden">
-        {/* Mobile Horizontal Pill Navigation Rail (visible on mobile/tablet) */}
+        
         <div className="block lg:hidden mb-5 w-full overflow-hidden">
           <div className="flex items-center gap-2 overflow-x-auto pb-2 pt-0.5 no-scrollbar w-full">
             {TABS.map((tab) => {
@@ -498,7 +498,7 @@ export default function Profile({ defaultTab }) {
         </div>
 
         <div className="grid grid-cols-1 gap-6 lg:gap-8 lg:grid-cols-4 w-full">
-          {/* Navigation Tab Sidebar (Desktop Only) */}
+          
           <aside className="hidden lg:block lg:col-span-1">
             <div className="sticky top-28 space-y-1.5 rounded-2xl border border-[#dedbd4] bg-white p-3 shadow-xs">
               <div className="px-3 py-2 text-[11px] font-semibold tracking-[1.5px] uppercase text-[#88857d]">
@@ -552,7 +552,7 @@ export default function Profile({ defaultTab }) {
                 })}
               </nav>
 
-              {/* Assistance Box */}
+              
               <div className="mt-4 rounded-xl bg-[#f6f3ec] p-4 text-xs text-[#55534c] border border-[#dedbd4]">
                 <p className="font-semibold text-[#171713] uppercase tracking-[0.5px]">
                   Concierge Support
@@ -571,7 +571,7 @@ export default function Profile({ defaultTab }) {
             </div>
           </aside>
 
-          {/* Active Tab Main Content */}
+          
           <main className="lg:col-span-3 min-w-0 w-full overflow-hidden">
             {activeTab === "overview" && (
               <OverviewSection
@@ -654,8 +654,8 @@ export default function Profile({ defaultTab }) {
         </div>
       </div>
 
-      {/* --- Modals --- */}
-      {/* Order Details & Invoice Modal */}
+      
+      
       {selectedOrder && (
         <OrderDetailsModal
           order={selectedOrder}
@@ -663,7 +663,7 @@ export default function Profile({ defaultTab }) {
         />
       )}
 
-      {/* Cancel Order Modal */}
+      
       {cancelModalOrder && (
         <CancelOrderModal
           order={cancelModalOrder}
@@ -677,7 +677,7 @@ export default function Profile({ defaultTab }) {
         />
       )}
 
-      {/* Add / Edit Address Modal */}
+      
       {addressModalOpen && (
         <AddressFormModal
           address={editingAddress}
@@ -704,9 +704,7 @@ export default function Profile({ defaultTab }) {
   );
 }
 
-// ==========================================
-// 1. OVERVIEW / DASHBOARD SECTION
-// ==========================================
+// overview / dashboard
 function OverviewSection({
   orders,
   addresses,
@@ -723,7 +721,7 @@ function OverviewSection({
 
   return (
     <div className="space-y-8 animate-fadeIn">
-      {/* Welcome Banner */}
+      
       <div className="rounded-2xl border border-[#dedbd4] bg-white p-4 sm:p-8 shadow-xs relative overflow-hidden">
         <div className="absolute right-0 top-0 h-full w-1/3 bg-radial from-[#394132]/5 to-transparent pointer-events-none" />
 
@@ -740,7 +738,7 @@ function OverviewSection({
           </p>
         </div>
 
-        {/* Quick Stat Cards */}
+        
         <div className="mt-5 sm:mt-6 grid grid-cols-2 gap-2.5 sm:grid-cols-4 sm:gap-4">
           <button
             type="button"
@@ -820,9 +818,9 @@ function OverviewSection({
         </div>
       </div>
 
-      {/* Two Column Grid: Recent Orders & Default Address */}
+      
       <div className="grid grid-cols-1 gap-6 md:gap-8 md:grid-cols-3">
-        {/* Recent Orders (2 cols) */}
+        
         <div className="md:col-span-2 space-y-4 min-w-0">
           <div className="flex items-center justify-between">
             <h3 className="font-serif text-lg sm:text-xl text-[#171713]">Recent Commissions</h3>
@@ -897,7 +895,7 @@ function OverviewSection({
           )}
         </div>
 
-        {/* Primary Residence (1 col) */}
+        
         <div className="space-y-4 min-w-0">
           <div className="flex items-center justify-between">
             <h3 className="font-serif text-lg sm:text-xl text-[#171713]">Default Residence</h3>
@@ -960,9 +958,7 @@ function OverviewSection({
   );
 }
 
-// ==========================================
-// 2. MY ORDERS SECTION
-// ==========================================
+// my orders
 function OrdersSection({ orders, loading, onSelectOrder, onOpenCancel }) {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
@@ -1000,7 +996,7 @@ function OrdersSection({ orders, loading, onSelectOrder, onOpenCancel }) {
 
   return (
     <div className="space-y-6 animate-fadeIn">
-      {/* Header & Controls */}
+      
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
         <div>
           <h2 className="font-serif text-xl sm:text-2xl text-[#171713]">Order Commissions</h2>
@@ -1009,9 +1005,9 @@ function OrdersSection({ orders, loading, onSelectOrder, onOpenCancel }) {
           </p>
         </div>
 
-        {/* Filters */}
+        
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
-          {/* Search */}
+          
           <div className="relative flex-1 sm:w-64">
             <Search
               size={14}
@@ -1026,7 +1022,7 @@ function OrdersSection({ orders, loading, onSelectOrder, onOpenCancel }) {
             />
           </div>
 
-          {/* Status Filter */}
+          
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
@@ -1043,7 +1039,7 @@ function OrdersSection({ orders, loading, onSelectOrder, onOpenCancel }) {
         </div>
       </div>
 
-      {/* Orders List */}
+      
       {filteredOrders.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-[#dedbd4] bg-white p-8 sm:p-12 text-center">
           <Package size={38} className="mx-auto text-[#bbb8b0]" />
@@ -1082,7 +1078,7 @@ function OrdersSection({ orders, loading, onSelectOrder, onOpenCancel }) {
                 key={orderId}
                 className="overflow-hidden rounded-2xl border border-[#dedbd4] bg-white shadow-xs transition-all hover:shadow-md"
               >
-                {/* Order Top Bar */}
+                
                 <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#dedbd4] bg-[#faf8f4] px-3.5 sm:px-5 py-3 sm:py-4">
                   <div className="flex flex-wrap items-center gap-3 sm:gap-4">
                     <div>
@@ -1122,7 +1118,7 @@ function OrdersSection({ orders, loading, onSelectOrder, onOpenCancel }) {
                   </div>
                 </div>
 
-                {/* Items in Order */}
+                
                 <div className="divide-y divide-[#f2efe9] px-3.5 sm:px-5 py-2 sm:py-3">
                   {items.map((item, idx) => {
                     const productObj = item.product || item;
@@ -1170,7 +1166,7 @@ function OrdersSection({ orders, loading, onSelectOrder, onOpenCancel }) {
                   })}
                 </div>
 
-                {/* Order Footer Actions */}
+                
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-t border-[#dedbd4] bg-[#faf8f4]/60 px-3.5 sm:px-5 py-3 sm:py-3.5">
                   <div className="text-[11px] text-[#77746c]">
                     {ord.shippingAddress
@@ -1216,7 +1212,7 @@ function AddressesSection({ addresses, loading, onUpdateAddresses, onOpenAdd, on
     );
     if (!res.isConfirmed) return;
 
-    // Optimistically remove address immediately
+    // update address
     onUpdateAddresses?.((prev) => prev.filter((a) => (a._id || a.id) !== addrId));
     showToast("Address deleted successfully.");
 
@@ -1228,7 +1224,7 @@ function AddressesSection({ addresses, loading, onUpdateAddresses, onOpenAdd, on
   };
 
   const handleSetDefault = async (addrId) => {
-    // Optimistically update default address immediately
+    // set default address
     onUpdateAddresses?.((prev) =>
       prev.map((a) => ({
         ...a,
@@ -1246,7 +1242,7 @@ function AddressesSection({ addresses, loading, onUpdateAddresses, onOpenAdd, on
 
   return (
     <div className="space-y-6 animate-fadeIn">
-      {/* Header */}
+      
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
         <div>
           <h2 className="font-serif text-xl sm:text-2xl text-[#171713]">Saved Residences</h2>
@@ -1376,9 +1372,7 @@ function AddressesSection({ addresses, loading, onUpdateAddresses, onOpenAdd, on
   );
 }
 
-// ==========================================
-// 4. WISHLIST SECTION
-// ==========================================
+// wishlist
 function WishlistSection({ items, loading, onUpdateItems, isAuthenticated }) {
   const dispatch = useDispatch();
 
@@ -1418,7 +1412,7 @@ function WishlistSection({ items, loading, onUpdateItems, isAuthenticated }) {
   };
 
   const handleRemove = async (productId, variantId) => {
-    // Optimistically remove item immediately
+    // remove item
     onUpdateItems?.((prev) =>
       prev.filter((item) => {
         const id = item._id || item.id || item.productId || item.product?._id;
@@ -1441,7 +1435,7 @@ function WishlistSection({ items, loading, onUpdateItems, isAuthenticated }) {
     );
     if (!res.isConfirmed) return;
 
-    // Optimistically clear immediately
+    // clear items
     onUpdateItems?.([]);
     clearAllWishlist();
 
@@ -1454,7 +1448,7 @@ function WishlistSection({ items, loading, onUpdateItems, isAuthenticated }) {
 
   return (
     <div className="space-y-6 animate-fadeIn">
-      {/* Header */}
+      
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h2 className="font-serif text-2xl text-[#171713]">Saved Treasures</h2>
@@ -1474,7 +1468,7 @@ function WishlistSection({ items, loading, onUpdateItems, isAuthenticated }) {
         )}
       </div>
 
-      {/* Guest Sync Banner */}
+      
       {!isAuthenticated && (
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-2xl border border-[#dedbd4] bg-[#faf8f4] p-4 text-xs">
           <div className="flex items-center gap-2.5 text-[#55534c]">
@@ -1543,7 +1537,7 @@ function WishlistSection({ items, loading, onUpdateItems, isAuthenticated }) {
                 key={idx}
                 className="group flex flex-col justify-between overflow-hidden rounded-2xl border border-[#dedbd4] bg-white shadow-2xs hover:shadow-md transition-all w-full min-w-0"
               >
-                {/* Product Image */}
+                
                 <div className="relative aspect-square w-full overflow-hidden bg-[#f6f3ec]">
                   <img
                     src={imgInfo.url}
@@ -1565,7 +1559,7 @@ function WishlistSection({ items, loading, onUpdateItems, isAuthenticated }) {
                   </button>
                 </div>
 
-                {/* Details */}
+                
                 <div className="flex flex-1 flex-col justify-between p-4">
                   <div>
                     <span className="text-[10px] font-semibold uppercase tracking-[1px] text-[#88857d]">
@@ -1582,7 +1576,7 @@ function WishlistSection({ items, loading, onUpdateItems, isAuthenticated }) {
                     </p>
                   </div>
 
-                  {/* Actions */}
+                  
                   <div className="mt-4 flex items-center gap-2">
                     <button
                       type="button"
@@ -1608,9 +1602,7 @@ function WishlistSection({ items, loading, onUpdateItems, isAuthenticated }) {
   );
 }
 
-// ==========================================
-// 5. PERSONAL DETAILS SECTION
-// ==========================================
+// personal details
 function PersonalDetailsSection({ user, onUpdateUser }) {
   const [formData, setFormData] = useState({
     firstName: user?.firstName || "",
@@ -1631,7 +1623,7 @@ function PersonalDetailsSection({ user, onUpdateUser }) {
       return;
     }
 
-    // Immediate optimistic update
+    // update details
     const optimisticUser = { ...user, ...formData };
     onUpdateUser(optimisticUser);
     showToast("Profile details updated successfully.");
@@ -1660,7 +1652,7 @@ function PersonalDetailsSection({ user, onUpdateUser }) {
 
       <form onSubmit={handleSubmit} className="space-y-5 sm:space-y-6">
         <div className="grid grid-cols-1 gap-4 sm:gap-5 sm:grid-cols-2">
-          {/* First Name */}
+          
           <div>
             <label className="block text-xs font-semibold uppercase tracking-wider text-[#55534c]">
               First Name *
@@ -1674,7 +1666,7 @@ function PersonalDetailsSection({ user, onUpdateUser }) {
             />
           </div>
 
-          {/* Last Name */}
+          
           <div>
             <label className="block text-xs font-semibold uppercase tracking-wider text-[#55534c]">
               Last Name
@@ -1687,7 +1679,7 @@ function PersonalDetailsSection({ user, onUpdateUser }) {
             />
           </div>
 
-          {/* Email (Readonly) */}
+          
           <div>
             <label className="block text-xs font-semibold uppercase tracking-wider text-[#55534c]">
               Registered Email (Primary Identity)
@@ -1703,7 +1695,7 @@ function PersonalDetailsSection({ user, onUpdateUser }) {
             </p>
           </div>
 
-          {/* Phone */}
+          
           <div>
             <label className="block text-xs font-semibold uppercase tracking-wider text-[#55534c]">
               Contact Phone Number
@@ -1717,7 +1709,7 @@ function PersonalDetailsSection({ user, onUpdateUser }) {
             />
           </div>
 
-          {/* Gender */}
+          
           <div>
             <label className="block text-xs font-semibold uppercase tracking-wider text-[#55534c]">
               Gender Salutation
@@ -1733,7 +1725,7 @@ function PersonalDetailsSection({ user, onUpdateUser }) {
             </select>
           </div>
 
-          {/* Currency */}
+          
           <div>
             <label className="block text-xs font-semibold uppercase tracking-wider text-[#55534c]">
               Preferred Currency
@@ -1764,9 +1756,7 @@ function PersonalDetailsSection({ user, onUpdateUser }) {
   );
 }
 
-// ==========================================
-// 6. SECURITY & SESSIONS SECTION
-// ==========================================
+// security & sessions
 function SecuritySection({ user, sessions, onRefresh }) {
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -1853,7 +1843,7 @@ function SecuritySection({ user, sessions, onRefresh }) {
 
   return (
     <div className="space-y-6 sm:space-y-8 animate-fadeIn">
-      {/* Password Change Box */}
+      
       <div className="rounded-2xl border border-[#dedbd4] bg-white p-4 sm:p-8 shadow-xs">
         <div>
           <h2 className="font-serif text-xl sm:text-2xl text-[#171713]">Password Sanctuary</h2>
@@ -1930,7 +1920,7 @@ function SecuritySection({ user, sessions, onRefresh }) {
         </form>
       </div>
 
-      {/* Active Device Sessions */}
+      
       <div className="rounded-2xl border border-[#dedbd4] bg-white p-4 sm:p-8 shadow-xs">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
           <div>
@@ -2003,9 +1993,7 @@ function SecuritySection({ user, sessions, onRefresh }) {
   );
 }
 
-// ==========================================
-// 7. B2B TRADE CONCIERGE SECTION
-// ==========================================
+// b2b trade concierge
 function TradeSection({ tradeProfile, user, onRefresh }) {
   const [applying, setApplying] = useState(false);
   const [formData, setFormData] = useState({
@@ -2079,7 +2067,7 @@ function TradeSection({ tradeProfile, user, onRefresh }) {
 
   return (
     <div className="space-y-8 animate-fadeIn">
-      {/* Trade Status Hero */}
+      
       <div className="rounded-2xl border border-[#dedbd4] bg-white p-6 sm:p-8 shadow-xs">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div className="max-w-xl">
@@ -2096,7 +2084,7 @@ function TradeSection({ tradeProfile, user, onRefresh }) {
             </p>
           </div>
 
-          {/* Status Badge */}
+          
           <div className="rounded-2xl border border-[#dedbd4] bg-[#faf8f4] p-5 text-center shrink-0 min-w-[220px]">
             <span className="text-[10px] uppercase font-semibold tracking-wider text-[#88857d]">
               Current Standing
@@ -2120,7 +2108,7 @@ function TradeSection({ tradeProfile, user, onRefresh }) {
               </span>
             ) : null}
 
-            {/* Launch B2B Trade Portal Button */}
+            
             {(tradeProfile?.status === "APPROVED" || user?.isTradeAccount || user?.accountType === "BUSINESS") && (
               <div className="mt-3.5">
                 <Link
@@ -2135,7 +2123,7 @@ function TradeSection({ tradeProfile, user, onRefresh }) {
           </div>
         </div>
 
-        {/* Trade Benefits Grid */}
+        
         <div className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-3 border-t border-[#dedbd4] pt-6">
           <div className="rounded-xl bg-[#faf8f4] p-4 border border-[#dedbd4]/60">
             <h4 className="font-serif text-sm font-semibold text-[#171713]">
@@ -2166,7 +2154,7 @@ function TradeSection({ tradeProfile, user, onRefresh }) {
         </div>
       </div>
 
-      {/* Application Form (if not approved) */}
+      
       {tradeProfile?.status !== "APPROVED" && (
         <div className="rounded-2xl border border-[#dedbd4] bg-white p-6 sm:p-8 shadow-xs">
           <h3 className="font-serif text-xl text-[#171713]">
@@ -2280,10 +2268,7 @@ function TradeSection({ tradeProfile, user, onRefresh }) {
   );
 }
 
-
-// ==========================================
-// ORDER DETAILS & INVOICE MODAL
-// ==========================================
+// order details & invoice modal
 function OrderDetailsModal({ order, onClose }) {
   const orderId = order._id || order.id || "";
   const status = (order.status || "CONFIRMED").toUpperCase();
@@ -2299,7 +2284,7 @@ function OrderDetailsModal({ order, onClose }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-2 sm:p-4 overflow-y-auto">
       <div className="relative w-full max-w-2xl rounded-2xl bg-white shadow-2xl border border-[#dedbd4] max-h-[92vh] flex flex-col my-auto">
-        {/* Modal Header */}
+        
         <div className="flex items-center justify-between border-b border-[#dedbd4] px-4 sm:px-6 py-3.5 sm:py-4 bg-[#faf8f4]">
           <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
             <FileText size={18} className="text-[#394132] shrink-0" />
@@ -2327,9 +2312,9 @@ function OrderDetailsModal({ order, onClose }) {
           </div>
         </div>
 
-        {/* Modal Content */}
+        
         <div className="overflow-y-auto p-4 sm:p-6 space-y-4 sm:space-y-6 flex-1 text-xs text-[#171713]">
-          {/* Brand Emblem & Header */}
+          
           <div className="flex justify-between items-start border-b border-[#dedbd4] pb-4 gap-2">
             <div>
               <p className="font-serif text-lg sm:text-xl font-bold tracking-wider uppercase text-[#171713]">
@@ -2347,7 +2332,7 @@ function OrderDetailsModal({ order, onClose }) {
             </div>
           </div>
 
-          {/* Delivery & Billing Info */}
+          
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 rounded-xl bg-[#faf8f4] p-3.5 sm:p-4 border border-[#dedbd4]/60">
             <div>
               <span className="text-[10px] font-semibold uppercase tracking-wider text-[#88857d]">
@@ -2377,7 +2362,7 @@ function OrderDetailsModal({ order, onClose }) {
             </div>
           </div>
 
-          {/* Items Table */}
+          
           <div>
             <span className="text-[10px] font-semibold uppercase tracking-wider text-[#88857d]">
               Commissioned Creations
@@ -2414,7 +2399,7 @@ function OrderDetailsModal({ order, onClose }) {
             </div>
           </div>
 
-          {/* Pricing Totals */}
+          
           <div className="space-y-1.5 border-t border-[#dedbd4] pt-4">
             <div className="flex justify-between text-[#777]">
               <span>Subtotal</span>
@@ -2435,7 +2420,7 @@ function OrderDetailsModal({ order, onClose }) {
           </div>
         </div>
 
-        {/* Modal Footer */}
+        
         <div className="border-t border-[#dedbd4] bg-[#faf8f4] px-4 sm:px-6 py-3 flex justify-end">
           <button
             type="button"
@@ -2450,9 +2435,7 @@ function OrderDetailsModal({ order, onClose }) {
   );
 }
 
-// ==========================================
-// CANCEL ORDER MODAL
-// ==========================================
+// cancel order modal
 function CancelOrderModal({ order, reason, setReason, onClose, onSuccess }) {
   const [cancelling, setCancelling] = useState(false);
   const orderId = order._id || order.id || "";
@@ -2539,7 +2522,7 @@ function AddressFormModal({ address, onClose, onSuccess, onOptimisticSave }) {
       return;
     }
 
-    // Immediate optimistic update and close modal
+    // save address
     onOptimisticSave?.(form);
     showToast(isEdit ? "Residence updated successfully." : "New residence added.");
     onClose();
@@ -2745,9 +2728,7 @@ function AddressFormModal({ address, onClose, onSuccess, onOptimisticSave }) {
   );
 }
 
-// ==========================================
-// ORDER STATUS PILL HELPER
-// ==========================================
+// order status pill helper
 function OrderStatusPill({ status }) {
   const s = (status || "").toUpperCase();
   if (s === "DELIVERED") {

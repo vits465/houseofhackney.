@@ -189,7 +189,7 @@ export function getCleanProductImage(product) {
     }
   }
 
-  // 6. Check colours array
+  
   if (Array.isArray(product.colours)) {
     for (const col of product.colours) {
       const cImg = col.image || col.media?.secureUrl || col.media?.thumbnail?.secureUrl;
