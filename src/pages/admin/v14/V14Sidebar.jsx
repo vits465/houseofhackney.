@@ -37,7 +37,7 @@ export default function V14Sidebar() {
       "Sign out of Atelier?",
       "Are you sure you want to end your current session? You will be redirected to the sign in page."
     );
-    if (confirmed) {
+    if (confirmed && confirmed.isConfirmed) {
       sessionStorage.removeItem("refreshToken");
       sessionStorage.removeItem("hoh_preview_role");
       dispatch(logout());

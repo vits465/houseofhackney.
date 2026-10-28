@@ -194,7 +194,7 @@ export default function AdminCommerce() {
   // Handle Delete Coupon (DELETE /coupons/:id)
   const handleDeleteCoupon = async (couponId, code) => {
     const confirmed = await showConfirm(`Delete Coupon?`, `Remove voucher code ${code}?`);
-    if (!confirmed) return;
+    if (!confirmed || !confirmed.isConfirmed) return;
 
     try {
       await adminApiService.deleteCoupon(couponId);

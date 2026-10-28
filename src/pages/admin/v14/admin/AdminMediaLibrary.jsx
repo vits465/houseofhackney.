@@ -176,7 +176,7 @@ export default function AdminMediaLibrary() {
       "Delete Media Asset?",
       "Are you sure you want to remove this media asset from Cloudinary and the atelier database?"
     );
-    if (!confirmed) return;
+    if (!confirmed || !confirmed.isConfirmed) return;
 
     try {
       await adminApiService.deleteMedia(assetId);

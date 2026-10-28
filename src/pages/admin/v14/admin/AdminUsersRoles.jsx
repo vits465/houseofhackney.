@@ -354,7 +354,7 @@ export default function AdminUsersRoles() {
       `Delete User ${user.name}?`,
       `Are you sure you want to permanently revoke credentials and delete ${user.email}? This action is reserved for Super Admins only.`
     );
-    if (!confirmed) return;
+    if (!confirmed || !confirmed.isConfirmed) return;
 
     try {
       await adminApiService.deleteUser(user.id);

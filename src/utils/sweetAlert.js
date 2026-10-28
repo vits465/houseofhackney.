@@ -46,8 +46,8 @@ export const showWarning = (title, text = "") =>
     confirmButtonText: "UNDERSTOOD",
   });
 
-export const showConfirm = (title, text = "") =>
-  Swal.fire({
+export const showConfirm = async (title, text = "") => {
+  const result = await Swal.fire({
     ...COLORS,
     icon: "question",
     title,
@@ -58,6 +58,12 @@ export const showConfirm = (title, text = "") =>
     reverseButtons: true,
     focusCancel: true,
   });
+
+  if (result && result.isConfirmed) {
+    return { ...result, isConfirmed: true };
+  }
+  return null;
+};
 
 export const showLoading = (title = "Please wait...") =>
   Swal.fire({

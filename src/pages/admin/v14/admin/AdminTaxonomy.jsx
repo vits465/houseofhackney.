@@ -119,7 +119,7 @@ export default function AdminTaxonomy() {
 
   const handleDeleteCategory = async (id, name) => {
     const ok = await showConfirm(`Delete Category?`, `Remove category '${name}' from catalogue taxonomy?`);
-    if (!ok) return;
+    if (!ok || !ok.isConfirmed) return;
 
     try {
       await adminApiService.deleteCategory(id);

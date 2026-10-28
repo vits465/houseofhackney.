@@ -155,7 +155,7 @@ export default function AdminReviews() {
       "Delete Review?",
       "Are you sure you want to permanently delete this customer review from the atelier records?"
     );
-    if (!confirmed) return;
+    if (!confirmed || !confirmed.isConfirmed) return;
 
     try {
       await adminApiService.deleteReview(reviewId);

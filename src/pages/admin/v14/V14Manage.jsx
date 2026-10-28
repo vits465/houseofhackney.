@@ -103,7 +103,7 @@ export default function V14Manage() {
       `Are you sure you want to remove SKU ${prod.sku} from the catalog? This will send a DELETE request to /products/${prod._id || prod.id}.`
     );
 
-    if (confirmed) {
+    if (confirmed && confirmed.isConfirmed) {
       await deleteProduct(prod._id || prod.id);
       showToast(`${prod.name} deleted from catalog.`);
     }
