@@ -13,6 +13,7 @@ export default function TradeCatalog() {
   const [selectedCategory, setSelectedCategory] = useState("ALL");
   const [searchQuery, setSearchQuery] = useState("");
   const [requestModalOpen, setRequestModalOpen] = useState(false);
+  const [selectedProductForQuote, setSelectedProductForQuote] = useState(null);
 
   // Dynamic categories from loaded products
   const categories = useMemo(() => {
@@ -187,7 +188,10 @@ export default function TradeCatalog() {
                         <ShoppingBag size={14} />
                       </button>
                       <button
-                        onClick={() => setRequestModalOpen(true)}
+                        onClick={() => {
+                          setSelectedProductForQuote(prod);
+                          setRequestModalOpen(true);
+                        }}
                         className="px-3.5 py-2 rounded-full bg-[#3e7b52] text-white text-xs font-bold hover:bg-[#346a45] transition-all flex items-center gap-1 shadow-sm"
                       >
                         <Plus size={13} /> Add to Quote
@@ -203,7 +207,11 @@ export default function TradeCatalog() {
 
       <RequestQuoteModal
         isOpen={requestModalOpen}
-        onClose={() => setRequestModalOpen(false)}
+        initialProduct={selectedProductForQuote}
+        onClose={() => {
+          setRequestModalOpen(false);
+          setSelectedProductForQuote(null);
+        }}
       />
     </div>
   );

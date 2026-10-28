@@ -119,13 +119,13 @@ export default function TradeLogin() {
 
       const requestedPath = urlFrom || location.state?.from?.pathname;
 
-      let destination = "/profile?tab=trade";
+      let destination = "/admin";
       if (requestedPath && requestedPath.startsWith("/") && !requestedPath.startsWith("//")) {
         destination = requestedPath;
       } else if (isAdminUser) {
         destination = "/admin";
       } else if (isTradeUser) {
-        destination = "/profile?tab=trade";
+        destination = "/admin";
       }
 
       showToast(

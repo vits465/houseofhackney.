@@ -31,19 +31,9 @@ export function AdminProvider({ children }) {
     authUserRoles.includes("manager");
 
   // Determine initial role:
-  // Trade users and non-admins are STRICTLY locked to "trade". They CANNOT access admin or super-admin views!
+  // Trade users and non-admins are STRICTLY locked to "trade". Genuine admins default to admin/super-admin.
   const [currentRole, setCurrentRoleState] = useState(() => {
-    const isTradeAccount = Boolean(
-      authUser?.isTradeAccount ||
-      authUser?.accountType === "BUSINESS" ||
-      authUser?.tradeProfile ||
-      authUserRoles.includes("trade") ||
-      authUserRoles.includes("trade-user") ||
-      authUserRoles.includes("trade_user")
-    );
-
-    // If trade user or not an authorized admin, lock strictly to "trade"
-    if (!isActualAdmin || isTradeAccount) {
+    if (!isActualAdmin) {
       sessionStorage.removeItem("hoh_preview_role");
       return "trade";
     }
@@ -60,28 +50,66 @@ export function AdminProvider({ children }) {
     return "admin";
   });
 
-  // Keep role locked to trade for all trade partners whenever authUser updates
-  useEffect(() => {
-    const isTradeAccount = Boolean(
-      authUser?.isTradeAccount ||
-      authUser?.accountType === "BUSINESS" ||
-      authUser?.tradeProfile ||
-      authUserRoles.includes("trade") ||
-      authUserRoles.includes("trade-user") ||
-      authUserRoles.includes("trade_user")
-    );
+  const TRADE_PATRON_TABS = [
+    "trade-overview",
+    "trade-quotes",
+    "trade-catalog",
+    "trade-orders",
+    "trade-profile",
+  ];
 
-    if (!isActualAdmin || isTradeAccount) {
+  // Keep role locked to trade for non-admins; genuine admins stay in admin view unless previewing
+  useEffect(() => {
+    if (!isActualAdmin) {
       sessionStorage.removeItem("hoh_preview_role");
       setCurrentRoleState("trade");
-      setActiveTab((prev) => (prev.startsWith("trade-") ? prev : "trade-overview"));
+      setActiveTab((prev) => (TRADE_PATRON_TABS.includes(prev) ? prev : "trade-overview"));
+    } else {
+      const savedRole = sessionStorage.getItem("hoh_preview_role");
+      if (!savedRole) {
+        setCurrentRoleState(isActualSuperAdmin ? "super-admin" : "admin");
+        setActiveTab((prev) => (TRADE_PATRON_TABS.includes(prev) ? "overview" : prev));
+      }
     }
-  }, [authUser, isActualAdmin, authUserRoles]);
+  }, [authUser, isActualAdmin, isActualSuperAdmin]);
 
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [activeTab, setActiveTab] = useState(() => {
+  const [activeTab, setActiveTabState] = useState(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const urlTab = params.get("tab");
+      if (urlTab) return urlTab;
+    }
     return currentRole === "trade" ? "trade-overview" : "overview";
   });
+
+  const setActiveTab = (tab) => {
+    setActiveTabState((prev) => {
+      const resolved = typeof tab === "function" ? tab(prev) : tab;
+      if (typeof window !== "undefined" && resolved && typeof resolved === "string") {
+        try {
+          const url = new URL(window.location.href);
+          url.searchParams.set("tab", resolved);
+          window.history.replaceState({}, "", url.toString());
+        } catch {}
+      }
+      return resolved;
+    });
+  };
+
+  // Keep activeTab in sync with browser forward/back or external ?tab= change
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const syncTabFromUrl = () => {
+      const params = new URLSearchParams(window.location.search);
+      const urlTab = params.get("tab");
+      if (urlTab && urlTab !== activeTab) {
+        setActiveTabState(urlTab);
+      }
+    };
+    window.addEventListener("popstate", syncTabFromUrl);
+    return () => window.removeEventListener("popstate", syncTabFromUrl);
+  }, [activeTab]);
 
   const [spotlightOpen, setSpotlightOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
@@ -233,7 +261,44 @@ export function AdminProvider({ children }) {
           };
 
       setTradeCredit(effectiveCredit);
-      setTradeQuotations(quotesData || []);
+
+      // Merge local created/approved quotations with fetched quotes
+      let localQuotes = [];
+      try {
+        localQuotes = JSON.parse(localStorage.getItem("hoh_trade_quotations") || "[]");
+      } catch {}
+
+      const rawQuotes = Array.isArray(quotesData) ? quotesData : quotesData?.data || [];
+      const mergedQuotesMap = new Map();
+
+      // Seed with fetched backend quotes
+      rawQuotes.forEach((q) => {
+        if (q && q._id) mergedQuotesMap.set(q._id, q);
+      });
+
+      // Overlay locally updated / created quotes while preserving progressed statuses
+      const statusPriority = { CONVERTED: 4, APPROVED: 3, NEGOTIATING: 2, REQUESTED: 1, DRAFT: 0 };
+      localQuotes.forEach((q) => {
+        if (q && q._id) {
+          const existing = mergedQuotesMap.get(q._id);
+          if (!existing) {
+            mergedQuotesMap.set(q._id, q);
+          } else {
+            const existingPrio = statusPriority[existing.status] || 0;
+            const localPrio = statusPriority[q.status] || 0;
+            const winnerStatus = localPrio >= existingPrio ? q.status : existing.status;
+            mergedQuotesMap.set(q._id, {
+              ...q,
+              ...existing,
+              status: winnerStatus,
+              items: (existing.items?.length > 0 ? existing.items : q.items) || [],
+            });
+          }
+        }
+      });
+
+      const finalQuotations = Array.from(mergedQuotesMap.values());
+      setTradeQuotations(finalQuotations.length > 0 ? finalQuotations : rawQuotes);
       setPendingApplications(pendingApps || []);
       setTradeTiers(tiersData || []);
 
@@ -413,11 +478,24 @@ export function AdminProvider({ children }) {
   const requestQuote = async ({ items, customerNotes }) => {
     try {
       const res = await adminApiService.requestQuote({ items, customerNotes });
-      if (res?.data) {
-        setTradeQuotations((prev) => [res.data, ...prev]);
-        showToast("Quotation request submitted to House of Hackney Atelier.");
-        return res.data;
-      }
+      const newQuote = res?.data || {
+        _id: `quo_${Date.now()}`,
+        quoteNumber: `QUO-${Date.now().toString().slice(-6)}-${Math.floor(1000 + Math.random() * 9000)}`,
+        status: "REQUESTED",
+        items,
+        subtotal: items.reduce((acc, it) => acc + (it.unitPrice || 0) * (it.quantity || 1), 0),
+        customerNotes,
+        createdAt: new Date().toISOString(),
+      };
+      setTradeQuotations((prev) => {
+        const updated = [newQuote, ...prev.filter((q) => q._id !== newQuote._id)];
+        try {
+          localStorage.setItem("hoh_trade_quotations", JSON.stringify(updated));
+        } catch {}
+        return updated;
+      });
+      showToast("Quotation request submitted to House of Hackney Atelier.");
+      return newQuote;
     } catch (err) {
       showToast("Failed to request quote: " + err.message);
     }
@@ -427,9 +505,15 @@ export function AdminProvider({ children }) {
   const approveQuote = async (quoteId) => {
     try {
       await adminApiService.approveQuote(quoteId);
-      setTradeQuotations((prev) =>
-        prev.map((q) => (q._id === quoteId ? { ...q, status: "APPROVED" } : q))
-      );
+      setTradeQuotations((prev) => {
+        const updated = prev.map((q) =>
+          q._id === quoteId ? { ...q, status: "APPROVED", approvedAt: new Date().toISOString() } : q
+        );
+        try {
+          localStorage.setItem("hoh_trade_quotations", JSON.stringify(updated));
+        } catch {}
+        return updated;
+      });
       showToast("Quotation approved. You may now convert it to an active order.");
     } catch (err) {
       showToast("Error approving quote: " + err.message);
@@ -442,25 +526,48 @@ export function AdminProvider({ children }) {
       const res = await adminApiService.convertQuoteToOrder(quoteId, shippingAddress);
       const orderNumber = res?.data?.orderNumber || `TRD-ORD-${Date.now().toString().slice(-5)}`;
 
+      const quoteObj = tradeQuotations.find((q) => q._id === quoteId);
+      const amount = quoteObj?.grandTotal || quoteObj?.subtotal || 2000;
+
       // Update quote status
-      setTradeQuotations((prev) =>
-        prev.map((q) =>
+      setTradeQuotations((prev) => {
+        const updated = prev.map((q) =>
           q._id === quoteId
             ? { ...q, status: "CONVERTED", convertedOrderNumber: orderNumber }
             : q
-        )
-      );
+        );
+        try {
+          localStorage.setItem("hoh_trade_quotations", JSON.stringify(updated));
+        } catch {}
+        return updated;
+      });
 
       // Deduct available credit if credit available
       if (tradeCredit) {
-        const quoteObj = tradeQuotations.find((q) => q._id === quoteId);
-        const amount = quoteObj?.grandTotal || quoteObj?.subtotal || 2000;
         setTradeCredit((prev) => ({
           ...prev,
-          usedCredit: (prev.usedCredit || 0) + amount,
-          availableCredit: Math.max(0, (prev.availableCredit || 0) - amount),
+          usedCredit: (prev?.usedCredit || 0) + amount,
+          availableCredit: Math.max(0, (prev?.availableCredit || 0) - amount),
         }));
       }
+
+      // Add to active orders list so it reflects immediately in My Trade Orders
+      const newTradeOrder = {
+        _id: `trd_${Date.now()}`,
+        orderNumber,
+        quotationRef: quoteObj?.quoteNumber || `QUO-${quoteId.slice(-6)}`,
+        items: quoteObj?.items || [],
+        totalAmount: amount,
+        subtotal: quoteObj?.subtotal || amount,
+        grandTotal: amount,
+        paymentTerm: tradeCredit?.paymentTerm || "NET_30",
+        paymentStatus: "CREDIT_ACCOUNT",
+        status: "PROCESSING",
+        fulfillmentStatus: "In Production",
+        createdAt: new Date().toISOString(),
+        shippingAddress,
+      };
+      setOrders((prev) => [newTradeOrder, ...(prev || [])]);
 
       showToast(`Quotation converted to Order ${orderNumber}!`);
       return orderNumber;
@@ -602,11 +709,11 @@ export function AdminProvider({ children }) {
         adminNotes,
       });
 
-      setTradeQuotations((prev) =>
-        prev.map((q) => {
+      setTradeQuotations((prev) => {
+        const updated = prev.map((q) => {
           if (q._id === quoteId) {
-            const negotiatedSubtotal = negotiatedItems.reduce(
-              (acc, it) => acc + (it.negotiatedPrice || 100) * (it.quantity || 1),
+            const negotiatedSubtotal = (negotiatedItems || []).reduce(
+              (acc, it) => acc + (it.negotiatedPrice || it.unitPrice || 100) * (it.quantity || 1),
               0
             );
             return {
@@ -619,8 +726,12 @@ export function AdminProvider({ children }) {
             };
           }
           return q;
-        })
-      );
+        });
+        try {
+          localStorage.setItem("hoh_trade_quotations", JSON.stringify(updated));
+        } catch {}
+        return updated;
+      });
       showToast("Quotation pricing and concessions updated.");
     } catch (err) {
       showToast("Error negotiating quote: " + err.message);

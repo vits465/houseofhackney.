@@ -83,6 +83,7 @@ const Login = () => {
       // Keep the refresh token in session storage.
       // Keep the access token in Redux memory.
       sessionStorage.setItem("refreshToken", refreshToken);
+      sessionStorage.removeItem("hoh_preview_role");
 
       dispatch(
         setCredentials({
@@ -103,7 +104,10 @@ const Login = () => {
         roleSlugs.includes("trade") ||
         roleSlugs.includes("trade-user") ||
         roleSlugs.includes("trade_user") ||
-        user?.accountType === "TRADE";
+        Boolean(user?.isTradeAccount) ||
+        user?.accountType === "TRADE" ||
+        user?.accountType === "BUSINESS" ||
+        Boolean(user?.tradeProfile);
       const isAdminUser =
         roleSlugs.includes("admin") ||
         roleSlugs.includes("super-admin") ||

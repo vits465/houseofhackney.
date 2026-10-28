@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Plus, Trash2, Send, ShoppingBag } from "lucide-react";
 import { useAdmin } from "../../AdminContext";
@@ -13,11 +13,24 @@ const CATALOG_ITEMS = [
   { id: "prod_06", name: "ZELLIGE Handcrafted Tile - Emerald Gloss", category: "Tiles", retailPrice: 195, unit: "Sq Metre" },
 ];
 
-export default function RequestQuoteModal({ isOpen, onClose }) {
-  const { theme, tradeProfile, requestQuote } = useAdmin();
+export default function RequestQuoteModal({ isOpen, onClose, initialProduct = null }) {
+  const { theme, tradeProfile, requestQuote, products } = useAdmin();
   const isDark = theme === "dark";
 
   const discountPercent = tradeProfile?.tier?.discountPercentage || 25;
+
+  const catalogOptions = useMemo(() => {
+    if (products && products.length > 0) {
+      return products.map((p) => ({
+        id: p._id || p.id,
+        name: p.name || p.title,
+        category: typeof p.category === "string" ? p.category : p.category?.name || "Decor",
+        retailPrice: Number(p.pricing?.retailPrice || p.price || 195),
+        unit: "Roll / Piece",
+      }));
+    }
+    return CATALOG_ITEMS;
+  }, [products]);
 
   const [items, setItems] = useState([
     {
@@ -30,10 +43,34 @@ export default function RequestQuoteModal({ isOpen, onClose }) {
   const [customerNotes, setCustomerNotes] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
+  useEffect(() => {
+    if (!isOpen) return;
+    if (initialProduct) {
+      setItems([
+        {
+          productId: initialProduct._id || initialProduct.id,
+          name: initialProduct.name,
+          unitPrice: Number(initialProduct.pricing?.retailPrice || initialProduct.price || 220),
+          quantity: 5,
+        },
+      ]);
+    } else if (items.length === 0 || items[0]?.productId === "prod_01") {
+      const first = catalogOptions[0] || CATALOG_ITEMS[0];
+      setItems([
+        {
+          productId: first.id,
+          name: first.name,
+          unitPrice: first.retailPrice,
+          quantity: 10,
+        },
+      ]);
+    }
+  }, [isOpen, initialProduct]);
+
   if (!isOpen) return null;
 
   const addItemRow = () => {
-    const available = CATALOG_ITEMS.find((c) => !items.some((i) => i.productId === c.id)) || CATALOG_ITEMS[0];
+    const available = catalogOptions.find((c) => !items.some((i) => i.productId === c.id)) || catalogOptions[0];
     setItems((prev) => [
       ...prev,
       {
@@ -54,7 +91,7 @@ export default function RequestQuoteModal({ isOpen, onClose }) {
   };
 
   const handleProductChange = (idx, prodId) => {
-    const selected = CATALOG_ITEMS.find((c) => c.id === prodId);
+    const selected = catalogOptions.find((c) => c.id === prodId) || CATALOG_ITEMS.find((c) => c.id === prodId);
     if (!selected) return;
     setItems((prev) =>
       prev.map((item, i) =>
