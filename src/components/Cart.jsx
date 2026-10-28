@@ -18,6 +18,7 @@ import {
   Building2,
   Home,
   Mail,
+  Award,
 } from "lucide-react";
 
 import {
@@ -86,7 +87,8 @@ function buildOrderRecord(
   coupon = null,
   discountAmount = 0,
   finalTotal = null,
-  shippingAddress = null
+  shippingAddress = null,
+  tradeInfo = null
 ) {
   const patronName =
     shippingAddress?.fullName ||
@@ -111,19 +113,24 @@ function buildOrderRecord(
     orderNumber: orderNum,
     createdAt: new Date().toISOString(),
     timestamp: new Date().toISOString().replace("T", " ").substring(0, 16),
+    isTradeAccount: Boolean(tradeInfo?.isTradeAccount),
+    tradeTier: tradeInfo?.tradeTierName || null,
+    tradeDiscountAmount: tradeInfo?.tradeDiscountAmount || 0,
+    tradeDiscountPercent: tradeInfo?.tradeDiscountPercent || 0,
+    couponDiscountAmount: tradeInfo?.couponDiscountAmount || 0,
     user: {
       _id: patronUserId,
       id: patronUserId,
       name: patronName,
       email: patronEmail,
-      tier: "Verified Razorpay Patron",
+      tier: tradeInfo?.tradeTierName ? `Trade Partner (${tradeInfo.tradeTierName})` : "Verified Razorpay Patron",
     },
     client: {
       _id: patronUserId,
       id: patronUserId,
       name: patronName,
       email: patronEmail,
-      tier: "Verified Razorpay Patron",
+      tier: tradeInfo?.tradeTierName ? `Trade Partner (${tradeInfo.tradeTierName})` : "Verified Razorpay Patron",
       location: shippingAddress?.city ? `${shippingAddress.city}, ${shippingAddress.country || "UK"}` : "London, United Kingdom",
       avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(patronName)}&background=3e7b52&color=fff`,
     },
@@ -348,6 +355,53 @@ function Cart() {
 
   const currency = items[0]?.currency || "GBP";
 
+  // Resolve Trade Member Tier & Wholesale Margin
+  const isTradeAccount = Boolean(
+    user?.isTradeAccount ||
+    user?.accountType === "BUSINESS" ||
+    user?.tradeProfile ||
+    user?.roles?.some((r) =>
+      (typeof r === "string" ? r : r?.name || r?.slug || "").toLowerCase().includes("trade")
+    )
+  );
+
+  let tradeTierName = null;
+  let tradeDiscountPercent = 0;
+
+  if (isTradeAccount) {
+    let savedProfile = null;
+    try {
+      savedProfile = JSON.parse(localStorage.getItem("hoh_trade_profile") || "null");
+    } catch {}
+
+    const resolvedTier = savedProfile?.tier || user?.tradeProfile?.tier || null;
+    if (typeof resolvedTier === "object" && resolvedTier !== null) {
+      tradeTierName = resolvedTier.shortName || resolvedTier.name || "Trade Partner";
+      tradeDiscountPercent = Number(
+        resolvedTier.discountPercentage ?? resolvedTier.discountMargin ?? 20
+      );
+    } else if (typeof resolvedTier === "string") {
+      tradeTierName = resolvedTier;
+      const lower = resolvedTier.toLowerCase();
+      if (lower.includes("platinum")) tradeDiscountPercent = 30;
+      else if (lower.includes("gold")) tradeDiscountPercent = 25;
+      else if (lower.includes("silver")) tradeDiscountPercent = 20;
+      else if (lower.includes("bronze")) tradeDiscountPercent = 15;
+      else tradeDiscountPercent = 20;
+    } else {
+      tradeTierName = "Trade Patron";
+      tradeDiscountPercent = 20;
+    }
+  }
+
+  // Calculate Trade wholesale savings
+  const tradeDiscountAmount =
+    isTradeAccount && tradeDiscountPercent > 0
+      ? Math.round(subtotal * (tradeDiscountPercent / 100) * 100) / 100
+      : 0;
+
+  const subtotalAfterTrade = Math.max(0, subtotal - tradeDiscountAmount);
+
   // Calculate discount based on subtotal
   const calculateDiscount = (coupon, currentSubtotal) => {
     if (!coupon) return 0;
@@ -363,8 +417,10 @@ function Cart() {
     return Math.min(currentSubtotal, Math.round(disc * 100) / 100);
   };
 
-  const discountAmount = appliedCoupon ? calculateDiscount(appliedCoupon, subtotal) : 0;
-  const finalTotal = Math.max(0, Math.round((subtotal - discountAmount) * 100) / 100);
+  const couponDiscountAmount = appliedCoupon ? calculateDiscount(appliedCoupon, subtotalAfterTrade) : 0;
+  const totalDiscountAmount = Math.round((tradeDiscountAmount + couponDiscountAmount) * 100) / 100;
+  const discountAmount = totalDiscountAmount;
+  const finalTotal = Math.max(0, Math.round((subtotal - totalDiscountAmount) * 100) / 100);
 
   // Auto-remove coupon if subtotal falls below minimum requirement
   useEffect(() => {
@@ -559,6 +615,14 @@ function Cart() {
 
     const activeAddress = confirmedAddress || getEffectiveAddress();
 
+    const tradeInfo = {
+      isTradeAccount,
+      tradeTierName,
+      tradeDiscountAmount,
+      tradeDiscountPercent,
+      couponDiscountAmount,
+    };
+
     // Save order locally for patron profile display
     const newOrder = buildOrderRecord(
       items,
@@ -569,7 +633,8 @@ function Cart() {
       appliedCoupon,
       discountAmount,
       finalTotal,
-      activeAddress
+      activeAddress,
+      tradeInfo
     );
 
     try {
@@ -585,10 +650,12 @@ function Cart() {
       try {
         await axiosInstance.post("/orders", {
           paymentMethod: "RAZORPAY",
-          paymentId: paymentData.paymentId,
+          paymentId: paymentData.paymentId || paymentData.razorpay_payment_id,
           totalAmount: finalTotal,
           subtotal: subtotal,
           discountAmount: discountAmount,
+          tradeDiscountAmount: tradeDiscountAmount,
+          tradeTier: tradeTierName,
           couponCode: appliedCoupon?.code || null,
           shippingAddress: activeAddress,
           addressId: activeAddress?._id || activeAddress?.id || null,
@@ -781,6 +848,28 @@ function Cart() {
         <div className="mt-10 grid items-start gap-10 lg:grid-cols-[1fr_340px]">
           {/* Left Column: Creations & Delivery */}
           <div className="space-y-8 min-w-0">
+            {/* Trade Member Advantage Notification */}
+            {isTradeAccount && tradeDiscountPercent > 0 && (
+              <div className="flex items-start gap-3.5 rounded-2xl border border-[#3e7b52]/30 bg-[#eff5ec] p-4 text-[#1b381e]">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#3e7b52]/10 text-[#3e7b52]">
+                  <Award size={18} />
+                </div>
+                <div className="flex-1">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <span className="text-xs font-semibold uppercase tracking-wider text-[#1e3c21]">
+                      Trade Patron Privilege &bull; {tradeTierName} Tier ({tradeDiscountPercent}% Off)
+                    </span>
+                    <span className="inline-flex items-center rounded-full bg-[#3e7b52] px-2.5 py-0.5 text-[11px] font-medium text-white">
+                      -{formatPrice(tradeDiscountAmount, currency)} saved
+                    </span>
+                  </div>
+                  <p className="mt-1 text-xs text-[#355d38]">
+                    Wholesale margin of {tradeDiscountPercent}% is automatically applied to all collection items in your order.
+                  </p>
+                </div>
+              </div>
+            )}
+
             <div className="border-t border-[#d8d1c5]">
               {items.map((item) => {
               const itemId =
@@ -1245,6 +1334,19 @@ function Cart() {
             <span className="font-medium text-[#171713]">{formatPrice(subtotal, currency)}</span>
           </div>
 
+          {/* Trade Wholesale Privilege Discount */}
+          {isTradeAccount && tradeDiscountAmount > 0 && (
+            <div className="mt-3 flex items-center justify-between gap-3 text-sm text-[#3e7b52]">
+              <span className="flex items-center gap-1.5 font-medium">
+                <Award size={14} className="text-[#3e7b52]" />
+                <span>Trade Privilege ({tradeTierName} &bull; {tradeDiscountPercent}% OFF)</span>
+              </span>
+              <span className="font-semibold">
+                -{formatPrice(tradeDiscountAmount, currency)}
+              </span>
+            </div>
+          )}
+
           {/* Applied Coupon Line (if any) */}
           {appliedCoupon && (
             <div className="mt-3 flex items-center justify-between gap-3 text-sm text-[#2d5022]">
@@ -1253,7 +1355,7 @@ function Cart() {
                 <span>Voucher ({appliedCoupon.code})</span>
               </span>
               <span className="font-semibold">
-                -{formatPrice(discountAmount, currency)}
+                -{formatPrice(couponDiscountAmount, currency)}
               </span>
             </div>
           )}

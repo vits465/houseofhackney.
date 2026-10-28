@@ -1,4 +1,4 @@
-import axios from "axios";
+import axiosInstance from "./axiosInstance";
 import { showError, showToast, showLoading, closeAlert } from "../utils/sweetAlert";
 
 /**
@@ -29,7 +29,7 @@ export async function createRazorpayOrder({ amount, currency = "INR", receipt })
   const amountInPaise = Math.max(100, Math.round(Number(amount)));
 
   try {
-    const response = await axios.post("/api/create-order", {
+    const response = await axiosInstance.post("/create-order", {
       amount: amountInPaise,
       currency: currency || "INR",
       receipt: receipt || `rcpt_${Date.now()}`,
@@ -65,7 +65,7 @@ export async function createRazorpayOrder({ amount, currency = "INR", receipt })
  */
 export async function verifyRazorpayPayment({ order_id, payment_id, razorpay_signature }) {
   try {
-    const response = await axios.post("/api/verify-payment", {
+    const response = await axiosInstance.post("/verify-payment", {
       order_id,
       payment_id,
       razorpay_signature,
