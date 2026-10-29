@@ -19,6 +19,8 @@ import {
   Home,
   Mail,
   Award,
+  CreditCard,
+  Truck,
 } from "lucide-react";
 
 import {
@@ -30,7 +32,7 @@ import axiosInstance from "../services/axiosInstance";
 import { userService } from "../services/userService";
 import RazorpayModal from "./RazorpayModal";
 import { initiateRazorpayCheckout } from "../services/razorpayFrontend";
-import { showSuccess, showToast, showError } from "../utils/sweetAlert";
+import { showSuccess, showToast, showError, showConfirm } from "../utils/sweetAlert";
 
 const COUNTRIES = [
   "United Kingdom",
@@ -160,11 +162,11 @@ function buildOrderRecord(
     totalAmount: totalPaid,
     total: totalPaid,
     currency,
-    paymentStatus: "PAID",
-    paymentMethod: `RAZORPAY (${(paymentData.method || "ONLINE").toUpperCase()})`,
-    paymentId: paymentData.paymentId || paymentData.razorpay_payment_id,
-    status: "PROCESSING",
-    fulfillmentStatus: "In Production",
+    paymentStatus: paymentData?.isCOD ? "PENDING" : "PAID",
+    paymentMethod: paymentData?.isCOD ? "CASH ON DELIVERY (COD)" : `RAZORPAY (${(paymentData.method || "ONLINE").toUpperCase()})`,
+    paymentId: paymentData?.isCOD ? (paymentData.paymentId || `COD-${Date.now().toString().slice(-6)}`) : (paymentData.paymentId || paymentData.razorpay_payment_id),
+    status: "CONFIRMED",
+    fulfillmentStatus: paymentData?.isCOD ? "Confirmed (Awaiting COD)" : "In Production",
     shippingAddress: shippingAddress
       ? {
           fullName: shippingAddress.fullName || patronName,
@@ -200,6 +202,7 @@ function Cart() {
   const [showRazorpay, setShowRazorpay] = useState(false);
   const [orderComplete, setOrderComplete] = useState(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState("RAZORPAY"); // "RAZORPAY" | "COD"
 
   // Coupon state
   const [couponInput, setCouponInput] = useState("");
@@ -568,7 +571,7 @@ function Cart() {
   };
 
   // open checkout
-  const handleProceedToCheckout = () => {
+  const handleProceedToCheckout = async () => {
     if (items.length === 0 || isProcessing) return;
 
     const effectiveAddress = getEffectiveAddress();
@@ -589,6 +592,29 @@ function Cart() {
 
     setAddressError("");
     setIsProcessing(true);
+
+    if (paymentMethod === "COD") {
+      const confirmed = await showConfirm(
+        "Confirm Cash on Delivery",
+        `Your commission total is ${formatPrice(finalTotal, currency)}. You will pay in cash upon white-glove doorstep delivery. Confirm order?`
+      );
+
+      if (!confirmed) {
+        setIsProcessing(false);
+        return;
+      }
+
+      await handlePaymentSuccess(
+        {
+          isCOD: true,
+          method: "COD",
+          paymentId: `COD-${Date.now().toString().slice(-6)}`,
+        },
+        effectiveAddress
+      );
+      setIsProcessing(false);
+      return;
+    }
 
     initiateRazorpayCheckout({
       amount: finalTotal,
@@ -649,8 +675,9 @@ function Cart() {
     if (isAuthenticated) {
       try {
         await axiosInstance.post("/orders", {
-          paymentMethod: "RAZORPAY",
-          paymentId: paymentData.paymentId || paymentData.razorpay_payment_id,
+          paymentMethod: paymentData?.isCOD ? "COD" : "RAZORPAY",
+          paymentStatus: paymentData?.isCOD ? "PENDING" : "PAID",
+          paymentId: paymentData?.isCOD ? (paymentData.paymentId || `COD-${Date.now().toString().slice(-6)}`) : (paymentData.paymentId || paymentData.razorpay_payment_id),
           totalAmount: finalTotal,
           subtotal: subtotal,
           discountAmount: discountAmount,
@@ -694,8 +721,10 @@ function Cart() {
       });
 
     showSuccess(
-      "Payment Successful!",
-      `Order ${newOrder.orderNumber} confirmed. A confirmation receipt has been transmitted to ${targetRecipientEmail}.`
+      paymentData?.isCOD ? "Order Booked!" : "Payment Successful!",
+      paymentData?.isCOD
+        ? `Order ${newOrder.orderNumber} confirmed. Cash will be collected upon white-glove courier arrival.`
+        : `Order ${newOrder.orderNumber} confirmed. A confirmation receipt has been transmitted to ${targetRecipientEmail}.`
     );
   };
 
@@ -709,13 +738,22 @@ function Cart() {
           </div>
 
           <p className="mt-4 text-[10px] uppercase tracking-[2px] text-[#777267]">
-            PAYMENT AUTHORIZED VIA RAZORPAY
+            {orderComplete.paymentMethod?.includes("COD")
+              ? "CASH ON DELIVERY ORDER"
+              : "PAYMENT AUTHORIZED VIA RAZORPAY"}
           </p>
           <h1 className="mt-1 font-serif text-3xl text-[#171713]">
-            Commission Confirmed
+            {orderComplete.paymentMethod?.includes("COD")
+              ? "Commission Booked"
+              : "Commission Confirmed"}
           </h1>
           <p className="mt-2 text-xs text-[#666257]">
             Order <span className="font-mono font-semibold text-[#171713]">{orderComplete.orderNumber}</span> has been transmitted to our English print mills.
+            {orderComplete.paymentMethod?.includes("COD") && (
+              <span className="block mt-1.5 text-[#2d5022] font-medium font-sans">
+                ✦ Please have exact cash ready for courier upon white-glove delivery.
+              </span>
+            )}
           </p>
 
           <div className="mt-3 inline-flex items-center gap-2 rounded-full bg-[#f0f5ee] px-3.5 py-1.5 text-xs text-[#2d5022] border border-[#d2e2cd]">
@@ -746,7 +784,9 @@ function Cart() {
               </div>
             )}
             <div className="flex justify-between border-t border-[#ede8de] pt-2 font-semibold">
-              <span className="text-[#171713]">Total Charged:</span>
+              <span className="text-[#171713]">
+                {orderComplete.paymentMethod?.includes("COD") ? "Total Due Upon Delivery:" : "Total Charged:"}
+              </span>
               <span className="font-serif text-base text-[#171713]">{formatPrice(orderComplete.totalAmount, orderComplete.currency)}</span>
             </div>
 
@@ -1504,7 +1544,74 @@ function Cart() {
             All commissions are printed to order in England. Sustainable packaging and tracked carbon-neutral courier delivery.
           </p>
 
-          
+          {/* Payment Method Selector */}
+          <div className="mt-5 pt-4 border-t border-[#ede8de]">
+            <div className="flex items-center justify-between mb-2.5">
+              <span className="text-[11px] font-mono uppercase tracking-wider font-bold text-[#394132]">
+                Payment Option
+              </span>
+              <span className="text-[10px] text-[#777267]">Select preferred mode</span>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+              {/* Option 1: Razorpay Online */}
+              <button
+                type="button"
+                onClick={() => setPaymentMethod("RAZORPAY")}
+                className={`p-3 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between ${
+                  paymentMethod === "RAZORPAY"
+                    ? "border-[#394132] bg-[#f2f7f0] shadow-xs ring-1 ring-[#394132]"
+                    : "border-[#dcd6ca] bg-white hover:border-[#b8b0a1]"
+                }`}
+              >
+                <div className="flex items-center justify-between mb-1.5">
+                  <div className="flex items-center gap-1.5 font-semibold text-xs text-[#171713]">
+                    <CreditCard size={14} className="text-[#394132]" />
+                    <span>Pay Online</span>
+                  </div>
+                  <span
+                    className={`w-3.5 h-3.5 rounded-full border flex items-center justify-center ${
+                      paymentMethod === "RAZORPAY" ? "border-[#394132] bg-[#394132]" : "border-[#b8b0a1]"
+                    }`}
+                  >
+                    {paymentMethod === "RAZORPAY" && <span className="w-1.5 h-1.5 rounded-full bg-white" />}
+                  </span>
+                </div>
+                <span className="text-[10px] text-[#666257] leading-tight">
+                  Razorpay (Cards, UPI, NetBanking)
+                </span>
+              </button>
+
+              {/* Option 2: Cash on Delivery */}
+              <button
+                type="button"
+                onClick={() => setPaymentMethod("COD")}
+                className={`p-3 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between ${
+                  paymentMethod === "COD"
+                    ? "border-[#394132] bg-[#f2f7f0] shadow-xs ring-1 ring-[#394132]"
+                    : "border-[#dcd6ca] bg-white hover:border-[#b8b0a1]"
+                }`}
+              >
+                <div className="flex items-center justify-between mb-1.5">
+                  <div className="flex items-center gap-1.5 font-semibold text-xs text-[#171713]">
+                    <Truck size={14} className="text-[#394132]" />
+                    <span>Cash on Delivery</span>
+                  </div>
+                  <span
+                    className={`w-3.5 h-3.5 rounded-full border flex items-center justify-center ${
+                      paymentMethod === "COD" ? "border-[#394132] bg-[#394132]" : "border-[#b8b0a1]"
+                    }`}
+                  >
+                    {paymentMethod === "COD" && <span className="w-1.5 h-1.5 rounded-full bg-white" />}
+                  </span>
+                </div>
+                <span className="text-[10px] text-[#666257] leading-tight">
+                  Pay in cash upon doorstep delivery
+                </span>
+              </button>
+            </div>
+          </div>
+
           {addressError && (
             <div className="mt-4 rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-red-700 flex items-start gap-2">
               <AlertCircle size={15} className="shrink-0 mt-0.5 text-red-600" />
@@ -1514,13 +1621,19 @@ function Cart() {
 
           <button
             type="button"
-            id="razorpay-checkout-button"
+            id={paymentMethod === "COD" ? "cod-checkout-button" : "razorpay-checkout-button"}
             disabled={isProcessing}
             onClick={handleProceedToCheckout}
             className="mt-6 flex w-full items-center justify-center gap-2 rounded-xl bg-[#394132] px-5 py-4 text-xs font-semibold tracking-[1.5px] uppercase text-white hover:bg-[#282e23] transition-all shadow-sm cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
           >
-            <Lock size={14} />
-            <span>{isProcessing ? "INITIALIZING RAZORPAY..." : `PAY ${formatPrice(finalTotal, currency)} VIA RAZORPAY`}</span>
+            {paymentMethod === "COD" ? <Truck size={15} /> : <Lock size={14} />}
+            <span>
+              {isProcessing
+                ? (paymentMethod === "COD" ? "CONFIRMING ORDER..." : "INITIALIZING RAZORPAY...")
+                : (paymentMethod === "COD"
+                    ? `CONFIRM COD ORDER (${formatPrice(finalTotal, currency)})`
+                    : `PAY ${formatPrice(finalTotal, currency)} VIA RAZORPAY`)}
+            </span>
           </button>
 
           <Link
