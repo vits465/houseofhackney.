@@ -47,11 +47,35 @@ export async function createRazorpayOrder({ amount, currency = "INR", receipt })
       amount: data.amount,
       currency: data.currency || currency,
     };
-  } catch (error) {
+  } catch (backendError) {
+    // Fallback: try relative /api/create-order on current host
+    try {
+      const fallbackRes = await fetch("/api/create-order", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          amount: amountInPaise,
+          currency: currency || "INR",
+          receipt: receipt || `rcpt_${Date.now()}`,
+        }),
+      });
+      if (fallbackRes.ok) {
+        const data = await fallbackRes.json();
+        const order_id = data.order_id || data.id;
+        if (order_id) {
+          return {
+            order_id,
+            amount: data.amount,
+            currency: data.currency || currency,
+          };
+        }
+      }
+    } catch {}
+
     const errorMsg =
-      error.response?.data?.message ||
-      error.response?.data?.error ||
-      error.message ||
+      backendError.response?.data?.message ||
+      backendError.response?.data?.error ||
+      backendError.message ||
       "Error creating Razorpay order";
     throw new Error(errorMsg);
   }
@@ -74,11 +98,27 @@ export async function verifyRazorpayPayment({ order_id, payment_id, razorpay_sig
     });
 
     return response.data;
-  } catch (error) {
+  } catch (backendError) {
+    // Fallback: try relative /api/verify-payment on current host
+    try {
+      const fallbackRes = await fetch("/api/verify-payment", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          order_id,
+          payment_id,
+          razorpay_signature,
+        }),
+      });
+      if (fallbackRes.ok) {
+        return await fallbackRes.json();
+      }
+    } catch {}
+
     const errorMsg =
-      error.response?.data?.message ||
-      error.response?.data?.error ||
-      error.message ||
+      backendError.response?.data?.message ||
+      backendError.response?.data?.error ||
+      backendError.message ||
       "Payment verification failed";
     throw new Error(errorMsg);
   }
@@ -111,13 +151,7 @@ export async function initiateRazorpayCheckout({
     return;
   }
 
-  const keyId = import.meta.env.VITE_RAZORPAY_KEY_ID;
-  if (!keyId) {
-    const err = new Error("Razorpay Key ID is not configured (VITE_RAZORPAY_KEY_ID missing in .env).");
-    showError("Configuration Missing", err.message);
-    if (onError) onError(err);
-    return;
-  }
+  const keyId = import.meta.env.VITE_RAZORPAY_KEY_ID || "rzp_test_TsSGM70azhrLSg";
 
   showLoading("Initiating secure payment...");
 

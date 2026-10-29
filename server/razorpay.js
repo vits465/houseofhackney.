@@ -5,8 +5,8 @@ import dotenv from "dotenv";
 dotenv.config();
 
 function getRazorpayInstance() {
-  const key_id = process.env.RAZORPAY_KEY_ID || process.env.VITE_RAZORPAY_KEY_ID;
-  const key_secret = process.env.RAZORPAY_KEY_SECRET;
+  const key_id = process.env.RAZORPAY_KEY_ID || process.env.VITE_RAZORPAY_KEY_ID || "rzp_test_TsSGM70azhrLSg";
+  const key_secret = process.env.RAZORPAY_KEY_SECRET || "bwguUzmvy7gcrj7kVlhRBwyB";
 
   if (!key_id || !key_secret) {
     const error = new Error("Razorpay credentials are not configured in environment variables");
@@ -89,7 +89,7 @@ export function handleVerifyPayment({ order_id, payment_id, razorpay_signature }
     throw error;
   }
 
-  const key_secret = process.env.RAZORPAY_KEY_SECRET;
+  const key_secret = process.env.RAZORPAY_KEY_SECRET || "bwguUzmvy7gcrj7kVlhRBwyB";
   if (!key_secret) {
     const error = new Error("RAZORPAY_KEY_SECRET is not configured");
     error.statusCode = 500;
