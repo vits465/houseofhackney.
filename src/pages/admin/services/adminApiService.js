@@ -1138,9 +1138,14 @@ export const adminApiService = {
     return res.data;
   },
 
-  async replyToReview(reviewId, comment) {
+  async replyToReview(reviewId, commentOrReply) {
     adminApiService.clearCache("admin_reviews");
-    const res = await axiosInstance.post(`/reviews/${reviewId}/reply`, { comment });
+    const msg = typeof commentOrReply === "string" ? commentOrReply : (commentOrReply?.message || commentOrReply?.reply || commentOrReply?.comment || "");
+    const res = await axiosInstance.post(`/reviews/${reviewId}/reply`, {
+      message: msg,
+      reply: msg,
+      comment: msg,
+    });
     return res.data;
   },
 
@@ -1227,31 +1232,6 @@ export const adminApiService = {
 
   async deleteMedia(mediaId) {
     const res = await axiosInstance.delete(`/media/${mediaId}`);
-    return res.data;
-  },
-
-  // PRODUCT REVIEWS & RATINGS
-
-  async getReviews(params = {}) {
-    return safeApiCall(axiosInstance.get("/reviews", { params }), []);
-  },
-
-  async getReviewsSummary() {
-    return safeApiCall(axiosInstance.get("/reviews/summary"), { totalReviews: 0, averageRating: 5.0 });
-  },
-
-  async updateReviewStatus(reviewId, status) {
-    const res = await axiosInstance.patch(`/reviews/${reviewId}/status`, { status });
-    return res.data;
-  },
-
-  async deleteReview(reviewId) {
-    const res = await axiosInstance.delete(`/reviews/${reviewId}`);
-    return res.data;
-  },
-
-  async replyToReview(reviewId, reply) {
-    const res = await axiosInstance.post(`/reviews/${reviewId}/reply`, { reply });
     return res.data;
   },
 };
